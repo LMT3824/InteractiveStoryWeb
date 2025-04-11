@@ -1,0 +1,29 @@
+﻿@model IEnumerable<InteractiveStoryWeb.Models.Story>
+@{
+    ViewData["Title"] = "Danh sách truyện";
+}
+
+<h2 class="mb-4">@ViewData["Title"]</h2>
+
+<div class="row row-cols-1 row-cols-md-3 g-4">
+    @foreach (var story in Model)
+    {
+        <div class="col">
+            <div class="card h-100 shadow-sm">
+                <img src="@(string.IsNullOrEmpty(story.CoverImageUrl)
+                    ? Url.Content("~/images/ImageNotFound.png")
+                    : story.CoverImageUrl)"
+                     class="card-img-top" style="height: 200px; object-fit: cover;" />
+                <div class="card-body">
+                    <h5 class="card-title">@story.Title</h5>
+                    <p class="card-text"><strong>Thể loại:</strong> @story.Genre</p>
+                    <p class="card-text"><strong>Lượt xem:</strong> @story.ViewCount</p>
+                    <p class="card-text"><small class="text-muted">Tác giả: @story.Author?.UserName</small></p>
+                </div>
+                <div class="card-footer bg-white border-top-0">
+                    <a asp-action="Details" asp-route-id="@story.Id" class="btn btn-primary w-100">Xem chi tiết</a>
+                </div>
+            </div>
+        </div>
+    }
+</div>

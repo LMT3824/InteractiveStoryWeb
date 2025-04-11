@@ -1,0 +1,52 @@
+﻿@model List<InteractiveStoryWeb.Models.Story>
+@{
+    ViewData["Title"] = "Tài khoản của tôi";
+    var user = ViewBag.User as InteractiveStoryWeb.Models.ApplicationUser;
+}
+
+<h2 class="mb-4">👤 Tài khoản: @user.UserName</h2>
+<p><strong>Email:</strong> @user.Email</p>
+@if (!string.IsNullOrEmpty(user.Caption))
+{
+    <p><strong>Giới thiệu:</strong> @user.Caption</p>
+}
+
+<hr />
+<h4 class="mt-4">📚 Truyện đã đăng:</h4>
+
+@if (!Model.Any())
+{
+    <p>Bạn chưa đăng truyện nào.</p>
+}
+else
+{
+    <div class="row row-cols-1 row-cols-md-2 g-4">
+        @foreach (var story in Model)
+        {
+            <div class="col">
+                <div class="card h-100 shadow">
+                    <img src="@(string.IsNullOrEmpty(story.CoverImageUrl)
+                        ? Url.Content("~/images/ImageNotFound.png")
+                        : story.CoverImageUrl)"
+                         class="card-img-top" style="height: 180px; object-fit: cover;" />
+
+                    <div class="card-body">
+                        <h5 class="card-title">@story.Title</h5>
+                        <p class="card-text"><strong>Thể loại:</strong> @story.Genre</p>
+                        <p class="card-text"><strong>Lượt xem:</strong> @story.ViewCount</p>
+                    </div>
+                    <div class="card-footer d-flex justify-content-between">
+                        <a asp-controller="Story" asp-action="Edit" asp-route-id="@story.Id" class="btn btn-warning btn-sm">✏️ Sửa truyện</a>
+                        <a asp-controller="Chapter" asp-action="Create" asp-route-storyId="@story.Id" class="btn btn-success btn-sm">➕ Thêm chương</a>
+                        <a asp-controller="Chapter" asp-action="Manage" asp-route-storyId="@story.Id" class="btn btn-outline-dark btn-sm mt-2">
+                            📄 Quản lý chương
+                        </a>
+                        <a asp-controller="Chapter" asp-action="Tree" asp-route-storyId="@story.Id" class="btn btn-outline-dark btn-sm">
+                            🌳 Sơ đồ chương
+                        </a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}

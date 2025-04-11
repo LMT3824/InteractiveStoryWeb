@@ -1,0 +1,19 @@
+﻿@model InteractiveStoryWeb.ViewModels.ChapterTreeViewModel
+
+<li class="list-group-item">
+    <strong>Chương @Model.Id</strong> - @Model.ContentPreview
+    <div class="mt-1 ms-3">
+        <a asp-controller="Choice" asp-action="Manage" asp-route-chapterId="@Model.Id" class="btn btn-sm btn-outline-secondary">🔗 Lựa chọn</a>
+        <a asp-controller="Chapter" asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-warning">✏️ Sửa</a>
+    </div>
+
+    @if (Model.Children.Any())
+    {
+        <ul class="list-group mt-2 ms-4">
+            @foreach (var child in Model.Children)
+            {
+                @Html.Partial("_ChapterNode", child)
+            }
+        </ul>
+    }
+</li>

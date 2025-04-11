@@ -1,0 +1,16 @@
+﻿@model List<InteractiveStoryWeb.ViewModels.ChapterTreeViewModel>
+@{
+    ViewData["Title"] = "Sơ đồ chương";
+    int storyId = (int)ViewBag.StoryId;
+}
+
+<h2 class="mb-4">🌳 Sơ đồ chương theo nhánh truyện</h2>
+
+<a asp-action="Create" asp-route-storyId="@storyId" class="btn btn-success mb-3">➕ Thêm chương mới</a>
+
+<ul class="list-group">
+    @foreach (var root in Model)
+    {
+        @Html.Partial("_ChapterNode", root)
+    }
+</ul>

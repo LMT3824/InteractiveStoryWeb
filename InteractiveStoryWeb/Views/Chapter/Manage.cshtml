@@ -1,0 +1,46 @@
+﻿@model List<InteractiveStoryWeb.Models.Chapter>
+@{
+    ViewData["Title"] = "Quản lý chương";
+    var story = ViewBag.Story as InteractiveStoryWeb.Models.Story;
+}
+
+<h2 class="mb-3">📘 Quản lý chương: <strong>@story.Title</strong></h2>
+
+<a asp-controller="Chapter" asp-action="Create" asp-route-storyId="@story.Id" class="btn btn-success mb-3">
+    ➕ Thêm chương mới
+</a>
+<a asp-controller="Chapter" asp-action="Tree" asp-route-storyId="@story.Id" class="btn btn-outline-info mb-3 ms-2">
+    🌳 Xem dạng cây nhánh
+</a>
+
+@if (!Model.Any())
+{
+    <p>Truyện này chưa có chương nào.</p>
+}
+else
+{
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nội dung</th>
+                <th>Ngày tạo</th>
+                <th>Thao tác</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var chapter in Model)
+            {
+                <tr>
+                    <td>@chapter.Id</td>
+                    <td>@(chapter.Content.Length > 50 ? chapter.Content.Substring(0, 50) + "..." : chapter.Content)</td>
+                    <td>@chapter.CreatedAt.ToString("dd/MM/yyyy")</td>
+                    <td>
+                        <a asp-controller="Choice" asp-action="Manage" asp-route-chapterId="@chapter.Id" class="btn btn-sm btn-outline-secondary">🔗 Quản lý lựa chọn</a>
+                        <a asp-action="Edit" asp-route-id="@chapter.Id" class="btn btn-sm btn-outline-warning ms-1">✏️ Sửa</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

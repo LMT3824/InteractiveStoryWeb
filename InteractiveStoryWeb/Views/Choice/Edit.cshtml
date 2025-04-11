@@ -1,0 +1,30 @@
+﻿@model InteractiveStoryWeb.Models.Choice
+@{
+    ViewData["Title"] = "Chỉnh sửa lựa chọn";
+}
+
+<h2 class="mb-4">✏️ Chỉnh sửa lựa chọn</h2>
+
+<form asp-action="Edit" method="post">
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="ChapterId" />
+
+    <div class="mb-3">
+        <label asp-for="ChoiceText" class="form-label">Nội dung lựa chọn</label>
+        <input asp-for="ChoiceText" class="form-control" />
+        <span asp-validation-for="ChoiceText" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="NextChapterId" class="form-label">ID chương tiếp theo</label>
+        <input asp-for="NextChapterId" class="form-control" />
+        <span asp-validation-for="NextChapterId" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+    <a asp-action="Manage" asp-route-chapterId="@Model.ChapterId" class="btn btn-secondary ms-2">Quay lại</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

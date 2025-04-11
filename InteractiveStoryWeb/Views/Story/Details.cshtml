@@ -1,0 +1,22 @@
+﻿@model InteractiveStoryWeb.Models.Story
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<div class="row">
+    <div class="col-md-4">
+        <img src="@(string.IsNullOrEmpty(Model.CoverImageUrl)
+            ? Url.Content("~/images/ImageNotFound.png")
+            : Model.CoverImageUrl)"
+             class="img-fluid rounded shadow" alt="Ảnh bìa truyện" />
+    </div>
+    <div class="col-md-8">
+        <h2>@Model.Title</h2>
+        <p><strong>Thể loại:</strong> @Model.Genre</p>
+        <p><strong>Lượt xem:</strong> @Model.ViewCount</p>
+        <p><strong>Tác giả:</strong> @Model.Author?.UserName</p>
+        <p><strong>Ngày đăng:</strong> @Model.CreatedAt.ToString("dd/MM/yyyy")</p>
+
+        <a asp-controller="Story" asp-action="Read" asp-route-id="@Model.Id" class="btn btn-success mt-3">Đọc từ đầu</a>
+    </div>
+</div>

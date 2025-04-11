@@ -1,0 +1,70 @@
+﻿@model InteractiveStoryWeb.Models.Chapter
+
+@{
+    ViewData["Title"] = "Quản lý lựa chọn";
+    var chapter = Model;
+}
+
+<h2 class="mb-3">🔗 Quản lý lựa chọn cho chương ID: @chapter.Id</h2>
+
+<div class="alert alert-light border">
+    <strong>Nội dung chương:</strong><br />
+    @(chapter.Content.Length > 150 ? chapter.Content.Substring(0, 150) + "..." : chapter.Content)
+</div>
+
+<a asp-controller="Chapter" asp-action="Manage" asp-route-storyId="@chapter.StoryId" class="btn btn-secondary mb-3">
+    ⬅️ Quay lại quản lý chương
+</a>
+
+@if (chapter.Choices != null && chapter.Choices.Any())
+{
+    <table class="table table-bordered table-hover">
+        <thead class="table-light">
+            <tr>
+                <th>Nội dung lựa chọn</th>
+                <th>Chuyển đến chương</th>
+                <th style="width: 180px;">Thao tác</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var choice in chapter.Choices)
+            {
+                <tr>
+                    <td>@choice.ChoiceText</td>
+                    <td>@choice.NextChapterId</td>
+                    <td>
+                        <a asp-action="Edit" asp-route-id="@choice.Id" class="btn btn-sm btn-warning">✏️ Sửa</a>
+                        <a asp-action="Delete" asp-route-id="@choice.Id" class="btn btn-sm btn-danger"
+                           onclick="return confirm('Bạn có chắc muốn xoá lựa chọn này không?')">🗑️ Xoá</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <div class="alert alert-info">
+        Không có lựa chọn nào. Đây có thể là chương cuối hoặc tác giả chưa viết tiếp.
+    </div>
+}
+
+<hr />
+<h4>➕ Thêm lựa chọn mới</h4>
+
+<form asp-action="Add" method="post">
+    <input type="hidden" name="ChapterId" value="@chapter.Id" />
+    <div class="mb-3">
+        <label for="ChoiceText" class="form-label">Nội dung lựa chọn</label>
+        <input type="text" name="ChoiceText" class="form-control" required />
+    </div>
+    <div class="mb-3">
+        <label for="NextChapterId" class="form-label">ID chương tiếp theo</label>
+        <input type="number" name="NextChapterId" class="form-control" required />
+    </div>
+    <button type="submit" class="btn btn-success">Thêm lựa chọn</button>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

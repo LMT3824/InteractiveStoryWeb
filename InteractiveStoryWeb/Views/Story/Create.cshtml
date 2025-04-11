@@ -1,0 +1,41 @@
+﻿@model InteractiveStoryWeb.ViewModels.StoryCreateViewModel
+
+@{
+    ViewData["Title"] = "Đăng truyện mới";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<form asp-action="Create" enctype="multipart/form-data" method="post">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <div class="form-group mb-3">
+        <label asp-for="Title" class="form-label"></label>
+        <input asp-for="Title" class="form-control" />
+        <span asp-validation-for="Title" class="text-danger"></span>
+    </div>
+
+    <div class="form-group mb-3">
+        <label asp-for="Genre" class="form-label"></label>
+        <select asp-for="Genre" class="form-select" asp-items="@(new SelectList(ViewBag.Genres, "Name", "Name"))">
+            <option value="">-- Chọn thể loại --</option>
+        </select>
+        <span asp-validation-for="Genre" class="text-danger"></span>
+    </div>
+
+    <div class="form-group mb-3">
+        <label asp-for="CoverImage" class="form-label"></label>
+        <input asp-for="CoverImage" type="file" class="form-control" />
+    </div>
+
+    <div class="form-check mb-3">
+        <input asp-for="IsPublic" class="form-check-input" />
+        <label asp-for="IsPublic" class="form-check-label">Công khai</label>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Đăng truyện</button>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
