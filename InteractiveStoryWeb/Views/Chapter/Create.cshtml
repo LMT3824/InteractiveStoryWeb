@@ -1,27 +1,62 @@
 ﻿@model InteractiveStoryWeb.ViewModels.ChapterCreateViewModel
-
 @{
     ViewData["Title"] = "Tạo chương mới";
 }
 
-<h2>@ViewData["Title"]</h2>
+<h2 class="mb-4">📘 Tạo chương mới</h2>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
 
 <form asp-action="Create" method="post" enctype="multipart/form-data">
     <input type="hidden" asp-for="StoryId" />
-    <input type="hidden" asp-for="ParentChapterId" />
 
-    <div class="form-group mb-3">
-        <label asp-for="Content" class="form-label"></label>
-        <textarea asp-for="Content" class="form-control" rows="6"></textarea>
-        <span asp-validation-for="Content" class="text-danger"></span>
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+    <div class="mb-3">
+        <label asp-for="Title" class="form-label">Tiêu đề chương</label>
+        <input asp-for="Title" class="form-control" placeholder="Nhập tiêu đề chương..." />
+        <span asp-validation-for="Title" class="text-danger"></span>
     </div>
 
     <div class="form-group mb-3">
-        <label asp-for="Image" class="form-label"></label>
-        <input asp-for="Image" type="file" class="form-control" />
+        <label asp-for="FirstSegmentTitle" class="form-label">Tiêu đề đoạn đầu tiên</label>
+        <input asp-for="FirstSegmentTitle" class="form-control" placeholder="Nhập tiêu đề đoạn..." />
+        <span asp-validation-for="FirstSegmentTitle" class="text-danger"></span>
     </div>
 
-    <button type="submit" class="btn btn-success">Lưu chương</button>
+    <div class="mb-3">
+        <label asp-for="FirstSegmentContent" class="form-label">Nội dung đoạn đầu tiên</label>
+        <textarea asp-for="FirstSegmentContent" class="form-control" rows="6" placeholder="Nhập nội dung đoạn..."></textarea>
+        <span asp-validation-for="FirstSegmentContent" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Image" class="form-label">Ảnh minh họa (không bắt buộc)</label>
+        <input asp-for="Image" type="file" class="form-control" accept="image/*" />
+        <small class="form-text text-muted">Chọn ảnh minh họa (định dạng: jpg, png, ...)</small>
+    </div>
+
+    <div class="form-check mb-3">
+        <input asp-for="IsPublic" class="form-check-input" />
+        <label asp-for="IsPublic" class="form-check-label">Công khai chương này</label>
+    </div>
+
+    <button type="submit" class="btn btn-primary">📘 Tạo chương</button>
+    <a asp-action="Manage" asp-route-storyId="@Model.StoryId" class="btn btn-secondary ms-2">⬅️ Quay lại</a>
 </form>
 
 @section Scripts {

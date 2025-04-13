@@ -33,7 +33,7 @@ else
                     <div class="card-body">
                         <h5 class="card-title">@story.Title</h5>
                         <p class="card-text"><strong>Thể loại:</strong> @story.Genre</p>
-                        <p class="card-text"><strong>Lượt xem:</strong> @story.ViewCount</p>
+                        <p class="card-text"><strong>Lượt xem:</strong> @ViewBag.ViewCounts[story.Id]</p>
                     </div>
                     <div class="card-footer d-flex justify-content-between">
                         <a asp-controller="Story" asp-action="Edit" asp-route-id="@story.Id" class="btn btn-warning btn-sm">✏️ Sửa truyện</a>

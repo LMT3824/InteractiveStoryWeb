@@ -4,10 +4,12 @@ namespace InteractiveStoryWeb.ViewModels
 {
     public class ChoiceCreateViewModel
     {
-        public int ChapterId { get; set; }
+        public int ChapterSegmentId { get; set; }
 
-        [Required(ErrorMessage = "Bạn phải nhập nội dung lựa chọn.")]
-        [Display(Name = "Nội dung lựa chọn")]
+        [Required(ErrorMessage = "Vui lòng nhập nội dung lựa chọn.")]
         public string ChoiceText { get; set; }
+
+        [Required(ErrorMessage = "Vui lòng chọn ID đoạn tiếp theo.")]
+        public int NextSegmentId { get; set; }
     }
 }

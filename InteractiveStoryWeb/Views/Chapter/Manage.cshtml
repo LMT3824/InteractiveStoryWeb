@@ -1,46 +1,111 @@
 ﻿@model List<InteractiveStoryWeb.Models.Chapter>
 @{
-    ViewData["Title"] = "Quản lý chương";
-    var story = ViewBag.Story as InteractiveStoryWeb.Models.Story;
+    ViewData["Title"] = "Quản lý chương & phân nhánh của truyện";
+    var storyId = ViewBag.StoryId;
 }
 
-<h2 class="mb-3">📘 Quản lý chương: <strong>@story.Title</strong></h2>
+<h2 class="mb-4"><i class="bi bi-journal-bookmark"></i> Quản lý chương & phân nhánh của truyện</h2>
 
-<a asp-controller="Chapter" asp-action="Create" asp-route-storyId="@story.Id" class="btn btn-success mb-3">
-    ➕ Thêm chương mới
-</a>
-<a asp-controller="Chapter" asp-action="Tree" asp-route-storyId="@story.Id" class="btn btn-outline-info mb-3 ms-2">
-    🌳 Xem dạng cây nhánh
-</a>
+<div class="mb-3">
+    <a asp-controller="Chapter" asp-action="Create" asp-route-storyId="@storyId" class="btn btn-success">
+        <i class="bi bi-plus-lg"></i> Thêm chương mới
+    </a>
+    <a asp-controller="Story" asp-action="Index" class="btn btn-secondary ms-2">
+        <i class="bi bi-arrow-left"></i> Quay lại danh sách truyện
+    </a>
+</div>
 
 @if (!Model.Any())
 {
-    <p>Truyện này chưa có chương nào.</p>
+    <div class="alert alert-info">
+        Truyện này chưa có chương nào.
+    </div>
 }
 else
 {
-    <table class="table table-bordered table-striped">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Nội dung</th>
-                <th>Ngày tạo</th>
-                <th>Thao tác</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var chapter in Model)
-            {
-                <tr>
-                    <td>@chapter.Id</td>
-                    <td>@(chapter.Content.Length > 50 ? chapter.Content.Substring(0, 50) + "..." : chapter.Content)</td>
-                    <td>@chapter.CreatedAt.ToString("dd/MM/yyyy")</td>
-                    <td>
-                        <a asp-controller="Choice" asp-action="Manage" asp-route-chapterId="@chapter.Id" class="btn btn-sm btn-outline-secondary">🔗 Quản lý lựa chọn</a>
-                        <a asp-action="Edit" asp-route-id="@chapter.Id" class="btn btn-sm btn-outline-warning ms-1">✏️ Sửa</a>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    @foreach (var chapter in Model.OrderBy(c => c.CreatedAt))
+    {
+        <div class="card mb-3 border-primary">
+            <div class="card-header bg-primary text-white fw-bold">
+                <i class="bi bi-journal-text"></i> Chương @chapter.Title (ID: @chapter.Id)
+                <span class="badge @(chapter.IsPublic ? "bg-success" : "bg-secondary") ms-2">
+                    @(chapter.IsPublic ? "Công khai" : "Không công khai")
+                </span>
+                <span class="badge bg-info ms-2">
+                    <i class="bi bi-eye"></i> @chapter.ViewCount lượt xem
+                </span>
+
+                <a asp-controller="Chapter" asp-action="Edit" asp-route-id="@chapter.Id" class="btn btn-warning btn-sm float-end">
+                    <i class="bi bi-pencil"></i> Sửa
+                </a>
+            </div>
+            <div class="card-body">
+                <a class="btn btn-outline-success mb-2"
+                   asp-controller="Segment" asp-action="Create" asp-route-chapterId="@chapter.Id">
+                    <i class="bi bi-plus-circle"></i> Thêm đoạn mới
+                </a>
+
+                @if (chapter.Segments != null && chapter.Segments.Any())
+                {
+                    foreach (var segment in chapter.Segments.OrderBy(s => s.Id))
+                    {
+                        <div class="card mb-2 border-light">
+                            <div class="card-header">
+                                <strong>Đoạn @segment.Title</strong> (ID: @segment.Id)
+
+                                <a asp-controller="Segment" asp-action="Edit" asp-route-id="@segment.Id"
+                                   class="btn btn-sm btn-warning float-end ms-2">
+                                    <i class="bi bi-pencil"></i> Sửa
+                                </a>
+
+                                <a asp-controller="Choice" asp-action="Manage" asp-route-chapterSegmentId="@segment.Id"
+                                   class="btn btn-sm btn-outline-primary float-end">
+                                    <i class="bi bi-diagram-2"></i> Quản lý lựa chọn
+                                </a>
+                            </div>
+                            <div class="card-body">
+                                <p>@(segment.Content?.Length > 80 ? segment.Content.Substring(0, 80) + "..." : segment.Content)</p>
+
+                                @if (segment.Choices != null && segment.Choices.Any())
+                                {
+                                    <ul class="list-group">
+                                        @foreach (var choice in segment.Choices)
+                                        {
+                                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                @choice.ChoiceText
+                                                <div>
+                                                    <span class="badge bg-secondary">
+                                                        → Đến đoạn: @(choice.NextSegment?.Title ?? $"ID: {choice.NextSegmentId}")
+                                                    </span>
+
+                                                    <a asp-controller="Choice" asp-action="Edit" asp-route-id="@choice.Id"
+                                                       class="btn btn-sm btn-outline-warning ms-2">
+                                                        <i class="bi bi-pencil"></i> Sửa
+                                                    </a>
+
+                                                    <a asp-controller="Choice" asp-action="Delete" asp-route-id="@choice.Id"
+                                                       class="btn btn-sm btn-outline-danger ms-2"
+                                                       onclick="return confirm('Bạn có chắc chắn muốn xóa lựa chọn này?');">
+                                                        <i class="bi bi-trash"></i> Xóa
+                                                    </a>
+                                                </div>
+                                            </li>
+                                        }
+                                    </ul>
+                                }
+                                else
+                                {
+                                    <div class="alert alert-light mt-2">Không có lựa chọn nào cho đoạn này.</div>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="alert alert-light">Chương này chưa có đoạn nào.</div>
+                }
+            </div>
+        </div>
+    }
 }

@@ -1,29 +1,28 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace InteractiveStoryWeb.Migrations
 {
     /// <inheritdoc />
-    public partial class DateTimeChapter : Migration
+    public partial class AddChapterIsPublic : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<DateTime>(
-                name: "CreatedAt",
+            migrationBuilder.AddColumn<bool>(
+                name: "IsPublic",
                 table: "Chapters",
-                type: "datetime2",
+                type: "bit",
                 nullable: false,
-                defaultValue: new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified));
+                defaultValue: false);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "CreatedAt",
+                name: "IsPublic",
                 table: "Chapters");
         }
     }

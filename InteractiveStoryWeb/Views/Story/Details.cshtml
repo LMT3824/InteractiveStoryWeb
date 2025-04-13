@@ -13,10 +13,26 @@
     <div class="col-md-8">
         <h2>@Model.Title</h2>
         <p><strong>Thể loại:</strong> @Model.Genre</p>
-        <p><strong>Lượt xem:</strong> @Model.ViewCount</p>
+        <p><strong>Mô tả:</strong> @Model.Description</p> <!-- Hiển thị mô tả -->
+        <p><strong>Lượt xem:</strong> @ViewBag.TotalViewCount</p> <!-- Hiển thị tổng lượt xem -->
         <p><strong>Tác giả:</strong> @Model.Author?.UserName</p>
         <p><strong>Ngày đăng:</strong> @Model.CreatedAt.ToString("dd/MM/yyyy")</p>
 
-        <a asp-controller="Story" asp-action="Read" asp-route-id="@Model.Id" class="btn btn-success mt-3">Đọc từ đầu</a>
+        @if (ViewBag.FirstSegmentId != null)
+        {
+            <a asp-controller="Segment" asp-action="InteractiveRead" asp-route-id="@ViewBag.FirstSegmentId"
+               class="btn btn-primary">
+                📖 Đọc truyện tương tác
+            </a>
+        }
+        else
+        {
+            <div class="alert alert-warning mt-3">
+                Truyện chưa có nội dung để đọc.
+            </div>
+        }
+
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-secondary mt-2">✏️ Chỉnh sửa</a>
+        <a asp-action="Index" class="btn btn-outline-secondary mt-2">⬅️ Quay lại</a>
     </div>
 </div>

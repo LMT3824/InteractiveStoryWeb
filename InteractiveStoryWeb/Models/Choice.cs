@@ -5,16 +5,17 @@ namespace InteractiveStoryWeb.Models
     public class Choice
     {
         public int Id { get; set; }
-        [Required(ErrorMessage = "Chương gốc không hợp lệ.")]
-        public int ChapterId { get; set; }
+        public int ChapterSegmentId { get; set; }
 
-        [Required(ErrorMessage = "Nội dung lựa chọn là bắt buộc.")]
-        public string ChoiceText { get; set; } = "";
+        [Required]
+        public string ChoiceText { get; set; }
 
-        [Required(ErrorMessage = "Chương tiếp theo là bắt buộc.")]
-        public int NextChapterId { get; set; }
+        public int NextSegmentId { get; set; }
 
-        public Chapter Chapter { get; set; }
-        public Chapter? NextChapter { get; set; } // 👈 Navigation quan trọng
+        public DateTime CreatedAt { get; set; } = DateTime.Now; // Bỏ [Required]
+        public DateTime? UpdatedAt { get; set; }
+
+        public ChapterSegment ChapterSegment { get; set; }
+        public ChapterSegment? NextSegment { get; set; }
     }
 }

@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InteractiveStoryWeb.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250410162747_FixChoiceRelationship")]
-    partial class FixChoiceRelationship
+    [Migration("20250411133030_FixChoiceRelationships")]
+    partial class FixChoiceRelationships
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -133,32 +133,24 @@ namespace InteractiveStoryWeb.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("ImageUrl")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("ParentChapterId")
-                        .HasColumnType("int");
 
                     b.Property<int>("StoryId")
                         .HasColumnType("int");
 
-                    b.HasKey("Id");
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
-                    b.HasIndex("ParentChapterId");
+                    b.HasKey("Id");
 
                     b.HasIndex("StoryId");
 
                     b.ToTable("Chapters");
                 });
 
-            modelBuilder.Entity("InteractiveStoryWeb.Models.Choice", b =>
+            modelBuilder.Entity("InteractiveStoryWeb.Models.ChapterSegment", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -169,18 +161,43 @@ namespace InteractiveStoryWeb.Migrations
                     b.Property<int>("ChapterId")
                         .HasColumnType("int");
 
-                    b.Property<string>("ChoiceText")
+                    b.Property<string>("Content")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("NextChapterId")
-                        .HasColumnType("int");
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ChapterId");
 
-                    b.HasIndex("NextChapterId");
+                    b.ToTable("ChapterSegments");
+                });
+
+            modelBuilder.Entity("InteractiveStoryWeb.Models.Choice", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ChapterSegmentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ChoiceText")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("NextSegmentId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChapterSegmentId");
+
+                    b.HasIndex("NextSegmentId");
 
                     b.ToTable("Choices");
                 });
@@ -402,6 +419,9 @@ namespace InteractiveStoryWeb.Migrations
                     b.Property<int?>("GenreId")
                         .HasColumnType("int");
 
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsPublic")
                         .HasColumnType("bit");
 
@@ -614,11 +634,6 @@ namespace InteractiveStoryWeb.Migrations
 
             modelBuilder.Entity("InteractiveStoryWeb.Models.Chapter", b =>
                 {
-                    b.HasOne("InteractiveStoryWeb.Models.Chapter", null)
-                        .WithMany()
-                        .HasForeignKey("ParentChapterId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("InteractiveStoryWeb.Models.Story", "Story")
                         .WithMany("Chapters")
                         .HasForeignKey("StoryId")
@@ -628,23 +643,34 @@ namespace InteractiveStoryWeb.Migrations
                     b.Navigation("Story");
                 });
 
-            modelBuilder.Entity("InteractiveStoryWeb.Models.Choice", b =>
+            modelBuilder.Entity("InteractiveStoryWeb.Models.ChapterSegment", b =>
                 {
                     b.HasOne("InteractiveStoryWeb.Models.Chapter", "Chapter")
-                        .WithMany("Choices")
+                        .WithMany("Segments")
                         .HasForeignKey("ChapterId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("InteractiveStoryWeb.Models.Chapter", "NextChapter")
-                        .WithMany()
-                        .HasForeignKey("NextChapterId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Chapter");
+                });
 
-                    b.Navigation("NextChapter");
+            modelBuilder.Entity("InteractiveStoryWeb.Models.Choice", b =>
+                {
+                    b.HasOne("InteractiveStoryWeb.Models.ChapterSegment", "ChapterSegment")
+                        .WithMany("Choices")
+                        .HasForeignKey("ChapterSegmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InteractiveStoryWeb.Models.ChapterSegment", "NextSegment")
+                        .WithMany()
+                        .HasForeignKey("NextSegmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ChapterSegment");
+
+                    b.Navigation("NextSegment");
                 });
 
             modelBuilder.Entity("InteractiveStoryWeb.Models.Comment", b =>
@@ -848,6 +874,11 @@ namespace InteractiveStoryWeb.Migrations
                 });
 
             modelBuilder.Entity("InteractiveStoryWeb.Models.Chapter", b =>
+                {
+                    b.Navigation("Segments");
+                });
+
+            modelBuilder.Entity("InteractiveStoryWeb.Models.ChapterSegment", b =>
                 {
                     b.Navigation("Choices");
                 });

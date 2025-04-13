@@ -1,28 +1,55 @@
 ﻿@model InteractiveStoryWeb.Models.Choice
 @{
     ViewData["Title"] = "Chỉnh sửa lựa chọn";
+    var segment = ViewBag.Segment as InteractiveStoryWeb.Models.ChapterSegment;
+    var availableSegments = ViewBag.AvailableSegments as List<InteractiveStoryWeb.Models.ChapterSegment>;
 }
 
-<h2 class="mb-4">✏️ Chỉnh sửa lựa chọn</h2>
+<h2 class="mb-4">🔗 @ViewData["Title"]</h2>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="alert alert-light mb-3">
+    <strong>Đoạn hiện tại:</strong> @segment.Title (ID: @segment.Id)
+</div>
 
 <form asp-action="Edit" method="post">
     <input type="hidden" asp-for="Id" />
-    <input type="hidden" asp-for="ChapterId" />
+    <input type="hidden" asp-for="ChapterSegmentId" />
+    <input type="hidden" asp-for="CreatedAt" />
+
+    <div asp-validation-summary="All" class="text-danger mb-3"></div>
 
     <div class="mb-3">
         <label asp-for="ChoiceText" class="form-label">Nội dung lựa chọn</label>
-        <input asp-for="ChoiceText" class="form-control" />
+        <input asp-for="ChoiceText" class="form-control" placeholder="Nhập nội dung lựa chọn..." />
         <span asp-validation-for="ChoiceText" class="text-danger"></span>
     </div>
 
     <div class="mb-3">
-        <label asp-for="NextChapterId" class="form-label">ID chương tiếp theo</label>
-        <input asp-for="NextChapterId" class="form-control" />
-        <span asp-validation-for="NextChapterId" class="text-danger"></span>
+        <label asp-for="NextSegmentId" class="form-label">Đoạn tiếp theo</label>
+        <select asp-for="NextSegmentId" class="form-select" asp-items="@(new SelectList(availableSegments, "Id", "Title", Model.NextSegmentId))">
+            <option value="">-- Chọn đoạn --</option>
+        </select>
+        <span asp-validation-for="NextSegmentId" class="text-danger"></span>
     </div>
 
-    <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
-    <a asp-action="Manage" asp-route-chapterId="@Model.ChapterId" class="btn btn-secondary ms-2">Quay lại</a>
+    <button type="submit" class="btn btn-primary">💾 Lưu lựa chọn</button>
+    <a asp-action="Manage" asp-route-chapterSegmentId="@Model.ChapterSegmentId" class="btn btn-secondary ms-2">⬅️ Quay lại</a>
 </form>
 
 @section Scripts {

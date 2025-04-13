@@ -19,30 +19,27 @@ namespace InteractiveStoryWeb.Controllers
             _env = env;
         }
 
-        // GET: Chapter/Create?storyId=1
-        public IActionResult Create(int storyId, int? parentChapterId)
+        [Authorize]
+        public IActionResult Create(int storyId)
         {
-            var vm = new ChapterCreateViewModel
-            {
-                StoryId = storyId,
-                ParentChapterId = parentChapterId
-            };
-            return View(vm);
+            return View(new ChapterCreateViewModel { StoryId = storyId });
         }
 
-        // POST: Chapter/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(ChapterCreateViewModel model)
         {
             if (!ModelState.IsValid)
+            {
+                TempData["ErrorMessage"] = "Vui lòng kiểm tra lại thông tin.";
                 return View(model);
+            }
 
             string imagePath = null;
 
             if (model.Image != null && model.Image.Length > 0)
             {
-                var uploads = Path.Combine(_env.WebRootPath, "uploads/chapters");
+                var uploads = Path.Combine(_env.WebRootPath, "uploads/segments");
                 Directory.CreateDirectory(uploads);
 
                 var fileName = Guid.NewGuid().ToString() + Path.GetExtension(model.Image.FileName);
@@ -53,50 +50,129 @@ namespace InteractiveStoryWeb.Controllers
                     await model.Image.CopyToAsync(stream);
                 }
 
-                imagePath = "/uploads/chapters/" + fileName;
+                imagePath = "/uploads/segments/" + fileName;
             }
 
             var chapter = new Chapter
             {
                 StoryId = model.StoryId,
-                ParentChapterId = model.ParentChapterId,
-                Content = model.Content,
-                ImageUrl = imagePath, // null nếu không có ảnh
-                CreatedAt = DateTime.Now
+                Title = model.Title,
+                IsPublic = model.IsPublic,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now
             };
-
             _context.Chapters.Add(chapter);
             await _context.SaveChangesAsync();
 
-            // TODO: chuyển sang quản lý lựa chọn hoặc danh sách chương
-            return RedirectToAction("Manage", "Choice", new { chapterId = chapter.Id });
+            var segment = new ChapterSegment
+            {
+                ChapterId = chapter.Id,
+                Title = model.FirstSegmentTitle,
+                Content = model.FirstSegmentContent,
+                ImageUrl = imagePath,
+                CreatedAt = DateTime.Now
+            };
+            _context.ChapterSegments.Add(segment);
+            await _context.SaveChangesAsync();
+
+            // Tạo đoạn thứ hai và lựa chọn (đã sửa trước đó)
+            var secondSegment = new ChapterSegment
+            {
+                ChapterId = chapter.Id,
+                Title = "Đoạn 2",
+                Content = "Nội dung đoạn 2",
+                CreatedAt = DateTime.Now
+            };
+            _context.ChapterSegments.Add(secondSegment);
+            await _context.SaveChangesAsync();
+
+            var choice = new Choice
+            {
+                ChapterSegmentId = segment.Id,
+                ChoiceText = "Sang đoạn 2",
+                NextSegmentId = secondSegment.Id,
+                CreatedAt = DateTime.Now
+            };
+            _context.Choices.Add(choice);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Chương đã được tạo thành công!";
+            return RedirectToAction("Manage", "Chapter", new { storyId = chapter.StoryId });
         }
 
-        [AllowAnonymous]
-        public async Task<IActionResult> Read(int id)
+        [HttpGet]
+        [Authorize]
+        public async Task<IActionResult> Edit(int id)
         {
-            var chapter = await _context.Chapters
-                .Include(c => c.Choices)
-                .Include(c => c.Story)
-                .FirstOrDefaultAsync(c => c.Id == id);
-
+            var chapter = await _context.Chapters.FindAsync(id);
             if (chapter == null) return NotFound();
 
             return View(chapter);
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(Chapter model)
+        {
+            if (!ModelState.IsValid)
+            {
+                TempData["ErrorMessage"] = "Vui lòng kiểm tra lại thông tin.";
+                return View(model);
+            }
+
+            var chapter = await _context.Chapters.FindAsync(model.Id);
+            if (chapter == null) return NotFound();
+
+            chapter.Title = model.Title;
+            chapter.IsPublic = model.IsPublic;
+            chapter.UpdatedAt = DateTime.Now;
+
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Chương đã được cập nhật thành công!";
+            return RedirectToAction("Manage", new { storyId = chapter.StoryId });
+        }
+
+
+        [AllowAnonymous]
+        public async Task<IActionResult> Read(int id)
+        {
+            var chapter = await _context.Chapters
+                .Include(c => c.Story)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (chapter == null)
+                return NotFound();
+
+            // Tăng ViewCount
+            chapter.ViewCount++;
+            await _context.SaveChangesAsync();
+
+            var firstSegment = await _context.ChapterSegments
+                .Where(s => s.ChapterId == chapter.Id)
+                .OrderBy(s => s.Id)
+                .FirstOrDefaultAsync();
+
+            if (firstSegment == null)
+                return NotFound("Chương chưa có đoạn nào.");
+
+            // Chuyển tới đọc đoạn đầu tiên
+            return RedirectToAction("Read", "Segment", new { id = firstSegment.Id });
+        }
+
         [Authorize]
         public async Task<IActionResult> Manage(int storyId)
         {
-            var story = await _context.Stories
-                .Include(s => s.Chapters)
-                .FirstOrDefaultAsync(s => s.Id == storyId);
+            var chapters = await _context.Chapters
+                .Where(c => c.StoryId == storyId)
+                .Include(c => c.Segments)
+                    .ThenInclude(s => s.Choices) // ✅ Thêm dòng này
+                        .ThenInclude(c => c.NextSegment) // ✅ Nếu muốn hiện tiêu đề đoạn tiếp theo
+                .OrderBy(c => c.CreatedAt)
+                .ToListAsync();
 
-            if (story == null)
-                return NotFound();
-
-            ViewBag.Story = story;
-            return View(story.Chapters.OrderBy(c => c.Id).ToList());
+            ViewBag.StoryId = storyId;
+            return View(chapters);
         }
 
         [Authorize]
@@ -104,29 +180,11 @@ namespace InteractiveStoryWeb.Controllers
         {
             var chapters = await _context.Chapters
                 .Where(c => c.StoryId == storyId)
-                .OrderBy(c => c.Id)
+                .OrderBy(c => c.CreatedAt)
                 .ToListAsync();
 
-            var chapterDict = chapters.ToDictionary(c => c.Id, c => new ChapterTreeViewModel
-            {
-                Id = c.Id,
-                ContentPreview = c.Content.Length > 50 ? c.Content.Substring(0, 50) + "..." : c.Content,
-                CreatedAt = c.CreatedAt
-            });
-
-            foreach (var chapter in chapters)
-            {
-                if (chapter.ParentChapterId.HasValue)
-                {
-                    chapterDict[chapter.ParentChapterId.Value].Children.Add(chapterDict[chapter.Id]);
-                }
-            }
-
-            var roots = chapterDict.Values.Where(c =>
-                !chapters.Any(ch => ch.Id == c.Id && ch.ParentChapterId.HasValue)).ToList();
-
             ViewBag.StoryId = storyId;
-            return View(roots);
+            return View(chapters); // sử dụng View mới để hiển thị danh sách chương
         }
     }
 }

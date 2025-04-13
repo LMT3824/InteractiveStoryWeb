@@ -1,0 +1,54 @@
+﻿@model InteractiveStoryWeb.ViewModels.ChapterSegmentCreateViewModel
+
+@{
+    ViewData["Title"] = "Thêm đoạn mới vào chương";
+}
+
+<h2 class="mb-4">📄 Thêm đoạn mới</h2>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<form asp-action="Create" method="post" enctype="multipart/form-data">
+    <input type="hidden" asp-for="ChapterId" />
+
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+    <div class="mb-3">
+        <label asp-for="Title" class="form-label">Tiêu đề đoạn</label>
+        <input asp-for="Title" class="form-control" placeholder="Nhập tiêu đề đoạn..." />
+        <span asp-validation-for="Title" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Content" class="form-label">Nội dung đoạn</label>
+        <textarea asp-for="Content" class="form-control" rows="6" placeholder="Nhập nội dung đoạn..."></textarea>
+        <span asp-validation-for="Content" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Image" class="form-label">Ảnh minh họa (nếu có)</label>
+        <input asp-for="Image" type="file" class="form-control" accept="image/*" />
+        <small class="form-text text-muted">Chọn ảnh minh họa (định dạng: jpg, png, ...)</small>
+    </div>
+
+    <button type="submit" class="btn btn-primary">📄 Lưu đoạn</button>
+    <a asp-controller="Chapter" asp-action="Manage" asp-route-storyId="@ViewBag.StoryId" class="btn btn-secondary ms-2">⬅️ Quay lại</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

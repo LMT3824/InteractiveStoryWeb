@@ -5,20 +5,20 @@
 namespace InteractiveStoryWeb.Migrations
 {
     /// <inheritdoc />
-    public partial class FixChoiceRelationship : Migration
+    public partial class FixChoiceRelationships : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropForeignKey(
-                name: "FK_Choices_Chapters_ChapterId",
+                name: "FK_Choices_ChapterSegments_NextSegmentId",
                 table: "Choices");
 
             migrationBuilder.AddForeignKey(
-                name: "FK_Choices_Chapters_ChapterId",
+                name: "FK_Choices_ChapterSegments_NextSegmentId",
                 table: "Choices",
-                column: "ChapterId",
-                principalTable: "Chapters",
+                column: "NextSegmentId",
+                principalTable: "ChapterSegments",
                 principalColumn: "Id",
                 onDelete: ReferentialAction.Restrict);
         }
@@ -27,14 +27,14 @@ namespace InteractiveStoryWeb.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropForeignKey(
-                name: "FK_Choices_Chapters_ChapterId",
+                name: "FK_Choices_ChapterSegments_NextSegmentId",
                 table: "Choices");
 
             migrationBuilder.AddForeignKey(
-                name: "FK_Choices_Chapters_ChapterId",
+                name: "FK_Choices_ChapterSegments_NextSegmentId",
                 table: "Choices",
-                column: "ChapterId",
-                principalTable: "Chapters",
+                column: "NextSegmentId",
+                principalTable: "ChapterSegments",
                 principalColumn: "Id",
                 onDelete: ReferentialAction.Cascade);
         }

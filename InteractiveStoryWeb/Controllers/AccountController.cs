@@ -19,17 +19,25 @@ namespace InteractiveStoryWeb.Controllers
             _userManager = userManager;
         }
 
+        [Authorize]
         public async Task<IActionResult> MyProfile()
         {
             var user = await _userManager.GetUserAsync(User);
-
-            var myStories = await _context.Stories
+            var stories = await _context.Stories
                 .Where(s => s.AuthorId == user.Id)
-                .OrderByDescending(s => s.CreatedAt)
+                .Include(s => s.Chapters)
                 .ToListAsync();
 
+            // Tính tổng ViewCount cho từng Story
+            var viewCounts = new Dictionary<int, int>();
+            foreach (var story in stories)
+            {
+                viewCounts[story.Id] = story.Chapters?.Sum(ch => ch.ViewCount) ?? 0;
+            }
+            ViewBag.ViewCounts = viewCounts;
             ViewBag.User = user;
-            return View(myStories);
+
+            return View(stories);
         }
     }
 }

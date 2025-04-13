@@ -1,0 +1,62 @@
+﻿@model InteractiveStoryWeb.Models.ChapterSegment
+
+<h2 class="mb-4">📖 Đọc truyện tương tác</h2>
+
+<div class="mb-3">
+    <h4>@Model.Chapter.Story.Title</h4>
+    <p class="text-muted">Chương: @Model.Chapter.Title | Đoạn: @Model.Title</p>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        @Html.Raw(Model.Content)
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.ImageUrl))
+{
+    <div class="text-center mb-3">
+        <img src="@Model.ImageUrl" class="img-fluid rounded shadow" alt="Ảnh minh họa" />
+    </div>
+}
+
+@if (Model.Choices != null && Model.Choices.Any())
+{
+    <ul class="list-group mb-4">
+        @foreach (var choice in Model.Choices.Where(c =>
+       c.NextSegment?.Chapter?.StoryId == Model.Chapter?.StoryId &&
+       c.NextSegment?.ChapterId == Model.ChapterId))
+        {
+            <li class="list-group-item">
+                <form asp-controller="Choice" asp-action="Choose" method="post">
+                    <input type="hidden" name="id" value="@choice.Id" />
+                    <button type="submit" class="btn btn-outline-primary w-100">
+                        @choice.ChoiceText
+                    </button>
+                </form>
+            </li>
+        }
+    </ul>
+}
+else
+{
+    <div class="alert alert-info mt-3">
+        Hết truyện hoặc chưa có lựa chọn tiếp theo trong chương này.
+    </div>
+
+    @if (ViewBag.HasNextChapter == true)
+    {
+        <form asp-controller="Segment" asp-action="NextChapter" method="post" class="mt-2">
+            <input type="hidden" name="currentSegmentId" value="@Model.Id" />
+            <button type="submit" class="btn btn-outline-primary">📖 Sang chương tiếp theo</button>
+        </form>
+    }
+    else
+    {
+        <div class="alert alert-warning mt-2">
+            Không có chương tiếp theo.
+        </div>
+    }
+}
+
+<a asp-controller="Story" asp-action="Details" asp-route-id="@Model.Chapter.StoryId" class="btn btn-secondary mt-3">⬅️ Quay lại chi tiết truyện</a>

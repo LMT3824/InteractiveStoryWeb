@@ -1,0 +1,63 @@
+﻿@model InteractiveStoryWeb.Models.ChapterSegment
+
+@{
+    ViewData["Title"] = "Chỉnh sửa đoạn truyện";
+}
+
+<h2 class="mb-4">📝 @ViewData["Title"]</h2>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<form asp-action="Edit" method="post" enctype="multipart/form-data">
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="ChapterId" />
+    <input type="hidden" asp-for="CreatedAt" />
+
+    <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+    <div class="mb-3">
+        <label asp-for="Title" class="form-label">Tiêu đề đoạn</label>
+        <input asp-for="Title" class="form-control" placeholder="Nhập tiêu đề đoạn..." />
+        <span asp-validation-for="Title" class="text-danger"></span>
+    </div>
+
+    <div class="form-group mb-3">
+        <label asp-for="Content" class="form-label">Nội dung đoạn</label>
+        <textarea asp-for="Content" rows="6" class="form-control" placeholder="Nhập nội dung đoạn..."></textarea>
+        <span asp-validation-for="Content" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label for="NewImage" class="form-label">Ảnh minh họa mới (tùy chọn)</label>
+        <input type="file" name="NewImage" class="form-control" accept="image/*" />
+        <small class="form-text text-muted">Chọn ảnh minh họa mới (định dạng: jpg, png, ...)</small>
+        @if (!string.IsNullOrEmpty(Model.ImageUrl))
+        {
+            <div class="mt-2">
+                <p>Ảnh hiện tại:</p>
+                <img src="@Model.ImageUrl" class="img-thumbnail" style="max-height: 200px;" alt="Ảnh minh họa" />
+            </div>
+        }
+    </div>
+
+    <button type="submit" class="btn btn-success">💾 Lưu thay đổi</button>
+    <a asp-controller="Chapter" asp-action="Manage" asp-route-storyId="@ViewBag.StoryId" class="btn btn-secondary ms-2">⬅️ Quay lại</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -13,6 +13,7 @@ namespace InteractiveStoryWeb.Data
 
         public DbSet<Story> Stories { get; set; }
         public DbSet<Chapter> Chapters { get; set; }
+        public DbSet<ChapterSegment> ChapterSegments { get; set; }
         public DbSet<Choice> Choices { get; set; }
         public DbSet<Comment> Comments { get; set; }
         public DbSet<Genre> Genres { get; set; }
@@ -28,27 +29,31 @@ namespace InteractiveStoryWeb.Data
         {
             base.OnModelCreating(builder);
 
-            base.OnModelCreating(builder);
-
-            // Chapter có nhiều lựa chọn đi ra (Choices), mỗi Choice thuộc 1 Chapter (gốc)
-            builder.Entity<Choice>()
-                .HasOne(c => c.Chapter)
-                .WithMany(ch => ch.Choices)
-                .HasForeignKey(c => c.ChapterId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // Mỗi Choice dẫn đến 1 chương tiếp theo (NextChapter), không cần ngược lại
-            builder.Entity<Choice>()
-                .HasOne(c => c.NextChapter)
-                .WithMany()
-                .HasForeignKey(c => c.NextChapterId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // 🔸 CHAPTER → PARENT CHAPTER
+            // 🔸 CHAPTER → SEGMENTS
             builder.Entity<Chapter>()
-                .HasOne<Chapter>()
+                .HasMany(c => c.Segments)
+                .WithOne(s => s.Chapter)
+                .HasForeignKey(s => s.ChapterId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // 🔸 SEGMENT → CHOICES
+            builder.Entity<ChapterSegment>()
+                .HasMany(s => s.Choices)
+                .WithOne(c => c.ChapterSegment)
+                .HasForeignKey(c => c.ChapterSegmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // 🔸 CHOICE → NEXT SEGMENT
+            builder.Entity<Choice>()
+                .HasOne(c => c.ChapterSegment)
+                .WithMany(s => s.Choices) 
+                .HasForeignKey(c => c.ChapterSegmentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Choice>()
+                .HasOne(c => c.NextSegment)
                 .WithMany()
-                .HasForeignKey(c => c.ParentChapterId)
+                .HasForeignKey(c => c.NextSegmentId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             // 🔸 LIBRARY → STORY + USER

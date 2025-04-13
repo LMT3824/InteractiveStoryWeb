@@ -1,32 +1,51 @@
-using System.Diagnostics;
-using InteractiveStoryWeb.Models;
+﻿using InteractiveStoryWeb.Data;
+using InteractiveStoryWeb.ViewModels;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Linq;
+using System.Threading.Tasks;
 
-namespace InteractiveStoryWeb.Controllers
+public class HomeController : Controller
 {
-    public class HomeController : Controller
+    private readonly ApplicationDbContext _context;
+
+    public HomeController(ApplicationDbContext context)
     {
-        private readonly ILogger<HomeController> _logger;
+        _context = context;
+    }
 
-        public HomeController(ILogger<HomeController> logger)
+    public async Task<IActionResult> Index()
+    {
+        var model = new HomeViewModel
         {
-            _logger = logger;
-        }
+            TopViewed = await _context.Stories
+            .Where(s => s.IsPublic)
+            .Include(s => s.Chapters)
+            .OrderByDescending(s => s.Chapters.Sum(ch => ch.ViewCount))
+            .Take(4)
+            .ToListAsync(),
+            NewStories = await _context.Stories
+            .Where(s => s.IsPublic)
+            .Include(s => s.Chapters)
+            .OrderByDescending(s => s.CreatedAt)
+            .Take(4)
+            .ToListAsync(),
+            CompletedStories = await _context.Stories
+            .Where(s => s.IsPublic && s.IsCompleted)
+            .Include(s => s.Chapters)
+            .OrderByDescending(s => s.CreatedAt)
+            .Take(4)
+            .ToListAsync()
+        };
 
-        public IActionResult Index()
+        // Tính tổng ViewCount cho từng Story
+        var viewCounts = new Dictionary<int, int>();
+        foreach (var story in model.TopViewed.Concat(model.NewStories).Concat(model.CompletedStories).Distinct())
         {
-            return View();
+            viewCounts[story.Id] = story.Chapters?.Sum(ch => ch.ViewCount) ?? 0;
         }
+        ViewBag.ViewCounts = viewCounts;
 
-        public IActionResult Privacy()
-        {
-            return View();
-        }
-
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
-        {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
-        }
+        return View(model);
     }
 }

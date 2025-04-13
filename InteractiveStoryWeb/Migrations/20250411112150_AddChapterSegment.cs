@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace InteractiveStoryWeb.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class AddChapterSegment : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -252,6 +252,8 @@ namespace InteractiveStoryWeb.Migrations
                     Genre = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsPublic = table.Column<bool>(type: "bit", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ViewCount = table.Column<int>(type: "int", nullable: false),
+                    IsCompleted = table.Column<bool>(type: "bit", nullable: false),
                     GenreId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
@@ -310,19 +312,12 @@ namespace InteractiveStoryWeb.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     StoryId = table.Column<int>(type: "int", nullable: false),
-                    Content = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ImageUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ParentChapterId = table.Column<int>(type: "int", nullable: true)
+                    Title = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Chapters", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Chapters_Chapters_ParentChapterId",
-                        column: x => x.ParentChapterId,
-                        principalTable: "Chapters",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Chapters_Stories_StoryId",
                         column: x => x.StoryId,
@@ -385,30 +380,24 @@ namespace InteractiveStoryWeb.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Choices",
+                name: "ChapterSegments",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     ChapterId = table.Column<int>(type: "int", nullable: false),
-                    ChoiceText = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    NextChapterId = table.Column<int>(type: "int", nullable: false)
+                    Content = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ImageUrl = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Choices", x => x.Id);
+                    table.PrimaryKey("PK_ChapterSegments", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Choices_Chapters_ChapterId",
+                        name: "FK_ChapterSegments_Chapters_ChapterId",
                         column: x => x.ChapterId,
                         principalTable: "Chapters",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Choices_Chapters_NextChapterId",
-                        column: x => x.NextChapterId,
-                        principalTable: "Chapters",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -445,6 +434,33 @@ namespace InteractiveStoryWeb.Migrations
                         principalTable: "Stories",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Choices",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ChapterSegmentId = table.Column<int>(type: "int", nullable: false),
+                    ChoiceText = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    NextSegmentId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Choices", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Choices_ChapterSegments_ChapterSegmentId",
+                        column: x => x.ChapterSegmentId,
+                        principalTable: "ChapterSegments",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Choices_ChapterSegments_NextSegmentId",
+                        column: x => x.NextSegmentId,
+                        principalTable: "ChapterSegments",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -537,24 +553,24 @@ namespace InteractiveStoryWeb.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Chapters_ParentChapterId",
-                table: "Chapters",
-                column: "ParentChapterId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Chapters_StoryId",
                 table: "Chapters",
                 column: "StoryId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Choices_ChapterId",
-                table: "Choices",
+                name: "IX_ChapterSegments_ChapterId",
+                table: "ChapterSegments",
                 column: "ChapterId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Choices_NextChapterId",
+                name: "IX_Choices_ChapterSegmentId",
                 table: "Choices",
-                column: "NextChapterId");
+                column: "ChapterSegmentId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Choices_NextSegmentId",
+                table: "Choices",
+                column: "NextSegmentId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Comments_ChapterId",
@@ -681,6 +697,9 @@ namespace InteractiveStoryWeb.Migrations
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");
+
+            migrationBuilder.DropTable(
+                name: "ChapterSegments");
 
             migrationBuilder.DropTable(
                 name: "Comments");

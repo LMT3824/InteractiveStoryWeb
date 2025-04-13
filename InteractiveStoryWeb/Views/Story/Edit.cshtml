@@ -1,7 +1,6 @@
-﻿@model InteractiveStoryWeb.ViewModels.StoryCreateViewModel
-
+﻿@model InteractiveStoryWeb.Models.Story
 @{
-    ViewData["Title"] = "Đăng truyện mới";
+    ViewData["Title"] = "Chỉnh sửa truyện";
 }
 
 <h2 class="mb-4">@ViewData["Title"]</h2>
@@ -22,16 +21,20 @@
     </div>
 }
 
-<form asp-action="Create" enctype="multipart/form-data" method="post">
-    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+<form asp-action="Edit" method="post" enctype="multipart/form-data">
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="AuthorId" />
+    <input type="hidden" asp-for="CreatedAt" />
 
-    <div class="form-group mb-3">
+    <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+    <div class="mb-3">
         <label asp-for="Title" class="form-label">Tiêu đề truyện</label>
         <input asp-for="Title" class="form-control" placeholder="Nhập tiêu đề truyện..." />
         <span asp-validation-for="Title" class="text-danger"></span>
     </div>
 
-    <div class="form-group mb-3">
+    <div class="mb-3">
         <label asp-for="Genre" class="form-label">Thể loại</label>
         <select asp-for="Genre" class="form-select" asp-items="@(new SelectList(ViewBag.Genres, "Name", "Name"))">
             <option value="">-- Chọn thể loại --</option>
@@ -39,25 +42,32 @@
         <span asp-validation-for="Genre" class="text-danger"></span>
     </div>
 
-    <div class="form-group mb-3">
+    <div class="mb-3">
         <label asp-for="Description" class="form-label">Mô tả truyện</label>
         <textarea asp-for="Description" class="form-control" rows="5" placeholder="Nhập mô tả truyện..."></textarea>
         <span asp-validation-for="Description" class="text-danger"></span>
     </div>
 
-    <div class="form-group mb-3">
-        <label asp-for="CoverImage" class="form-label">Ảnh bìa</label>
-        <input asp-for="CoverImage" type="file" class="form-control" accept="image/*" />
-        <small class="form-text text-muted">Chọn ảnh bìa (định dạng: jpg, png, ...)</small>
+    <div class="mb-3">
+        <label asp-for="IsPublic" class="form-check-label">Công khai?</label>
+        <input asp-for="IsPublic" class="form-check-input ms-2" type="checkbox" />
     </div>
 
-    <div class="form-check mb-3">
-        <input asp-for="IsPublic" class="form-check-input" />
-        <label asp-for="IsPublic" class="form-check-label">Công khai truyện</label>
+    <div class="mb-3">
+        <label for="NewCoverImage" class="form-label">Ảnh bìa mới (tuỳ chọn)</label>
+        <input type="file" name="NewCoverImage" class="form-control" accept="image/*" />
+        <small class="form-text text-muted">Chọn ảnh bìa mới (định dạng: jpg, png, ...)</small>
+        @if (!string.IsNullOrEmpty(Model.CoverImageUrl))
+        {
+            <div class="mt-2">
+                <p>Ảnh hiện tại:</p>
+                <img src="@Model.CoverImageUrl" class="img-thumbnail" style="max-height: 200px;" />
+            </div>
+        }
     </div>
 
-    <button type="submit" class="btn btn-primary">📖 Đăng truyện</button>
-    <a asp-action="Index" class="btn btn-secondary ms-2">⬅️ Quay lại</a>
+    <button type="submit" class="btn btn-primary">💾 Lưu thay đổi</button>
+    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-secondary ms-2">⬅️ Quay lại</a>
 </form>
 
 @section Scripts {
