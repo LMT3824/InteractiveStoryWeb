@@ -1,15 +1,26 @@
 ﻿@model InteractiveStoryWeb.Models.ChapterSegment
 
+@{
+    var customization = ViewBag.Customization as InteractiveStoryWeb.Models.ReaderStoryCustomization;
+}
+
 <h2 class="mb-4">📖 Đọc truyện tương tác</h2>
 
 <div class="mb-3">
     <h4>@Model.Chapter.Story.Title</h4>
     <p class="text-muted">Chương: @Model.Chapter.Title | Đoạn: @Model.Title</p>
+    @if (customization != null)
+    {
+        <p class="text-muted">Nhân vật: @customization.Name</p>
+        <a asp-controller="Story" asp-action="Customize" asp-route-storyId="@Model.Chapter.StoryId" class="btn btn-outline-secondary mt-2">
+            ✏️ Chỉnh sửa tên/xưng hô
+        </a>
+    }
 </div>
 
 <div class="card mb-3">
     <div class="card-body">
-        @Html.Raw(Model.Content)
+        @Html.Raw(Model.Content.Replace("\n", "<br/>"))
     </div>
 </div>
 

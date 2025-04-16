@@ -2,6 +2,7 @@
 
 @{
     ViewData["Title"] = "Thêm đoạn mới vào chương";
+
 }
 
 <h2 class="mb-4">📄 Thêm đoạn mới</h2>
@@ -37,7 +38,21 @@
         <label asp-for="Content" class="form-label">Nội dung đoạn</label>
         <textarea asp-for="Content" class="form-control" rows="6" placeholder="Nhập nội dung đoạn..."></textarea>
         <span asp-validation-for="Content" class="text-danger"></span>
+        @if (ViewBag.AllowCustomization == true)
+        {
+            <small class="form-text text-muted">
+                Bạn có thể dùng các từ khóa: [Tên], [XưngHôThứNhất], [XưngHôThứHai]. Chúng sẽ được thay thế bằng thông tin người đọc nhập.
+                <br />Ví dụ: "[Tên] nói: [XưngHôThứNhất] sẽ đi đâu?" trở thành "Anna nói: Tôi sẽ đi đâu?"
+            </small>
+        }
+        else
+        {
+            <small class="form-text text-muted">
+                Truyện này không bật tùy chỉnh nhân vật. Nội dung sẽ hiển thị như bạn nhập.
+            </small>
+        }
     </div>
+
 
     <div class="mb-3">
         <label asp-for="Image" class="form-label">Ảnh minh họa (nếu có)</label>

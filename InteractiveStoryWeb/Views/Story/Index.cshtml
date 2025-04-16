@@ -34,6 +34,7 @@ else
                         <p class="card-text"><strong>Thể loại:</strong> @story.Genre</p>
                         <p class="card-text"><strong>Mô tả:</strong> @(story.Description.Length > 100 ? story.Description.Substring(0, 100) + "..." : story.Description)</p>
                         <p class="card-text"><strong>Lượt xem:</strong> @ViewBag.ViewCounts[story.Id]</p> <!-- Sử dụng ViewBag -->
+                        <p class="card-text"><strong>Tùy chỉnh nhân vật:</strong> @(story.AllowCustomization ? "Có" : "Không")</p>
                         <p class="card-text"><small class="text-muted">Tác giả: @story.Author?.UserName</small></p>
                         <p class="card-text"><small class="text-muted">Ngày đăng: @story.CreatedAt.ToString("dd/MM/yyyy")</small></p>
                     </div>

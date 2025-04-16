@@ -54,6 +54,11 @@
     </div>
 
     <div class="mb-3">
+        <label asp-for="AllowCustomization" class="form-check-label">Cho phép người đọc tùy chỉnh tên và xưng hô</label>
+        <input asp-for="AllowCustomization" class="form-check-input ms-2" type="checkbox" />
+    </div>
+
+    <div class="mb-3">
         <label for="NewCoverImage" class="form-label">Ảnh bìa mới (tuỳ chọn)</label>
         <input type="file" name="NewCoverImage" class="form-control" accept="image/*" />
         <small class="form-text text-muted">Chọn ảnh bìa mới (định dạng: jpg, png, ...)</small>

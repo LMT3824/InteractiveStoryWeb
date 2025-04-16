@@ -18,6 +18,7 @@ namespace InteractiveStoryWeb.Models
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime? UpdatedAt { get; set; }
         public bool IsCompleted { get; set; }
+        public bool AllowCustomization { get; set; } = false; // Bật/tắt tính năng cá nhân hóa
 
         public ApplicationUser Author { get; set; }
         public ICollection<Chapter>? Chapters { get; set; } = new List<Chapter>();

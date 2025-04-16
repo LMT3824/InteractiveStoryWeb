@@ -1,9 +1,13 @@
-﻿using InteractiveStoryWeb.Data;
+﻿using System.Text.RegularExpressions;
+using InteractiveStoryWeb.Data;
 using InteractiveStoryWeb.Models;
 using InteractiveStoryWeb.ViewModels;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
+using InteractiveStoryWeb.Utils;
 
 namespace InteractiveStoryWeb.Controllers
 {
@@ -12,11 +16,13 @@ namespace InteractiveStoryWeb.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _env;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public SegmentController(ApplicationDbContext context, IWebHostEnvironment env)
+        public SegmentController(ApplicationDbContext context, IWebHostEnvironment env, UserManager<ApplicationUser> userManager)
         {
             _context = context;
             _env = env;
+            _userManager = userManager;
         }
 
         [HttpGet]
@@ -25,6 +31,7 @@ namespace InteractiveStoryWeb.Controllers
             var chapter = _context.Chapters.Find(chapterId);
             if (chapter == null) return NotFound();
             ViewBag.StoryId = chapter.StoryId; // Gán StoryId cho nút "Quay lại"
+            ViewBag.AllowCustomization = chapter.Story?.AllowCustomization ?? false;
             return View(new ChapterSegmentCreateViewModel { ChapterId = chapterId });
         }
 
@@ -119,11 +126,60 @@ namespace InteractiveStoryWeb.Controllers
                 .FirstOrDefaultAsync();
             if (segment.Id == firstSegment?.Id)
             {
-                chapter.ViewCount++; // Tăng ViewCount của Chapter
+                chapter.ViewCount++;
                 await _context.SaveChangesAsync();
             }
 
-            // Lọc các lựa chọn: chỉ giữ lại nếu NextSegment tồn tại, cùng chương, cùng truyện, và chương public
+            // Thay thế từ khóa nếu tính năng cá nhân hóa được bật
+            ReaderStoryCustomization customization = null;
+            if (story.AllowCustomization)
+            {
+                var user = await _userManager.GetUserAsync(User);
+                string userId = user?.Id ?? "anonymous";
+
+                if (user != null) // Người dùng đã đăng nhập, đọc từ database
+                {
+                    customization = await _context.ReaderStoryCustomizations
+                        .FirstOrDefaultAsync(rsc => rsc.StoryId == story.Id && rsc.UserId == userId);
+                }
+                else // Người dùng chưa đăng nhập, đọc từ session
+                {
+                    var sessionKey = $"Customization_{story.Id}";
+                    var sessionData = HttpContext.Session.GetString(sessionKey);
+                    if (!string.IsNullOrEmpty(sessionData))
+                    {
+                        customization = JsonSerializer.Deserialize<ReaderStoryCustomization>(sessionData);
+                    }
+                }
+
+                if (customization != null)
+                {
+                    // Debug dữ liệu customization
+                    if (string.IsNullOrEmpty(customization.Name))
+                    {
+                        Console.WriteLine($"Customization Name is empty for UserId: {userId}, StoryId: {story.Id}");
+                    }
+                    if (string.IsNullOrEmpty(customization.FirstPersonPronoun))
+                    {
+                        Console.WriteLine($"Customization FirstPersonPronoun is empty for UserId: {userId}, StoryId: {story.Id}");
+                    }
+                    if (string.IsNullOrEmpty(customization.SecondPersonPronoun))
+                    {
+                        Console.WriteLine($"Customization SecondPersonPronoun is empty for UserId: {userId}, StoryId: {story.Id}");
+                    }
+
+                    // Thay thế từ khóa với viết hoa theo ngữ cảnh
+                    segment.Content = TextFormatter.ReplaceWithContextualCapitalization(segment.Content, "[Tên]", customization.Name);
+                    segment.Content = TextFormatter.ReplaceWithContextualCapitalization(segment.Content, "[XưngHôThứNhất]", customization.FirstPersonPronoun);
+                    segment.Content = TextFormatter.ReplaceWithContextualCapitalization(segment.Content, "[XưngHôThứHai]", customization.SecondPersonPronoun);
+                }
+                else
+                {
+                    Console.WriteLine($"Customization is null for UserId: {userId}, StoryId: {story.Id}");
+                }
+            }
+
+            // Lọc các lựa chọn
             segment.Choices = segment.Choices
                 .Where(c => c.NextSegment != null &&
                             c.NextSegment.ChapterId == segment.ChapterId &&
@@ -131,11 +187,10 @@ namespace InteractiveStoryWeb.Controllers
                             c.NextSegment.Chapter.IsPublic)
                 .ToList();
 
-            // Gán ViewBag để hiển thị nút chuyển chương
             ViewBag.StoryId = story.Id;
             ViewBag.CurrentChapterId = chapter.Id;
+            ViewBag.Customization = customization;
 
-            // Kiểm tra xem có chương tiếp theo không
             var hasNextChapter = await _context.Chapters
                 .AnyAsync(c => c.StoryId == story.Id && c.IsPublic && c.CreatedAt > chapter.CreatedAt);
 
@@ -217,6 +272,7 @@ namespace InteractiveStoryWeb.Controllers
             if (segment == null) return NotFound();
 
             ViewBag.StoryId = segment.Chapter.StoryId; // Gán StoryId cho nút "Quay lại"
+            ViewBag.AllowCustomization = segment.Chapter.Story?.AllowCustomization ?? false;
             return View(segment);
         }
 
@@ -265,8 +321,13 @@ namespace InteractiveStoryWeb.Controllers
 
             await _context.SaveChangesAsync();
 
+            var chapter = await _context.Chapters
+                .FirstOrDefaultAsync(c => c.Id == segment.ChapterId);
+
+            if (chapter == null) return NotFound();
+
             TempData["SuccessMessage"] = "Đoạn đã được cập nhật thành công!";
-            return RedirectToAction("Manage", "Chapter", new { storyId = segment.ChapterId });
+            return RedirectToAction("Manage", "Chapter", new { storyId = chapter.StoryId });
         }
     }
 }

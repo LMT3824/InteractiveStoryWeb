@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace InteractiveStoryWeb.Controllers
 {
@@ -68,6 +69,7 @@ namespace InteractiveStoryWeb.Controllers
                 Genre = model.Genre,
                 CoverImageUrl = imagePath,
                 IsPublic = model.IsPublic,
+                AllowCustomization = model.AllowCustomization, // Lưu tùy chọn
                 CreatedAt = DateTime.Now,
                 AuthorId = user.Id
             };
@@ -129,6 +131,7 @@ namespace InteractiveStoryWeb.Controllers
             story.Description = model.Description;
             story.Genre = model.Genre;
             story.IsPublic = model.IsPublic;
+            story.AllowCustomization = model.AllowCustomization; // Cập nhật tùy chọn cá nhân hóa
             story.AuthorId = model.AuthorId;
             story.CreatedAt = story.CreatedAt;
             story.UpdatedAt = DateTime.Now;
@@ -163,6 +166,35 @@ namespace InteractiveStoryWeb.Controllers
 
             if (story == null)
                 return NotFound("Truyện không tồn tại hoặc chưa được công khai.");
+
+            // Kiểm tra nếu tính năng cá nhân hóa được bật
+            if (story.AllowCustomization)
+            {
+                var user = await _userManager.GetUserAsync(User);
+                string userId = user?.Id ?? "anonymous";
+
+                // Kiểm tra xem thông tin tùy chỉnh đã tồn tại chưa
+                if (user != null) // Người dùng đã đăng nhập
+                {
+                    var customization = await _context.ReaderStoryCustomizations
+                        .FirstOrDefaultAsync(rsc => rsc.StoryId == id && rsc.UserId == userId);
+
+                    if (customization == null)
+                    {
+                        return RedirectToAction("Customize", new { storyId = id });
+                    }
+                }
+                else // Người dùng chưa đăng nhập
+                {
+                    // Kiểm tra trong session
+                    var sessionKey = $"Customization_{id}";
+                    var sessionData = HttpContext.Session.GetString(sessionKey);
+                    if (string.IsNullOrEmpty(sessionData))
+                    {
+                        return RedirectToAction("Customize", new { storyId = id });
+                    }
+                }
+            }
 
             var firstSegment = await _context.ChapterSegments
                 .Include(s => s.Chapter)
@@ -227,6 +259,114 @@ namespace InteractiveStoryWeb.Controllers
             ViewBag.FirstSegmentId = firstSegment?.Id;
             ViewBag.TotalViewCount = totalViewCount; // Truyền tổng ViewCount vào ViewBag
             return View(story);
+        }
+
+        [AllowAnonymous]
+        public async Task<IActionResult> Customize(int storyId)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            string userId = user?.Id ?? "anonymous";
+
+            var model = new StoryCustomizationViewModel { StoryId = storyId };
+
+            if (user != null) // Người dùng đã đăng nhập
+            {
+                var existingCustomization = await _context.ReaderStoryCustomizations
+                    .FirstOrDefaultAsync(rsc => rsc.StoryId == storyId && rsc.UserId == userId);
+                if (existingCustomization != null)
+                {
+                    model.Name = existingCustomization.Name;
+                    model.FirstPersonPronoun = existingCustomization.FirstPersonPronoun;
+                    model.SecondPersonPronoun = existingCustomization.SecondPersonPronoun;
+                }
+            }
+            else // Người dùng chưa đăng nhập
+            {
+                var sessionKey = $"Customization_{storyId}";
+                var sessionData = HttpContext.Session.GetString(sessionKey);
+                if (!string.IsNullOrEmpty(sessionData))
+                {
+                    var existingCustomization = JsonSerializer.Deserialize<ReaderStoryCustomization>(sessionData);
+                    model.Name = existingCustomization.Name;
+                    model.FirstPersonPronoun = existingCustomization.FirstPersonPronoun;
+                    model.SecondPersonPronoun = existingCustomization.SecondPersonPronoun;
+                }
+            }
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [AllowAnonymous]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Customize(StoryCustomizationViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                TempData["ErrorMessage"] = "Vui lòng kiểm tra lại thông tin.";
+                return View(model);
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+            string userId = user?.Id ?? "anonymous";
+
+            if (user != null) // Người dùng đã đăng nhập, lưu vào database
+            {
+                // Kiểm tra xem bản ghi đã tồn tại chưa
+                var existingCustomization = await _context.ReaderStoryCustomizations
+                    .FirstOrDefaultAsync(rsc => rsc.StoryId == model.StoryId && rsc.UserId == userId);
+
+                if (existingCustomization != null) // Nếu đã tồn tại, cập nhật
+                {
+                    existingCustomization.Name = model.Name;
+                    existingCustomization.FirstPersonPronoun = model.FirstPersonPronoun;
+                    existingCustomization.SecondPersonPronoun = model.SecondPersonPronoun;
+                    existingCustomization.CreatedAt = existingCustomization.CreatedAt; // Giữ nguyên thời gian tạo
+                    _context.ReaderStoryCustomizations.Update(existingCustomization); // Đảm bảo gọi Update
+                }
+                else // Nếu chưa tồn tại, tạo mới
+                {
+                    var customization = new ReaderStoryCustomization
+                    {
+                        UserId = userId,
+                        StoryId = model.StoryId,
+                        Name = model.Name,
+                        FirstPersonPronoun = model.FirstPersonPronoun,
+                        SecondPersonPronoun = model.SecondPersonPronoun,
+                        CreatedAt = DateTime.Now
+                    };
+                    _context.ReaderStoryCustomizations.Add(customization);
+                }
+
+                try
+                {
+                    await _context.SaveChangesAsync();
+                }
+                catch (Exception ex)
+                {
+                    TempData["ErrorMessage"] = "Có lỗi xảy ra khi lưu thông tin: " + ex.Message;
+                    return View(model);
+                }
+            }
+            else // Người dùng chưa đăng nhập, lưu vào session
+            {
+                var customization = new ReaderStoryCustomization
+                {
+                    UserId = userId,
+                    StoryId = model.StoryId,
+                    Name = model.Name,
+                    FirstPersonPronoun = model.FirstPersonPronoun,
+                    SecondPersonPronoun = model.SecondPersonPronoun,
+                    CreatedAt = DateTime.Now
+                };
+
+                // Lưu vào session dưới dạng JSON
+                var sessionKey = $"Customization_{model.StoryId}";
+                HttpContext.Session.SetString(sessionKey, JsonSerializer.Serialize(customization));
+            }
+
+            TempData["SuccessMessage"] = "Thông tin tùy chỉnh đã được lưu!";
+            return RedirectToAction("Read", new { id = model.StoryId });
         }
     }
 }

@@ -22,5 +22,8 @@ namespace InteractiveStoryWeb.ViewModels
 
         [Display(Name = "Công khai?")]
         public bool IsPublic { get; set; } = true;
+
+        [Display(Name = "Cho phép người đọc tùy chỉnh tên và xưng hô")]
+        public bool AllowCustomization { get; set; }
     }
 }

@@ -56,6 +56,11 @@
         <label asp-for="IsPublic" class="form-check-label">Công khai truyện</label>
     </div>
 
+    <div class="form-check mb-3">
+        <input asp-for="AllowCustomization" class="form-check-input" />
+        <label asp-for="AllowCustomization" class="form-check-label">Cho phép người đọc tùy chỉnh tên và xưng hô</label>
+    </div>
+
     <button type="submit" class="btn btn-primary">📖 Đăng truyện</button>
     <a asp-action="Index" class="btn btn-secondary ms-2">⬅️ Quay lại</a>
 </form>

@@ -13,14 +13,15 @@
     <div class="col-md-8">
         <h2>@Model.Title</h2>
         <p><strong>Thể loại:</strong> @Model.Genre</p>
-        <p><strong>Mô tả:</strong> @Model.Description</p> <!-- Hiển thị mô tả -->
-        <p><strong>Lượt xem:</strong> @ViewBag.TotalViewCount</p> <!-- Hiển thị tổng lượt xem -->
+        <p><strong>Mô tả:</strong> @Model.Description</p>
+        <p><strong>Lượt xem:</strong> @ViewBag.TotalViewCount</p>
         <p><strong>Tác giả:</strong> @Model.Author?.UserName</p>
         <p><strong>Ngày đăng:</strong> @Model.CreatedAt.ToString("dd/MM/yyyy")</p>
+        <p><strong>Tùy chỉnh nhân vật:</strong> @(Model.AllowCustomization ? "Có" : "Không")</p>
 
         @if (ViewBag.FirstSegmentId != null)
         {
-            <a asp-controller="Segment" asp-action="InteractiveRead" asp-route-id="@ViewBag.FirstSegmentId"
+            <a asp-controller="Story" asp-action="Read" asp-route-id="@Model.Id"
                class="btn btn-primary">
                 📖 Đọc truyện tương tác
             </a>

@@ -24,6 +24,7 @@ namespace InteractiveStoryWeb.Data
         public DbSet<Block> Blocks { get; set; }
         public DbSet<SupportTicket> SupportTickets { get; set; }
         public DbSet<Report> Reports { get; set; }
+        public DbSet<ReaderStoryCustomization> ReaderStoryCustomizations { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -156,6 +157,24 @@ namespace InteractiveStoryWeb.Data
                 .WithMany()
                 .HasForeignKey(n => n.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Cấu hình ReaderStoryCustomization
+            builder.Entity<ReaderStoryCustomization>()
+                .HasOne(rsc => rsc.User)
+                .WithMany()
+                .HasForeignKey(rsc => rsc.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<ReaderStoryCustomization>()
+                .HasOne(rsc => rsc.Story)
+                .WithMany()
+                .HasForeignKey(rsc => rsc.StoryId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Thêm ràng buộc khóa duy nhất trên UserId và StoryId
+            builder.Entity<ReaderStoryCustomization>()
+                .HasIndex(rsc => new { rsc.UserId, rsc.StoryId })
+                .IsUnique();
         }
     }
 }

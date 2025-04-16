@@ -4,6 +4,7 @@ using InteractiveStoryWeb.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InteractiveStoryWeb.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250414162318_AddReaderCustomization")]
+    partial class AddReaderCustomization
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -416,8 +419,7 @@ namespace InteractiveStoryWeb.Migrations
 
                     b.HasIndex("StoryId");
 
-                    b.HasIndex("UserId", "StoryId")
-                        .IsUnique();
+                    b.HasIndex("UserId");
 
                     b.ToTable("ReaderStoryCustomizations");
                 });

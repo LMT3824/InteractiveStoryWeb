@@ -39,6 +39,19 @@
         <label asp-for="Content" class="form-label">Nội dung đoạn</label>
         <textarea asp-for="Content" rows="6" class="form-control" placeholder="Nhập nội dung đoạn..."></textarea>
         <span asp-validation-for="Content" class="text-danger"></span>
+        @if (ViewBag.AllowCustomization == true)
+        {
+            <small class="form-text text-muted">
+                Bạn có thể dùng các từ khóa: [Tên], [XưngHôThứNhất], [XưngHôThứHai]. Chúng sẽ được thay thế bằng thông tin người đọc nhập.
+                <br />Ví dụ: "[Tên] nói: [XưngHôThứNhất] sẽ đi đâu?" trở thành "Anna nói: Tôi sẽ đi đâu?"
+            </small>
+        }
+        else
+        {
+            <small class="form-text text-muted">
+                Truyện này không bật tùy chỉnh nhân vật. Nội dung sẽ hiển thị như bạn nhập.
+            </small>
+        }
     </div>
 
     <div class="mb-3">

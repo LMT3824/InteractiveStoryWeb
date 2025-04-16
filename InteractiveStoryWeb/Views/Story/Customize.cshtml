@@ -1,0 +1,57 @@
+﻿@model InteractiveStoryWeb.ViewModels.StoryCustomizationViewModel
+
+@{
+    ViewData["Title"] = "Tùy chỉnh nhân vật";
+}
+
+<h2 class="mb-4">@ViewData["Title"]</h2>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<form asp-action="Customize" method="post">
+    <input type="hidden" asp-for="StoryId" />
+
+    <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label">Tên nhân vật</label>
+        <input asp-for="Name" class="form-control" placeholder="Nhập tên nhân vật của bạn..." />
+        <small class="form-text text-muted">Tên này sẽ thay thế [Tên] trong truyện.</small>
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="FirstPersonPronoun" class="form-label">Xưng hô thứ nhất</label>
+        <input asp-for="FirstPersonPronoun" class="form-control" placeholder="Ví dụ: tôi, mình, tớ..." />
+        <small class="form-text text-muted">Cách xưng hô của bạn, thay thế [XưngHôThứNhất].</small>
+        <span asp-validation-for="FirstPersonPronoun" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="SecondPersonPronoun" class="form-label">Xưng hô thứ hai</label>
+        <input asp-for="SecondPersonPronoun" class="form-control" placeholder="Ví dụ: cô ấy, anh ấy, họ..." />
+        <small class="form-text text-muted">Cách gọi bạn trong mô tả, thay thế [XưngHôThứHai].</small>
+        <span asp-validation-for="SecondPersonPronoun" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn btn-primary">💾 Lưu và bắt đầu đọc</button>
+    <a asp-action="Details" asp-route-id="@Model.StoryId" class="btn btn-secondary ms-2">⬅️ Quay lại</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
