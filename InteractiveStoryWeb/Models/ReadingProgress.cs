@@ -1,15 +1,15 @@
 ﻿namespace InteractiveStoryWeb.Models
 {
-    public class Rating
+    public class ReadingProgress
     {
         public int Id { get; set; }
         public string UserId { get; set; }
         public int StoryId { get; set; }
-        public int RatingValue { get; set; }
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
-        public DateTime? UpdatedAt { get; set; }
+        public int? ChapterSegmentId { get; set; }
+        public DateTime LastReadAt { get; set; } = DateTime.Now;
 
         public ApplicationUser User { get; set; }
         public Story Story { get; set; }
+        public ChapterSegment? ChapterSegment { get; set; }
     }
 }

@@ -2,14 +2,70 @@
 @{
     ViewData["Title"] = "Tài khoản của tôi";
     var user = ViewBag.User as InteractiveStoryWeb.Models.ApplicationUser;
+    var readingProgresses = ViewBag.ReadingProgresses as List<InteractiveStoryWeb.Models.ReadingProgress>;
 }
 
-<h2 class="mb-4">👤 Tài khoản: @user.UserName</h2>
-<p><strong>Email:</strong> @user.Email</p>
-@if (!string.IsNullOrEmpty(user.Caption))
+@if (TempData["SuccessMessage"] != null)
 {
-    <p><strong>Giới thiệu:</strong> @user.Caption</p>
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
 }
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="row mb-4">
+    <div class="col-md-3 text-center">
+        <img src="@(string.IsNullOrEmpty(user.AvatarUrl)
+            ? Url.Content("~/images/AvatarNull.jpg")
+            : user.AvatarUrl)"
+             class="img-fluid rounded-circle shadow profile-avatar" style="width: 150px; height: 150px; object-fit: cover;" alt="Ảnh đại diện" />
+    </div>
+    <div class="col-md-9">
+        <h2 class="mb-3">👤 Tài khoản: @user.UserName</h2>
+        <div class="profile-display">
+            @if (!string.IsNullOrEmpty(user.Caption))
+            {
+                <p><strong>Giới thiệu:</strong> <span class="profile-caption">@user.Caption</span></p>
+            }
+            else
+            {
+                <p><strong>Giới thiệu:</strong> <span class="profile-caption text-muted">Chưa có giới thiệu</span></p>
+            }
+            <button type="button" class="btn btn-primary edit-profile-btn">✏️ Chỉnh sửa hồ sơ</button>
+            <div class="mt-3">
+                <a asp-area="Identity" asp-page="/Account/ChangePassword" class="btn btn-outline-secondary me-2">
+                    🔐 Đổi mật khẩu
+                </a>
+                <a asp-area="Identity" asp-page="/Account/EditUsername" class="btn btn-outline-warning">
+                    🆔 Đổi tên người dùng
+                </a>
+            </div>
+        </div>
+        <div class="profile-edit" style="display: none;">
+            <form id="editProfileForm" enctype="multipart/form-data">
+                @Html.AntiForgeryToken() <!-- Thêm mã thông báo chống giả mạo -->
+                <div class="mb-3">
+                    <label for="avatarFile" class="form-label">Ảnh đại diện mới</label>
+                    <input type="file" class="form-control" id="avatarFile" name="avatarFile" accept="image/*" />
+                </div>
+                <div class="mb-3">
+                    <label for="Caption" class="form-label">Giới thiệu</label>
+                    <textarea class="form-control profile-caption-input" id="Caption" name="Caption" rows="3">@user.Caption</textarea>
+                </div>
+                <button type="submit" class="btn btn-success save-profile-btn">💾 Lưu thay đổi</button>
+                <button type="button" class="btn btn-secondary cancel-profile-btn ms-2">Hủy</button>
+            </form>
+        </div>
+    </div>
+</div>
 
 <hr />
 <h4 class="mt-4">📚 Truyện đã đăng:</h4>
@@ -36,17 +92,121 @@ else
                         <p class="card-text"><strong>Lượt xem:</strong> @ViewBag.ViewCounts[story.Id]</p>
                     </div>
                     <div class="card-footer d-flex justify-content-between">
-                        <a asp-controller="Story" asp-action="Edit" asp-route-id="@story.Id" class="btn btn-warning btn-sm">✏️ Sửa truyện</a>
-                        <a asp-controller="Chapter" asp-action="Create" asp-route-storyId="@story.Id" class="btn btn-success btn-sm">➕ Thêm chương</a>
+                        <a asp-controller="Story" asp-action="Edit" asp-route-id="@story.Id" class="btn btn-outline-dark btn-sm mt-2">✏️ Sửa truyện</a>
                         <a asp-controller="Chapter" asp-action="Manage" asp-route-storyId="@story.Id" class="btn btn-outline-dark btn-sm mt-2">
                             📄 Quản lý chương
                         </a>
-                        <a asp-controller="Chapter" asp-action="Tree" asp-route-storyId="@story.Id" class="btn btn-outline-dark btn-sm">
-                            🌳 Sơ đồ chương
-                        </a>
+                        <form asp-controller="Story" asp-action="Delete" asp-route-id="@story.Id" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-outline-dark btn-sm mt-2" onclick="return confirm('Bạn có chắc chắn muốn xóa truyện này?');">
+                                🗑️ Xóa truyện
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>
         }
     </div>
+}
+
+<hr />
+<h4 class="mt-4">📖 Tiến trình đọc:</h4>
+
+@if (readingProgresses == null || !readingProgresses.Any())
+{
+    <p>Bạn chưa đọc truyện nào hoặc chưa lưu tiến trình.</p>
+}
+else
+{
+    <div class="row row-cols-1 row-cols-md-2 g-4">
+        @foreach (var progress in readingProgresses)
+        {
+            <div class="col">
+                <div class="card h-100 shadow">
+                    <img src="@(string.IsNullOrEmpty(progress.Story.CoverImageUrl)
+                        ? Url.Content("~/images/ImageNotFound.png")
+                        : progress.Story.CoverImageUrl)"
+                         class="card-img-top" style="height: 180px; object-fit: cover;" />
+
+                    <div class="card-body">
+                        <h5 class="card-title">@progress.Story.Title</h5>
+                        <p class="card-text">
+                            <strong>Đang đọc:</strong>
+                            @(progress.ChapterSegment != null
+                                ? $"{progress.ChapterSegment.Title} (Chương: {progress.ChapterSegment.Chapter.Title})"
+                                : "Đoạn không còn tồn tại")
+                        </p>
+                        <p class="card-text"><strong>Lần đọc cuối:</strong> @progress.LastReadAt.ToString("dd/MM/yyyy HH:mm")</p>
+                    </div>
+                    <div class="card-footer">
+                        @if (progress.ChapterSegmentId != null)
+                        {
+                            <a asp-controller="Segment" asp-action="InteractiveRead" asp-route-id="@progress.ChapterSegmentId" class="btn btn-primary btn-sm">📖 Tiếp tục đọc</a>
+                        }
+                        else
+                        {
+                            <span class="text-muted">Không thể tiếp tục do đoạn đã bị xóa</span>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            // Hiển thị form chỉnh sửa
+            $('.edit-profile-btn').on('click', function () {
+                $('.profile-display').hide();
+                $('.profile-edit').show();
+            });
+
+            // Hủy chỉnh sửa
+            $('.cancel-profile-btn').on('click', function () {
+                $('.profile-display').show();
+                $('.profile-edit').hide();
+
+                // Đặt lại giá trị ban đầu
+                $('.profile-caption-input').val($('.profile-caption').text().trim());
+                $('#avatarFile').val(''); // Xóa file đã chọn
+            });
+
+            // Lưu thay đổi
+            $('#editProfileForm').on('submit', function (e) {
+                e.preventDefault();
+                var formData = new FormData(this);
+
+                $.ajax({
+                    url: '/Account/MyProfile',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function (response) {
+                        if (response.success) {
+                            // Cập nhật giao diện
+                            if (response.avatarUrl) {
+                                $('.profile-avatar').attr('src', response.avatarUrl);
+                            }
+                            $('.profile-caption').text(response.caption || 'Chưa có giới thiệu');
+                            $('.profile-display').show();
+                            $('.profile-edit').hide();
+                        } else {
+                            alert(response.message);
+                        }
+                    },
+                    error: function () {
+                        alert('Có lỗi xảy ra khi lưu thay đổi.');
+                    }
+                });
+            });
+
+            // Lưu giá trị ban đầu của caption
+            $('.profile-caption-input').data('original-value', $('.profile-caption').text().trim());
+        });
+    </script>
 }

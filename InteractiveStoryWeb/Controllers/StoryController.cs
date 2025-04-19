@@ -132,6 +132,7 @@ namespace InteractiveStoryWeb.Controllers
             story.Genre = model.Genre;
             story.IsPublic = model.IsPublic;
             story.AllowCustomization = model.AllowCustomization; // Cập nhật tùy chọn cá nhân hóa
+            story.IsCompleted = model.IsCompleted;
             story.AuthorId = model.AuthorId;
             story.CreatedAt = story.CreatedAt;
             story.UpdatedAt = DateTime.Now;
@@ -235,7 +236,7 @@ namespace InteractiveStoryWeb.Controllers
         }
 
         [AllowAnonymous]
-        public async Task<IActionResult> Details(int id)
+        public async Task<IActionResult> Details(int id, string errorMessage = null)
         {
             var story = await _context.Stories
                 .Include(s => s.Author)
@@ -253,13 +254,40 @@ namespace InteractiveStoryWeb.Controllers
                 .OrderBy(s => s.Id)
                 .FirstOrDefault();
 
-            // Tính tổng ViewCount từ các Chapter
             var totalViewCount = story.Chapters?.Sum(ch => ch.ViewCount) ?? 0;
 
+            var comments = await _context.Comments
+                .Where(c => c.StoryId == id)
+                .Include(c => c.User)
+                .OrderByDescending(c => c.CreatedAt)
+                .ToListAsync();
+
+            var ratings = await _context.Ratings
+                .Where(r => r.StoryId == id)
+                .Include(r => r.User)
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+
+            // Lấy thông tin người dùng hiện tại
+            ApplicationUser currentUser = null;
+            if (User.Identity.IsAuthenticated)
+            {
+                currentUser = await _userManager.GetUserAsync(User);
+            }
+
             ViewBag.FirstSegmentId = firstSegment?.Id;
-            ViewBag.TotalViewCount = totalViewCount; // Truyền tổng ViewCount vào ViewBag
+            ViewBag.TotalViewCount = totalViewCount;
+            ViewBag.Comments = comments;
+            ViewBag.Ratings = ratings;
+            ViewBag.AverageRating = ratings.Any() ? ratings.Average(r => r.RatingValue) : 0;
+            ViewBag.CurrentUser = currentUser; // Truyền người dùng hiện tại vào ViewBag
+            if (!string.IsNullOrEmpty(errorMessage))
+            {
+                TempData["ErrorMessage"] = errorMessage;
+            }
             return View(story);
         }
+
 
         [AllowAnonymous]
         public async Task<IActionResult> Customize(int storyId)
@@ -367,6 +395,279 @@ namespace InteractiveStoryWeb.Controllers
 
             TempData["SuccessMessage"] = "Thông tin tùy chỉnh đã được lưu!";
             return RedirectToAction("Read", new { id = model.StoryId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var story = await _context.Stories
+                .Include(s => s.Chapters)
+                    .ThenInclude(c => c.Segments) // Bao gồm Segments để lấy ChapterSegmentId
+                .FirstOrDefaultAsync(s => s.Id == id);
+
+            if (story == null)
+            {
+                TempData["ErrorMessage"] = "Truyện không tồn tại.";
+                return RedirectToAction("Index");
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+            if (story.AuthorId != user.Id)
+            {
+                TempData["ErrorMessage"] = "Bạn không có quyền xóa truyện này.";
+                return RedirectToAction("Index");
+            }
+
+            // Đặt ChapterSegmentId trong ReadingProgress thành null trước khi xóa
+            var segmentIds = story.Chapters
+                .SelectMany(c => c.Segments)
+                .Select(s => s.Id)
+                .ToList();
+
+            var relatedProgresses = await _context.ReadingProgresses
+                .Where(rp => segmentIds.Contains(rp.ChapterSegmentId.Value))
+                .ToListAsync();
+
+            foreach (var progress in relatedProgresses)
+            {
+                progress.ChapterSegmentId = null;
+            }
+
+            _context.Stories.Remove(story);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Truyện đã được xóa thành công!";
+            return RedirectToAction("MyProfile", "Account");
+        }
+
+        // Actions for Comments
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> AddComment(int storyId, string content)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Json(new { success = false, message = "Người dùng không tồn tại." });
+            }
+
+            var story = await _context.Stories.FindAsync(storyId);
+            if (story == null)
+            {
+                return Json(new { success = false, message = "Truyện không tồn tại." });
+            }
+
+            if (string.IsNullOrEmpty(content))
+            {
+                return Json(new { success = false, message = "Nội dung bình luận không được để trống." });
+            }
+
+            var comment = new Comment
+            {
+                UserId = user.Id,
+                StoryId = storyId,
+                Content = content,
+                CreatedAt = DateTime.Now
+            };
+
+            _context.Comments.Add(comment);
+            await _context.SaveChangesAsync();
+
+            return Json(new
+            {
+                success = true,
+                commentId = comment.Id,
+                userName = user.UserName,
+                content = comment.Content,
+                createdAt = comment.CreatedAt.ToString("dd/MM/yyyy HH:mm"),
+                avatarUrl = string.IsNullOrEmpty(user.AvatarUrl) ? "/images/AvatarNotFound.png" : user.AvatarUrl // Thêm avatarUrl vào phản hồi
+            });
+        }
+
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> EditComment(int id, string content)
+        {
+            var comment = await _context.Comments
+                .Include(c => c.User)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (comment == null)
+            {
+                return Json(new { success = false, message = "Bình luận không tồn tại." });
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+            if (comment.UserId != user.Id)
+            {
+                return Json(new { success = false, message = "Bạn không có quyền chỉnh sửa bình luận này." });
+            }
+
+            if (string.IsNullOrEmpty(content))
+            {
+                return Json(new { success = false, message = "Nội dung bình luận không được để trống." });
+            }
+
+            comment.Content = content;
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, content = comment.Content });
+        }
+
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> DeleteComment(int id)
+        {
+            var comment = await _context.Comments
+                .Include(c => c.User)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (comment == null)
+            {
+                return Json(new { success = false, message = "Bình luận không tồn tại." });
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+            if (comment.UserId != user.Id)
+            {
+                return Json(new { success = false, message = "Bạn không có quyền xóa bình luận này." });
+            }
+
+            _context.Comments.Remove(comment);
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true });
+        }
+
+        // Actions for Ratings
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> AddRating(int storyId, int ratingValue)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Json(new { success = false, message = "Người dùng không tồn tại." });
+            }
+
+            var story = await _context.Stories.FindAsync(storyId);
+            if (story == null)
+            {
+                return Json(new { success = false, message = "Truyện không tồn tại." });
+            }
+
+            if (ratingValue < 1 || ratingValue > 5)
+            {
+                return Json(new { success = false, message = "Điểm đánh giá phải từ 1 đến 5 sao." });
+            }
+
+            var existingRating = await _context.Ratings
+                .FirstOrDefaultAsync(r => r.UserId == user.Id && r.StoryId == storyId);
+
+            if (existingRating != null)
+            {
+                return Json(new { success = false, message = "Bạn đã đánh giá truyện này rồi. Vui lòng chỉnh sửa đánh giá hiện có." });
+            }
+
+            var rating = new Rating
+            {
+                UserId = user.Id,
+                StoryId = storyId,
+                RatingValue = ratingValue,
+                CreatedAt = DateTime.Now
+            };
+
+            _context.Ratings.Add(rating);
+            await _context.SaveChangesAsync();
+
+            var ratings = await _context.Ratings
+                .Where(r => r.StoryId == storyId)
+                .ToListAsync();
+            var averageRating = ratings.Any() ? ratings.Average(r => r.RatingValue) : 0;
+
+            return Json(new
+            {
+                success = true,
+                ratingId = rating.Id,
+                userName = user.UserName,
+                ratingValue = rating.RatingValue,
+                createdAt = rating.CreatedAt.ToString("dd/MM/yyyy HH:mm"),
+                averageRating = averageRating
+            });
+        }
+
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> EditRating(int id, int ratingValue)
+        {
+            var rating = await _context.Ratings
+                .Include(r => r.User)
+                .FirstOrDefaultAsync(r => r.Id == id);
+
+            if (rating == null)
+            {
+                return Json(new { success = false, message = "Đánh giá không tồn tại." });
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+            if (rating.UserId != user.Id)
+            {
+                return Json(new { success = false, message = "Bạn không có quyền chỉnh sửa đánh giá này." });
+            }
+
+            if (ratingValue < 1 || ratingValue > 5)
+            {
+                return Json(new { success = false, message = "Điểm đánh giá phải từ 1 đến 5 sao." });
+            }
+
+            rating.RatingValue = ratingValue;
+            rating.UpdatedAt = DateTime.Now;
+            await _context.SaveChangesAsync();
+
+            var ratings = await _context.Ratings
+                .Where(r => r.StoryId == rating.StoryId)
+                .ToListAsync();
+            var averageRating = ratings.Any() ? ratings.Average(r => r.RatingValue) : 0;
+
+            return Json(new
+            {
+                success = true,
+                ratingValue = rating.RatingValue,
+                averageRating = averageRating,
+                updatedAt = rating.UpdatedAt?.ToString("dd/MM/yyyy HH:mm")
+            });
+        }
+
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> DeleteRating(int id)
+        {
+            var rating = await _context.Ratings
+                .Include(r => r.User)
+                .FirstOrDefaultAsync(r => r.Id == id);
+
+            if (rating == null)
+            {
+                return Json(new { success = false, message = "Đánh giá không tồn tại." });
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+            if (rating.UserId != user.Id)
+            {
+                return Json(new { success = false, message = "Bạn không có quyền xóa đánh giá này." });
+            }
+
+            _context.Ratings.Remove(rating);
+            await _context.SaveChangesAsync();
+
+            var ratings = await _context.Ratings
+                .Where(r => r.StoryId == rating.StoryId)
+                .ToListAsync();
+            var averageRating = ratings.Any() ? ratings.Average(r => r.RatingValue) : 0;
+
+            return Json(new { success = true, averageRating = averageRating });
         }
     }
 }

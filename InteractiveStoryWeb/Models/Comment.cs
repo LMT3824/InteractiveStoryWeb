@@ -9,7 +9,7 @@
         public string Content { get; set; }
         public string? ImageUrl { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
-
+        public DateTime? UpdatedAt { get; set; }
         public ApplicationUser User { get; set; }
         public Story Story { get; set; }
         public Chapter? Chapter { get; set; }

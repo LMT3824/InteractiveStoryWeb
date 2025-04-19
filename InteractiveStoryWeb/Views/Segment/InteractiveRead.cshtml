@@ -11,7 +11,6 @@
     <p class="text-muted">Chương: @Model.Chapter.Title | Đoạn: @Model.Title</p>
     @if (customization != null)
     {
-        <p class="text-muted">Nhân vật: @customization.Name</p>
         <a asp-controller="Story" asp-action="Customize" asp-route-storyId="@Model.Chapter.StoryId" class="btn btn-outline-secondary mt-2">
             ✏️ Chỉnh sửa tên/xưng hô
         </a>

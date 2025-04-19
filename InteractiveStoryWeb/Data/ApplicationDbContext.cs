@@ -25,6 +25,7 @@ namespace InteractiveStoryWeb.Data
         public DbSet<SupportTicket> SupportTickets { get; set; }
         public DbSet<Report> Reports { get; set; }
         public DbSet<ReaderStoryCustomization> ReaderStoryCustomizations { get; set; }
+        public DbSet<ReadingProgress> ReadingProgresses { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -44,12 +45,12 @@ namespace InteractiveStoryWeb.Data
                 .HasForeignKey(c => c.ChapterSegmentId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // 🔸 CHOICE → NEXT SEGMENT
+           // 🔸 CHOICE → CHAPTER SEGMENT
             builder.Entity<Choice>()
                 .HasOne(c => c.ChapterSegment)
-                .WithMany(s => s.Choices) 
+                .WithMany(s => s.Choices)
                 .HasForeignKey(c => c.ChapterSegmentId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<Choice>()
                 .HasOne(c => c.NextSegment)
@@ -174,6 +175,30 @@ namespace InteractiveStoryWeb.Data
             // Thêm ràng buộc khóa duy nhất trên UserId và StoryId
             builder.Entity<ReaderStoryCustomization>()
                 .HasIndex(rsc => new { rsc.UserId, rsc.StoryId })
+                .IsUnique();
+
+            // 🔸 READING PROGRESS → USER + STORY + CHAPTER SEGMENT
+            builder.Entity<ReadingProgress>()
+                .HasOne(rp => rp.User)
+                .WithMany()
+                .HasForeignKey(rp => rp.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<ReadingProgress>()
+                .HasOne(rp => rp.Story)
+                .WithMany()
+                .HasForeignKey(rp => rp.StoryId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<ReadingProgress>()
+                .HasOne(rp => rp.ChapterSegment)
+                .WithMany()
+                .HasForeignKey(rp => rp.ChapterSegmentId)
+                .OnDelete(DeleteBehavior.Restrict); 
+
+            // Thêm ràng buộc khóa duy nhất trên UserId và StoryId
+            builder.Entity<ReadingProgress>()
+                .HasIndex(rp => new { rp.UserId, rp.StoryId })
                 .IsUnique();
         }
     }

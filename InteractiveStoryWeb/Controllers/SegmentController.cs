@@ -30,7 +30,7 @@ namespace InteractiveStoryWeb.Controllers
         {
             var chapter = _context.Chapters.Find(chapterId);
             if (chapter == null) return NotFound();
-            ViewBag.StoryId = chapter.StoryId; // Gán StoryId cho nút "Quay lại"
+            ViewBag.StoryId = chapter.StoryId;
             ViewBag.AllowCustomization = chapter.Story?.AllowCustomization ?? false;
             return View(new ChapterSegmentCreateViewModel { ChapterId = chapterId });
         }
@@ -39,10 +39,20 @@ namespace InteractiveStoryWeb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(ChapterSegmentCreateViewModel model)
         {
+            // Kiểm tra ChapterId có tồn tại không
+            var chapter = await _context.Chapters
+                .Include(c => c.Story) // Bao gồm Story để lấy StoryId
+                .FirstOrDefaultAsync(c => c.Id == model.ChapterId);
+
+            if (chapter == null)
+            {
+                TempData["ErrorMessage"] = "Chương không tồn tại.";
+                return RedirectToAction("Index", "Story"); // Chuyển hướng về danh sách truyện nếu chương không tồn tại
+            }
+
             if (!ModelState.IsValid)
             {
-                var chapter = await _context.Chapters.FindAsync(model.ChapterId);
-                ViewBag.StoryId = chapter?.StoryId;
+                ViewBag.StoryId = chapter.StoryId;
                 TempData["ErrorMessage"] = "Vui lòng kiểm tra lại thông tin.";
                 return View(model);
             }
@@ -75,28 +85,8 @@ namespace InteractiveStoryWeb.Controllers
             _context.ChapterSegments.Add(segment);
             await _context.SaveChangesAsync();
 
-            var secondSegment = new ChapterSegment
-            {
-                ChapterId = model.ChapterId,
-                Title = "Đoạn 2",
-                Content = "Nội dung đoạn 2",
-                CreatedAt = DateTime.Now
-            };
-            _context.ChapterSegments.Add(secondSegment);
-            await _context.SaveChangesAsync();
-
-            var choice = new Choice
-            {
-                ChapterSegmentId = segment.Id,
-                ChoiceText = "Sang đoạn 2",
-                NextSegmentId = secondSegment.Id,
-                CreatedAt = DateTime.Now
-            };
-            _context.Choices.Add(choice);
-            await _context.SaveChangesAsync();
-
             TempData["SuccessMessage"] = "Đoạn đã được tạo thành công!";
-            return RedirectToAction("Create", "Segment", new { chapterId = model.ChapterId });
+            return RedirectToAction("Manage", "Chapter", new { storyId = chapter.StoryId }); // Sử dụng chapter.StoryId đã được tải
         }
 
         [AllowAnonymous]
@@ -130,11 +120,37 @@ namespace InteractiveStoryWeb.Controllers
                 await _context.SaveChangesAsync();
             }
 
+            // Lưu tiến trình đọc nếu người dùng đã đăng nhập
+            var user = await _userManager.GetUserAsync(User);
+            if (user != null)
+            {
+                var progress = await _context.ReadingProgresses
+                    .FirstOrDefaultAsync(rp => rp.UserId == user.Id && rp.StoryId == story.Id);
+
+                if (progress == null)
+                {
+                    // Tạo mới tiến trình
+                    progress = new ReadingProgress
+                    {
+                        UserId = user.Id,
+                        StoryId = story.Id,
+                        ChapterSegmentId = segment.Id,
+                        LastReadAt = DateTime.Now
+                    };
+                    _context.ReadingProgresses.Add(progress);
+                }
+                else
+                {
+                    progress.ChapterSegmentId = segment.Id;
+                    progress.LastReadAt = DateTime.Now;
+                }
+                await _context.SaveChangesAsync();
+            }
+
             // Thay thế từ khóa nếu tính năng cá nhân hóa được bật
             ReaderStoryCustomization customization = null;
             if (story.AllowCustomization)
             {
-                var user = await _userManager.GetUserAsync(User);
                 string userId = user?.Id ?? "anonymous";
 
                 if (user != null) // Người dùng đã đăng nhập, đọc từ database
@@ -328,6 +344,58 @@ namespace InteractiveStoryWeb.Controllers
 
             TempData["SuccessMessage"] = "Đoạn đã được cập nhật thành công!";
             return RedirectToAction("Manage", "Chapter", new { storyId = chapter.StoryId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var segment = await _context.ChapterSegments
+                .Include(s => s.Chapter)
+                    .ThenInclude(c => c.Story)
+                .Include(s => s.Choices)
+                .FirstOrDefaultAsync(s => s.Id == id);
+
+            if (segment == null)
+            {
+                TempData["ErrorMessage"] = "Đoạn không tồn tại.";
+                return RedirectToAction("Manage", "Chapter", new { storyId = ViewBag.StoryId });
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+            if (segment.Chapter.Story.AuthorId != user.Id)
+            {
+                TempData["ErrorMessage"] = "Bạn không có quyền xóa đoạn này.";
+                return RedirectToAction("Manage", "Chapter", new { storyId = segment.Chapter.StoryId });
+            }
+
+            // Kiểm tra xem đoạn có được liên kết bởi các lựa chọn khác không (NextSegmentId)
+            var linkedChoices = await _context.Choices
+                .Where(c => c.NextSegmentId == segment.Id)
+                .ToListAsync();
+
+            if (linkedChoices.Any())
+            {
+                TempData["ErrorMessage"] = "Không thể xóa đoạn này vì nó được liên kết bởi các lựa chọn khác.";
+                return RedirectToAction("Manage", "Chapter", new { storyId = segment.Chapter.StoryId });
+            }
+
+            // Đặt ChapterSegmentId trong ReadingProgress thành null trước khi xóa
+            var relatedProgresses = await _context.ReadingProgresses
+                .Where(rp => rp.ChapterSegmentId == segment.Id)
+                .ToListAsync();
+
+            foreach (var progress in relatedProgresses)
+            {
+                progress.ChapterSegmentId = null;
+            }
+
+            _context.ChapterSegments.Remove(segment);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Đoạn đã được xóa thành công!";
+            return RedirectToAction("Manage", "Chapter", new { storyId = segment.Chapter.StoryId });
         }
     }
 }

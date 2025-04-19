@@ -22,8 +22,8 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
     options.Password.RequiredLength = 6;
     options.Password.RequiredUniqueChars = 1;
 
-    // Không yêu cầu xác nhận email
-    options.SignIn.RequireConfirmedAccount = true; // Bắt buộc xác nhận email mới đăng nhập
+    options.SignIn.RequireConfirmedAccount = false; // Không yêu cầu xác nhận email
+    options.User.RequireUniqueEmail = true; // Yêu cầu email duy nhất
 
     // Cấu hình user
     options.User.RequireUniqueEmail = false;

@@ -6,6 +6,22 @@
 
 <h2 class="mb-4"><i class="bi bi-journal-bookmark"></i> Quản lý chương & phân nhánh của truyện</h2>
 
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
 <div class="mb-3">
     <a asp-controller="Chapter" asp-action="Create" asp-route-storyId="@storyId" class="btn btn-success">
         <i class="bi bi-plus-lg"></i> Thêm chương mới
@@ -23,7 +39,7 @@
 }
 else
 {
-    @foreach (var chapter in Model.OrderBy(c => c.CreatedAt))
+    foreach (var chapter in Model.OrderBy(c => c.CreatedAt))
     {
         <div class="card mb-3 border-primary">
             <div class="card-header bg-primary text-white fw-bold">
@@ -35,9 +51,17 @@ else
                     <i class="bi bi-eye"></i> @chapter.ViewCount lượt xem
                 </span>
 
-                <a asp-controller="Chapter" asp-action="Edit" asp-route-id="@chapter.Id" class="btn btn-warning btn-sm float-end">
-                    <i class="bi bi-pencil"></i> Sửa
-                </a>
+                <div class="float-end">
+                    <a asp-controller="Chapter" asp-action="Edit" asp-route-id="@chapter.Id" class="btn btn-warning btn-sm">
+                        <i class="bi bi-pencil"></i> Sửa
+                    </a>
+                    <form asp-controller="Chapter" asp-action="Delete" asp-route-id="@chapter.Id" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-danger btn-sm ms-2" onclick="return confirm('Bạn có chắc chắn muốn xóa chương này?');">
+                            <i class="bi bi-trash"></i> Xóa
+                        </button>
+                    </form>
+                </div>
             </div>
             <div class="card-body">
                 <a class="btn btn-outline-success mb-2"
@@ -53,39 +77,79 @@ else
                             <div class="card-header">
                                 <strong>Đoạn @segment.Title</strong> (ID: @segment.Id)
 
-                                <a asp-controller="Segment" asp-action="Edit" asp-route-id="@segment.Id"
-                                   class="btn btn-sm btn-warning float-end ms-2">
-                                    <i class="bi bi-pencil"></i> Sửa
-                                </a>
-
-                                <a asp-controller="Choice" asp-action="Manage" asp-route-chapterSegmentId="@segment.Id"
-                                   class="btn btn-sm btn-outline-primary float-end">
-                                    <i class="bi bi-diagram-2"></i> Quản lý lựa chọn
-                                </a>
+                                <div class="float-end">
+                                    <a asp-controller="Segment" asp-action="Edit" asp-route-id="@segment.Id"
+                                       class="btn btn-sm btn-warning ms-2">
+                                        <i class="bi bi-pencil"></i> Sửa
+                                    </a>
+                                    <form asp-controller="Segment" asp-action="Delete" asp-route-id="@segment.Id" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-danger ms-2" onclick="return confirm('Bạn có chắc chắn muốn xóa đoạn này?');">
+                                            <i class="bi bi-trash"></i> Xóa
+                                        </button>
+                                    </form>
+                                </div>
                             </div>
                             <div class="card-body">
                                 <p>@(segment.Content?.Length > 80 ? segment.Content.Substring(0, 80) + "..." : segment.Content)</p>
 
+                                <!-- Form thêm lựa chọn -->
+                                <form asp-controller="Choice" asp-action="Add" method="post" class="row g-2 mt-3">
+                                    <input type="hidden" name="ChapterSegmentId" value="@segment.Id" />
+                                    <div class="col-md-5">
+                                        <input name="ChoiceText" class="form-control" placeholder="Nội dung lựa chọn" required />
+                                    </div>
+                                    <div class="col-md-5">
+                                        <select name="NextSegmentId" class="form-select" required>
+                                            <option value="">-- Chọn đoạn tiếp theo --</option>
+                                            @foreach (var target in chapter.Segments)
+                                            {
+                                                <option value="@target.Id">@target.Title</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button type="submit" class="btn btn-success w-100">Thêm lựa chọn</button>
+                                    </div>
+                                </form>
+                                <!-- Danh sách các lựa chọn -->
                                 @if (segment.Choices != null && segment.Choices.Any())
                                 {
                                     <ul class="list-group">
                                         @foreach (var choice in segment.Choices)
                                         {
-                                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                @choice.ChoiceText
-                                                <div>
-                                                    <span class="badge bg-secondary">
-                                                        → Đến đoạn: @(choice.NextSegment?.Title ?? $"ID: {choice.NextSegmentId}")
-                                                    </span>
-
-                                                    <a asp-controller="Choice" asp-action="Edit" asp-route-id="@choice.Id"
-                                                       class="btn btn-sm btn-outline-warning ms-2">
+                                            <li class="list-group-item d-flex justify-content-between align-items-center choice-item" data-choice-id="@choice.Id">
+                                                <div class="choice-display">
+                                                    <span class="choice-text">@choice.ChoiceText</span>
+                                                    <span class="badge bg-dark ms-2">→ Đến đoạn: @(choice.NextSegment != null ? choice.NextSegment.Title : "Không xác định")</span>
+                                                </div>
+                                                <div class="choice-edit" style="display: none;">
+                                                    <input type="hidden" class="edit-choice-id" value="@choice.Id" />
+                                                    <input type="hidden" class="edit-chapter-segment-id" value="@choice.ChapterSegmentId" />
+                                                    <input type="hidden" class="edit-created-at" value="@choice.CreatedAt.ToString("o")" />
+                                                    <input type="text" class="form-control edit-choice-text" value="@choice.ChoiceText" style="display: inline-block; width: 200px;" required />
+                                                    <select class="form-select edit-next-segment-id" style="display: inline-block; width: 200px;" required data-original-value="@choice.NextSegmentId">
+                                                        <option value="">-- Chọn đoạn --</option>
+                                                        @foreach (var target in chapter.Segments)
+                                                        {
+                                                            @if (target.Id == choice.NextSegmentId)
+                                                            {
+                                                                <option value="@target.Id" selected>@target.Title</option>
+                                                            }
+                                                            else
+                                                            {
+                                                                <option value="@target.Id">@target.Title</option>
+                                                            }
+                                                        }
+                                                    </select>
+                                                    <button type="button" class="btn btn-success btn-sm save-choice-btn ms-2">Lưu</button>
+                                                    <button type="button" class="btn btn-secondary btn-sm cancel-choice-btn ms-2">Hủy</button>
+                                                </div>
+                                                <div class="choice-actions">
+                                                    <button type="button" class="btn btn-warning btn-sm edit-choice-btn ms-2">
                                                         <i class="bi bi-pencil"></i> Sửa
-                                                    </a>
-
-                                                    <a asp-controller="Choice" asp-action="Delete" asp-route-id="@choice.Id"
-                                                       class="btn btn-sm btn-outline-danger ms-2"
-                                                       onclick="return confirm('Bạn có chắc chắn muốn xóa lựa chọn này?');">
+                                                    </button>
+                                                    <a asp-controller="Choice" asp-action="Delete" asp-route-id="@choice.Id" class="btn btn-danger btn-sm ms-2" onclick="return confirm('Bạn có chắc chắn muốn xóa lựa chọn này?');">
                                                         <i class="bi bi-trash"></i> Xóa
                                                     </a>
                                                 </div>
@@ -108,4 +172,83 @@ else
             </div>
         </div>
     }
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            $('.edit-choice-btn').on('click', function () {
+                var $row = $(this).closest('.choice-item');
+                $row.find('.choice-display').hide();
+                $row.find('.choice-actions').hide();
+                $row.find('.choice-edit').show();
+            });
+
+            $('.cancel-choice-btn').on('click', function () {
+                var $row = $(this).closest('.choice-item');
+                $row.find('.choice-display').show();
+                $row.find('.choice-actions').show();
+                $row.find('.choice-edit').hide();
+
+                // Đặt lại giá trị ban đầu
+                var $textInput = $row.find('.edit-choice-text');
+                var originalText = $textInput.data('original-value');
+                $textInput.val(originalText);
+
+                var $selectInput = $row.find('.edit-next-segment-id');
+                var originalNextSegmentId = $selectInput.attr('data-original-value');
+                $selectInput.val(originalNextSegmentId);
+            });
+
+            $('.save-choice-btn').on('click', function () {
+                var $row = $(this).closest('.choice-item');
+                var choiceId = $row.find('.edit-choice-id').val();
+                var chapterSegmentId = $row.find('.edit-chapter-segment-id').val();
+                var createdAt = $row.find('.edit-created-at').val();
+                var choiceText = $row.find('.edit-choice-text').val();
+                var nextSegmentId = $row.find('.edit-next-segment-id').val();
+
+                if (!choiceText || !nextSegmentId) {
+                    alert('Vui lòng điền đầy đủ thông tin.');
+                    return;
+                }
+
+                $.ajax({
+                    url: '/Choice/Edit',
+                    type: 'POST',
+                    data: {
+                        Id: choiceId,
+                        ChapterSegmentId: chapterSegmentId,
+                        CreatedAt: createdAt,
+                        ChoiceText: choiceText,
+                        NextSegmentId: nextSegmentId,
+                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            $row.find('.choice-text').text(response.choiceText);
+                            $row.find('.badge').text('→ Đến đoạn: ' + response.nextSegmentTitle);
+                            $row.find('.choice-display').show();
+                            $row.find('.choice-actions').show();
+                            $row.find('.choice-edit').hide();
+                        } else {
+                            alert(response.message);
+                        }
+                    },
+                    error: function () {
+                        alert('Có lỗi xảy ra khi lưu thay đổi.');
+                    }
+                });
+            });
+
+            // Lưu giá trị ban đầu của các input
+            $('.choice-item').each(function () {
+                var $row = $(this);
+                $row.find('.edit-choice-text').data('original-value', $row.find('.choice-text').text().trim());
+                $row.find('.edit-next-segment-id').data('original-value', $row.find('.edit-next-segment-id').attr('data-original-value'));
+            });
+        });
+    </script>
 }

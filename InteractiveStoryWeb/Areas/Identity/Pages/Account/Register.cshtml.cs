@@ -97,6 +97,14 @@ namespace InteractiveStoryWeb.Areas.Identity.Pages.Account
 
             if (ModelState.IsValid)
             {
+                // Kiểm tra email đã tồn tại chưa
+                var existingUser = await _userManager.FindByEmailAsync(Input.Email);
+                if (existingUser != null)
+                {
+                    ModelState.AddModelError(string.Empty, "Email đã được sử dụng. Vui lòng chọn email khác.");
+                    return Page();
+                }
+
                 var user = CreateUser();
 
                 await _userStore.SetUserNameAsync(user, Input.Username, CancellationToken.None);
@@ -110,17 +118,20 @@ namespace InteractiveStoryWeb.Areas.Identity.Pages.Account
                     // ✅ GÁN ROLE "User" cho tài khoản mới
                     await _userManager.AddToRoleAsync(user, "User");
 
-                    var userId = await _userManager.GetUserIdAsync(user);
-                    var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                    code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-                    var callbackUrl = Url.Page(
-                        "/Account/ConfirmEmail",
-                        pageHandler: null,
-                        values: new { area = "Identity", userId = userId, code = code, returnUrl = returnUrl },
-                        protocol: Request.Scheme);
+                    if (result.Succeeded)
+                    {
+                        _logger.LogInformation("User created a new account with password.");
 
-                    await _emailSender.SendEmailAsync(Input.Email, "Confirm your email",
-                        $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
+                        // ✅ GÁN ROLE "User" cho tài khoản mới
+                        await _userManager.AddToRoleAsync(user, "User");
+
+                        // ✅ Tự động xác nhận email
+                        user.EmailConfirmed = true;
+                        await _userManager.UpdateAsync(user);
+
+                        await _signInManager.SignInAsync(user, isPersistent: false);
+                        return LocalRedirect(returnUrl);
+                    }
 
                     if (_userManager.Options.SignIn.RequireConfirmedAccount)
                     {

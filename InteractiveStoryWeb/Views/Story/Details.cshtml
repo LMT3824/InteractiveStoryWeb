@@ -1,6 +1,11 @@
 ﻿@model InteractiveStoryWeb.Models.Story
 @{
     ViewData["Title"] = Model.Title;
+    var comments = ViewBag.Comments as List<InteractiveStoryWeb.Models.Comment>;
+    var ratings = ViewBag.Ratings as List<InteractiveStoryWeb.Models.Rating>;
+    var averageRating = ViewBag.AverageRating;
+    var user = ViewBag.CurrentUser as InteractiveStoryWeb.Models.ApplicationUser;
+    var userRating = ratings?.FirstOrDefault(r => r.UserId == user?.Id);
 }
 
 <div class="row">
@@ -11,6 +16,14 @@
              class="img-fluid rounded shadow" alt="Ảnh bìa truyện" />
     </div>
     <div class="col-md-8">
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @TempData["ErrorMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+
         <h2>@Model.Title</h2>
         <p><strong>Thể loại:</strong> @Model.Genre</p>
         <p><strong>Mô tả:</strong> @Model.Description</p>
@@ -32,8 +45,461 @@
                 Truyện chưa có nội dung để đọc.
             </div>
         }
-
-        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-secondary mt-2">✏️ Chỉnh sửa</a>
         <a asp-action="Index" class="btn btn-outline-secondary mt-2">⬅️ Quay lại</a>
     </div>
 </div>
+
+<!-- Hiển thị danh sách các chương công khai -->
+<hr />
+<h3 class="mt-4">📚 Danh sách chương</h3>
+
+@if (Model.Chapters != null && Model.Chapters.Any(c => c.IsPublic))
+{
+    <div class="list-group chapter-list">
+        @foreach (var chapter in Model.Chapters.Where(c => c.IsPublic).OrderBy(c => c.CreatedAt))
+        {
+            <div class="list-group-item list-group-item-action mb-2">
+                <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">Chương: @chapter.Title (ID: @chapter.Id)</h5>
+                    <small>@chapter.CreatedAt.ToString("dd/MM/yyyy")</small>
+                </div>
+                <p class="mb-1">
+                    <strong>Lượt xem:</strong> @chapter.ViewCount<br />
+                    <strong>Số đoạn:</strong> @(chapter.Segments?.Count ?? 0)
+                </p>
+                @if (chapter.Segments != null && chapter.Segments.Any())
+                {
+                    <a asp-controller="Chapter" asp-action="Read" asp-route-id="@chapter.Id" class="btn btn-sm btn-primary">
+                        📖 Đọc chương
+                    </a>
+                }
+                else
+                {
+                    <span class="text-muted">Chương chưa có nội dung để đọc.</span>
+                }
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="alert alert-info mt-3">
+        Truyện chưa có chương công khai nào.
+    </div>
+}
+
+<!-- Hiển thị đánh giá -->
+<hr />
+<h3 class="mt-4">⭐ Đánh giá truyện</h3>
+
+<div class="mb-3">
+    <p><strong>Điểm trung bình:</strong> <span class="average-rating">@(averageRating != null ? averageRating.ToString("F1") : "Chưa có đánh giá")</span> / 5 ⭐</p>
+</div>
+
+<div class="alert alert-danger error-message mt-2" style="display: none;"></div>
+
+@if (User.Identity.IsAuthenticated)
+{
+    <!-- Form thêm đánh giá -->
+    <form id="addRatingForm" class="mb-3" style="@(userRating != null ? "display: none;" : "")">
+        <input type="hidden" name="storyId" value="@Model.Id" />
+        <div class="d-flex align-items-center">
+            <select class="form-select me-2" name="ratingValue" style="width: 150px;" required>
+                <option value="">Chọn số sao</option>
+                <option value="1">1 ⭐</option>
+                <option value="2">2 ⭐</option>
+                <option value="3">3 ⭐</option>
+                <option value="4">4 ⭐</option>
+                <option value="5">5 ⭐</option>
+            </select>
+            <button type="submit" class="btn btn-primary">Gửi đánh giá</button>
+        </div>
+    </form>
+}
+else
+{
+    <p class="text-muted">Vui lòng đăng nhập để đánh giá truyện.</p>
+}
+
+<div class="rating-list-container">
+    <div class="list-group rating-list">
+        @if (ratings != null && ratings.Any())
+        {
+            @foreach (var rating in ratings)
+            {
+                <div class="list-group-item mb-2" data-rating-id="@rating.Id" data-rating-value="@rating.RatingValue">
+                    <p data-created-at="@rating.CreatedAt.ToString("dd/MM/yyyy HH:mm")">
+                        <strong>@rating.User.UserName:</strong> @rating.RatingValue ⭐
+                        <small>(@rating.CreatedAt.ToString("dd/MM/yyyy HH:mm")@(!rating.UpdatedAt.HasValue ? "" : $" - Cập nhật: {rating.UpdatedAt.Value.ToString("dd/MM/yyyy HH:mm")}"))</small>
+                        @if (User.Identity.IsAuthenticated && rating.UserId == user?.Id)
+                        {
+                            <button type="button" class="btn btn-warning btn-sm edit-rating-btn ms-2">✏️ Sửa</button>
+                            <button type="button" class="btn btn-danger btn-sm delete-rating-btn ms-2">🗑️ Xóa</button>
+                        }
+                    </p>
+                </div>
+            }
+        }
+    </div>
+    <div class="alert alert-info mt-3 rating-no-data" style="@(ratings != null && ratings.Any() ? "display: none;" : "")">
+        Truyện chưa có đánh giá nào.
+    </div>
+</div>
+
+<!-- Hiển thị bình luận -->
+<hr />
+<h3 class="mt-4">💬 Bình luận</h3>
+
+@if (User.Identity.IsAuthenticated)
+{
+    <!-- Form thêm bình luận -->
+    <form id="addCommentForm" class="mb-3">
+        <input type="hidden" name="storyId" value="@Model.Id" />
+        <div class="mb-3">
+            <textarea class="form-control" name="content" rows="3" placeholder="Viết bình luận của bạn..." required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Gửi bình luận</button>
+    </form>
+
+    <!-- Hiển thị danh sách bình luận -->
+    <div class="comment-list-container">
+        <div class="list-group comment-list" style="@(comments != null && comments.Any() ? "" : "display: none;")">
+            @if (comments != null && comments.Any())
+            {
+                @foreach (var comment in comments)
+                {
+                    <div class="list-group-item mb-2 comment-item" data-comment-id="@comment.Id">
+                        <div class="comment-display">
+                            <div class="d-flex align-items-center">
+                                <img src="@(string.IsNullOrEmpty(comment.User.AvatarUrl)
+                                    ? Url.Content("~/images/AvatarNull.jpg")
+                                    : comment.User.AvatarUrl)"
+                                     class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;" alt="Avatar người dùng" />
+                                <p class="mb-0">
+                                    <strong>@comment.User.UserName:</strong> <span class="comment-content">@comment.Content</span>
+                                    <small>(@comment.CreatedAt.ToString("dd/MM/yyyy HH:mm"))</small>
+                                    @if (User.Identity.IsAuthenticated && comment.UserId == user?.Id)
+                                    {
+                                        <button type="button" class="btn btn-warning btn-sm edit-comment-btn ms-2">✏️ Sửa</button>
+                                        <button type="button" class="btn btn-danger btn-sm delete-comment-btn ms-2">🗑️ Xóa</button>
+                                    }
+                                </p>
+                            </div>
+                        </div>
+                        <div class="comment-edit" style="display: none;">
+                            <textarea class="form-control comment-content-input mb-2" rows="3" required>@comment.Content</textarea>
+                            <button type="button" class="btn btn-success save-comment-btn">💾 Lưu</button>
+                            <button type="button" class="btn btn-secondary cancel-comment-btn ms-2">Hủy</button>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+        <div class="alert alert-info mt-3 comment-no-data" style="@(comments != null && comments.Any() ? "display: none;" : "")">
+            Truyện chưa có bình luận nào.
+        </div>
+    </div>
+}
+else
+{
+    <p class="text-muted">Vui lòng đăng nhập để bình luận.</p>
+
+    @if (comments != null && comments.Any())
+    {
+        <div class="list-group comment-list">
+            @foreach (var comment in comments)
+            {
+                <div class="list-group-item mb-2 comment-item" data-comment-id="@comment.Id">
+                    <div class="comment-display">
+                        <div class="d-flex align-items-center">
+                            <img src="@(string.IsNullOrEmpty(comment.User.AvatarUrl)
+                                ? Url.Content("~/images/AvatarNotFound.png")
+                                : comment.User.AvatarUrl)"
+                                 class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;" alt="Avatar người dùng" />
+                            <p class="mb-0">
+                                <strong>@comment.User.UserName:</strong> <span class="comment-content">@comment.Content</span>
+                                <small>(@comment.CreatedAt.ToString("dd/MM/yyyy HH:mm"))</small>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            // Thêm bình luận
+            $(document).on('submit', '#addCommentForm', function (e) {
+                e.preventDefault();
+                var formData = $(this).serialize();
+
+                $.ajax({
+                    url: '/Story/AddComment',
+                    type: 'POST',
+                    data: formData,
+                    success: function (response) {
+                        if (response.success) {
+                            var commentHtml = `
+                                <div class="list-group-item mb-2 comment-item" data-comment-id="${response.commentId}">
+                                    <div class="comment-display">
+                                        <div class="d-flex align-items-center">
+                                            <img src="${response.avatarUrl}"
+                                                 class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;" alt="Avatar người dùng" />
+                                            <p class="mb-0">
+                                                <strong>${response.userName}:</strong> <span class="comment-content">${response.content}</span>
+                                                <small>(${response.createdAt})</small>
+                                                <button type="button" class="btn btn-warning btn-sm edit-comment-btn ms-2">✏️ Sửa</button>
+                                                <button type="button" class="btn btn-danger btn-sm delete-comment-btn ms-2">🗑️ Xóa</button>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="comment-edit" style="display: none;">
+                                        <textarea class="form-control comment-content-input mb-2" rows="3" required>${response.content}</textarea>
+                                        <button type="button" class="btn btn-success save-comment-btn">💾 Lưu</button>
+                                        <button type="button" class="btn btn-secondary cancel-comment-btn ms-2">Hủy</button>
+                                    </div>
+                                </div>`;
+                            $('.comment-list').prepend(commentHtml);
+                            $('.comment-list').show();
+                            $('.comment-no-data').hide();
+                            $('#addCommentForm')[0].reset();
+                            $('.error-message').hide();
+                        } else {
+                            $('.error-message').text(response.message).show();
+                        }
+                    },
+                    error: function () {
+                        $('.error-message').text('Có lỗi xảy ra khi gửi bình luận.').show();
+                    }
+                });
+            });
+
+            // Chỉnh sửa bình luận
+            $(document).on('click', '.edit-comment-btn', function () {
+                var $row = $(this).closest('.comment-item');
+                $row.find('.comment-display').hide();
+                $row.find('.comment-edit').show();
+            });
+
+            $(document).on('click', '.cancel-comment-btn', function () {
+                var $row = $(this).closest('.comment-item');
+                $row.find('.comment-display').show();
+                $row.find('.comment-edit').hide();
+
+                // Đặt lại giá trị ban đầu
+                $row.find('.comment-content-input').val($row.find('.comment-content').text().trim());
+            });
+
+            $(document).on('click', '.save-comment-btn', function () {
+                var $row = $(this).closest('.comment-item');
+                var commentId = $row.data('comment-id');
+                var content = $row.find('.comment-content-input').val();
+
+                if (!content) {
+                    $('.error-message').text('Nội dung bình luận không được để trống.').show();
+                    return;
+                }
+
+                $.ajax({
+                    url: '/Story/EditComment',
+                    type: 'POST',
+                    data: {
+                        id: commentId,
+                        content: content,
+                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            $row.find('.comment-content').text(response.content);
+                            $row.find('.comment-display').show();
+                            $row.find('.comment-edit').hide();
+                            $('.error-message').hide();
+                        } else {
+                            $('.error-message').text(response.message).show();
+                        }
+                    },
+                    error: function () {
+                        $('.error-message').text('Có lỗi xảy ra khi chỉnh sửa bình luận.').show();
+                    }
+                });
+            });
+
+            // Xóa bình luận
+            $(document).on('click', '.delete-comment-btn', function () {
+                var $row = $(this).closest('.comment-item');
+                var commentId = $row.data('comment-id');
+
+                if (confirm('Bạn có chắc chắn muốn xóa bình luận này?')) {
+                    $.ajax({
+                        url: '/Story/DeleteComment',
+                        type: 'POST',
+                        data: {
+                            id: commentId,
+                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        success: function (response) {
+                            if (response.success) {
+                                $row.remove();
+                                if ($('.comment-item').length === 0) {
+                                    $('.comment-list').hide();
+                                    $('.comment-no-data').show();
+                                }
+                                $('.error-message').hide();
+                            } else {
+                                $('.error-message').text(response.message).show();
+                            }
+                        },
+                        error: function () {
+                            $('.error-message').text('Có lỗi xảy ra khi xóa bình luận.').show();
+                        }
+                    });
+                }
+            });
+
+            // Thêm đánh giá
+            $(document).on('submit', '#addRatingForm', function (e) {
+                e.preventDefault();
+                var formData = $(this).serialize();
+
+                $.ajax({
+                    url: '/Story/AddRating',
+                    type: 'POST',
+                    data: formData,
+                    success: function (response) {
+                        if (response.success) {
+                            var ratingHtml = `
+                                <div class="list-group-item mb-2" data-rating-id="${response.ratingId}" data-rating-value="${response.ratingValue}">
+                                    <p data-created-at="${response.createdAt}">
+                                        <strong>${response.userName}:</strong> ${response.ratingValue} ⭐
+                                        <small>(${response.createdAt})</small>
+                                        <button type="button" class="btn btn-warning btn-sm edit-rating-btn ms-2">✏️ Sửa</button>
+                                        <button type="button" class="btn btn-danger btn-sm delete-rating-btn ms-2">🗑️ Xóa</button>
+                                    </p>
+                                </div>`;
+                            $('.rating-list-container .rating-list').prepend(ratingHtml);
+                            $(this).hide(); // Ẩn form sau khi gửi
+                            $('.rating-list').show();
+                            $('.rating-no-data').hide();
+                            $('.average-rating').html(`${response.averageRating.toFixed(1)}`);
+                            $('.error-message').hide();
+                        } else {
+                            $('.error-message').text(response.message).show();
+                        }
+                    },
+                    error: function () {
+                        $('.error-message').text('Có lỗi xảy ra khi gửi đánh giá.').show();
+                    }
+                });
+            });
+
+            // Chỉnh sửa đánh giá
+            $(document).on('click', '.edit-rating-btn', function () {
+                var $row = $(this).closest('.list-group-item');
+                var ratingId = $row.data('rating-id');
+                var ratingValue = $row.data('rating-value'); // Lấy ratingValue từ data attribute
+
+                var editHtml = `
+                    <div class="rating-edit">
+                        <select class="form-select rating-value-input me-2" style="width: 150px;" required>
+                            <option value="1" ${ratingValue == 1 ? 'selected' : ''}>1 ⭐</option>
+                            <option value="2" ${ratingValue == 2 ? 'selected' : ''}>2 ⭐</option>
+                            <option value="3" ${ratingValue == 3 ? 'selected' : ''}>3 ⭐</option>
+                            <option value="4" ${ratingValue == 4 ? 'selected' : ''}>4 ⭐</option>
+                            <option value="5" ${ratingValue == 5 ? 'selected' : ''}>5 ⭐</option>
+                        </select>
+                        <button type="button" class="btn btn-success save-rating-btn">💾 Lưu</button>
+                        <button type="button" class="btn btn-secondary cancel-rating-btn ms-2">Hủy</button>
+                    </div>`;
+                $row.append(editHtml);
+                $row.find('p').hide();
+            });
+
+            $(document).on('click', '.cancel-rating-btn', function () {
+                var $row = $(this).closest('.list-group-item');
+                $row.find('.rating-edit').remove();
+                $row.find('p').show();
+            });
+
+            $(document).on('click', '.save-rating-btn', function () {
+                var $row = $(this).closest('.list-group-item');
+                var ratingId = $row.data('rating-id');
+                var ratingValue = $row.find('.rating-value-input').val();
+                var createdAt = $row.find('p').data('created-at') || $row.find('small').text().replace(/[()]/g, '').split(' - ')[0];
+
+                $.ajax({
+                    url: '/Story/EditRating',
+                    type: 'POST',
+                    data: {
+                        id: ratingId,
+                        ratingValue: ratingValue,
+                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            $row.html(`
+                                <p data-created-at="${createdAt}">
+                                    <strong>${$row.find('strong').text().split(':')[0]}:</strong> ${response.ratingValue} ⭐
+                                    <small>(${createdAt}${response.updatedAt ? " - Cập nhật: " + response.updatedAt : ""})</small>
+                                    <button type="button" class="btn btn-warning btn-sm edit-rating-btn ms-2">✏️ Sửa</button>
+                                    <button type="button" class="btn btn-danger btn-sm delete-rating-btn ms-2">🗑️ Xóa</button>
+                                </p>`);
+                            $row.data('rating-value', response.ratingValue); // Cập nhật data-rating-value
+                            $('.average-rating').html(`${response.averageRating.toFixed(1)}`);
+                            $('.error-message').hide();
+                        } else {
+                            $('.error-message').text(response.message).show();
+                        }
+                    },
+                    error: function () {
+                        $('.error-message').text('Có lỗi xảy ra khi chỉnh sửa đánh giá.').show();
+                    }
+                });
+            });
+
+            // Xóa đánh giá
+            $(document).on('click', '.delete-rating-btn', function () {
+                var $row = $(this).closest('.list-group-item');
+                var ratingId = $row.data('rating-id');
+
+                if (confirm('Bạn có chắc chắn muốn xóa đánh giá này?')) {
+                    $.ajax({
+                        url: '/Story/DeleteRating',
+                        type: 'POST',
+                        data: {
+                            id: ratingId,
+                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        success: function (response) {
+                            if (response.success) {
+                                $row.remove();
+                                $('#addRatingForm').show();
+                                $('.average-rating').html(`${response.averageRating.toFixed(1)}`);
+                                if ($('.rating-list-container .rating-list').children().length === 0) {
+                                    $('.rating-list').hide();
+                                    $('.rating-no-data').show();
+                                }
+                                $('.error-message').hide();
+                            } else {
+                                $('.error-message').text(response.message).show();
+                            }
+                        },
+                        error: function () {
+                            $('.error-message').text('Có lỗi xảy ra khi xóa đánh giá.').show();
+                        }
+                    });
+                }
+            });
+
+            // Lưu giá trị ban đầu của các input bình luận
+            $('.comment-item').each(function () {
+                var $row = $(this);
+                $row.find('.comment-content-input').data('original-value', $row.find('.comment-content').text().trim());
+            });
+        });
+    </script>
+}

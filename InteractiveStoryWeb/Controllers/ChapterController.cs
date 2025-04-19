@@ -2,6 +2,7 @@
 using InteractiveStoryWeb.Models;
 using InteractiveStoryWeb.ViewModels;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,11 +12,13 @@ namespace InteractiveStoryWeb.Controllers
     public class ChapterController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly UserManager<ApplicationUser> _userManager;
         private readonly IWebHostEnvironment _env;
 
-        public ChapterController(ApplicationDbContext context, IWebHostEnvironment env)
+        public ChapterController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, IWebHostEnvironment env)
         {
             _context = context;
+            _userManager = userManager;
             _env = env;
         }
 
@@ -133,7 +136,6 @@ namespace InteractiveStoryWeb.Controllers
             return RedirectToAction("Manage", new { storyId = chapter.StoryId });
         }
 
-
         [AllowAnonymous]
         public async Task<IActionResult> Read(int id)
         {
@@ -142,9 +144,11 @@ namespace InteractiveStoryWeb.Controllers
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             if (chapter == null)
-                return NotFound();
+                return NotFound("Chương không tồn tại.");
 
-            // Tăng ViewCount
+            if (!chapter.IsPublic)
+                return NotFound("Chương không công khai.");
+
             chapter.ViewCount++;
             await _context.SaveChangesAsync();
 
@@ -154,10 +158,9 @@ namespace InteractiveStoryWeb.Controllers
                 .FirstOrDefaultAsync();
 
             if (firstSegment == null)
-                return NotFound("Chương chưa có đoạn nào.");
+                return RedirectToAction("Details", "Story", new { id = chapter.StoryId, errorMessage = "Chương chưa có đoạn nào." });
 
-            // Chuyển tới đọc đoạn đầu tiên
-            return RedirectToAction("Read", "Segment", new { id = firstSegment.Id });
+            return RedirectToAction("InteractiveRead", "Segment", new { id = firstSegment.Id });
         }
 
         [Authorize]
@@ -175,16 +178,56 @@ namespace InteractiveStoryWeb.Controllers
             return View(chapters);
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         [Authorize]
-        public async Task<IActionResult> Tree(int storyId)
+        public async Task<IActionResult> Delete(int id)
         {
-            var chapters = await _context.Chapters
-                .Where(c => c.StoryId == storyId)
-                .OrderBy(c => c.CreatedAt)
+            var chapter = await _context.Chapters
+                .Include(c => c.Story)
+                .Include(c => c.Segments)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (chapter == null)
+            {
+                TempData["ErrorMessage"] = "Chương không tồn tại.";
+                return RedirectToAction("Manage", new { storyId = ViewBag.StoryId });
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+            if (chapter.Story.AuthorId != user.Id)
+            {
+                TempData["ErrorMessage"] = "Bạn không có quyền xóa chương này.";
+                return RedirectToAction("Manage", new { storyId = chapter.StoryId });
+            }
+
+            // Kiểm tra xem đây có phải là chương duy nhất của truyện không
+            var chapterCount = await _context.Chapters
+                .Where(c => c.StoryId == chapter.StoryId)
+                .CountAsync();
+
+            if (chapterCount <= 1)
+            {
+                TempData["ErrorMessage"] = "Đây là chương duy nhất của truyện. Bạn chỉ có thể xóa toàn bộ truyện.";
+                return RedirectToAction("Manage", new { storyId = chapter.StoryId });
+            }
+
+            // Đặt ChapterSegmentId trong ReadingProgress thành null trước khi xóa
+            var segmentIds = chapter.Segments.Select(s => s.Id).ToList();
+            var relatedProgresses = await _context.ReadingProgresses
+                .Where(rp => segmentIds.Contains(rp.ChapterSegmentId.Value))
                 .ToListAsync();
 
-            ViewBag.StoryId = storyId;
-            return View(chapters); // sử dụng View mới để hiển thị danh sách chương
+            foreach (var progress in relatedProgresses)
+            {
+                progress.ChapterSegmentId = null;
+            }
+
+            _context.Chapters.Remove(chapter);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Chương đã được xóa thành công!";
+            return RedirectToAction("Manage", new { storyId = chapter.StoryId });
         }
     }
 }
