@@ -9,6 +9,22 @@
 
 <div id="alert-container"></div>
 
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
 <div class="card mb-3" id="add-chapter-card">
     <div class="card-header bg-success text-white">
         <h5 class="mb-0">Thêm chương mới</h5>
@@ -460,66 +476,66 @@ else
                 window.location.href = `/Segment/Create?chapterId=${chapterId}`;
             });
 
-                            // Xóa đoạn
-        $(document).on('click', '.delete-segment-btn', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            if (!confirm('Bạn có chắc chắn muốn xóa đoạn này?')) return;
-            var segmentId = $(this).data('segment-id');
-            var storyId = $(this).data('story-id');
-            var token = $('input[name="__RequestVerificationToken"]').val();
-            if (!token) {
-                showAlert('danger', 'Không thể xóa đoạn: Thiếu token xác thực.', `#segment-${segmentId}`);
-                return;
-            }
-            $.ajax({
-                url: '/Segment/Delete',
-                type: 'POST',
-                data: {
-                    id: segmentId,
-                    __RequestVerificationToken: token
-                },
-                success: function (response) {
-                    if (response.success) {
-                        var $segment = $(`#segment-${segmentId}`);
-                        if ($segment.length) {
-                            $segment.fadeOut(300, function() {
-                                $(this).remove();
-                                // Kiểm tra xem chương còn đoạn nào không
-                                var $chapterCard = $segment.closest('.card.mb-3.border-primary');
-                                if ($chapterCard.find('.card.mb-2.border-light').length === 0) {
-                                    $chapterCard.find('.card-body').append('<div class="alert alert-light">Chương này chưa có đoạn nào.</div>');
-                                    $chapterCard.find('.is-public-badge')
-                                        .removeClass('bg-success bg-secondary')
-                                        .addClass('bg-secondary')
-                                        .text('Không công khai');
-                                }
-                            });
-                            showAlert('success', response.message, `#chapter-${response.chapterId}`);
-                        }
-                    } else {
-                        // Hiển thị thông báo lỗi ở vị trí phù hợp
-                        var $segment = $(`#segment-${segmentId}`);
-                        if ($segment.length) {
-                            showAlert('danger', response.message, `#segment-${segmentId} .card-body`);
-                        } else {
-                            showAlert('danger', response.message, `#chapter-${response.chapterId || response.storyId}`);
-                        }
-                    }
-                },
-                error: function (xhr) {
-                    var errorMessage = xhr.responseJSON && xhr.responseJSON.message
-                        ? xhr.responseJSON.message
-                        : 'Có lỗi xảy ra khi xóa đoạn.';
-                    var $segment = $(`#segment-${segmentId}`);
-                    if ($segment.length) {
-                        showAlert('danger', errorMessage, `#segment-${segmentId} .card-body`);
-                    } else {
-                        showAlert('danger', errorMessage);
-                    }
+            // Xóa đoạn
+            $(document).on('click', '.delete-segment-btn', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!confirm('Bạn có chắc chắn muốn xóa đoạn này?')) return;
+                var segmentId = $(this).data('segment-id');
+                var storyId = $(this).data('story-id');
+                var token = $('input[name="__RequestVerificationToken"]').val();
+                if (!token) {
+                    showAlert('danger', 'Không thể xóa đoạn: Thiếu token xác thực.', `#segment-${segmentId}`);
+                    return;
                 }
+                $.ajax({
+                    url: '/Segment/Delete',
+                    type: 'POST',
+                    data: {
+                        id: segmentId,
+                        __RequestVerificationToken: token
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            var $segment = $(`#segment-${segmentId}`);
+                            if ($segment.length) {
+                                $segment.fadeOut(300, function() {
+                                    $(this).remove();
+                                    // Kiểm tra xem chương còn đoạn nào không
+                                    var $chapterCard = $segment.closest('.card.mb-3.border-primary');
+                                    if ($chapterCard.find('.card.mb-2.border-light').length === 0) {
+                                        $chapterCard.find('.card-body').append('<div class="alert alert-light">Chương này chưa có đoạn nào.</div>');
+                                        $chapterCard.find('.is-public-badge')
+                                            .removeClass('bg-success bg-secondary')
+                                            .addClass('bg-secondary')
+                                            .text('Không công khai');
+                                    }
+                                });
+                                showAlert('success', response.message, `#chapter-${response.chapterId}`);
+                            }
+                        } else {
+                            // Hiển thị thông báo lỗi ở vị trí phù hợp
+                            var $segment = $(`#segment-${segmentId}`);
+                            if ($segment.length) {
+                                showAlert('danger', response.message, `#segment-${segmentId} .card-body`);
+                            } else {
+                                showAlert('danger', response.message, `#chapter-${response.chapterId || response.storyId}`);
+                            }
+                        }
+                    },
+                    error: function (xhr) {
+                        var errorMessage = xhr.responseJSON && xhr.responseJSON.message
+                            ? xhr.responseJSON.message
+                            : 'Có lỗi xảy ra khi xóa đoạn.';
+                        var $segment = $(`#segment-${segmentId}`);
+                        if ($segment.length) {
+                            showAlert('danger', errorMessage, `#segment-${segmentId} .card-body`);
+                        } else {
+                            showAlert('danger', errorMessage);
+                        }
+                    }
+                });
             });
-        });
 
             // Thêm lựa chọn
             $(document).on('submit', '.add-choice-form', function (e) {

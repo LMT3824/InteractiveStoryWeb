@@ -170,6 +170,8 @@
     <h2>THƯ VIỆN CỦA TÔI</h2>
 </div>
 
+<div id="alert-container"></div>
+
 @if (Model != null && Model.Any())
 {
     <div class="story-row mb-5">
@@ -261,20 +263,39 @@ else
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         $(document).ready(function () {
+            // Hàm hiển thị thông báo
+            function showAlert(type, message) {
+                // Xóa các thông báo cũ
+                $('#alert-container').empty();
+
+                var $alert = $('<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
+                    message + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>');
+                $('#alert-container').prepend($alert);
+                setTimeout(function () { $alert.alert('close'); }, 3000);
+            }
+
             // Xóa truyện khỏi thư viện
-            $(document).on('click', '.remove-from-library', function () {
+            $(document).on('click', '.remove-from-library', function (e) {
+                e.preventDefault();
+                if (!confirm('Bạn có chắc chắn muốn xóa truyện này khỏi thư viện?')) return;
+
                 var storyId = $(this).data('story-id');
-                if (confirm('Bạn có chắc chắn muốn xóa truyện này khỏi thư viện?')) {
-                    $.ajax({
-                        url: '/Story/RemoveFromLibrary',
-                        type: 'POST',
-                        data: {
-                            storyId: storyId,
-                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
-                        },
-                        success: function (response) {
-                            if (response.success) {
-                                $(`button[data-story-id="${storyId}"]`).closest('.col').remove();
+                var $col = $(this).closest('.col');
+                var token = $('input[name="__RequestVerificationToken"]').val();
+
+                $.ajax({
+                    url: '/Story/RemoveFromLibrary',
+                    type: 'POST',
+                    data: {
+                        storyId: storyId,
+                        __RequestVerificationToken: token
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            // Áp dụng hiệu ứng fadeOut
+                            $col.fadeOut(300, function () {
+                                $(this).remove();
+                                // Kiểm tra nếu không còn truyện nào thì hiển thị thông báo
                                 if ($('.col').length === 0) {
                                     $('.story-row').after(`
                                         <div class="alert alert-info mt-3">
@@ -283,16 +304,19 @@ else
                                     `);
                                     $('.story-row').remove();
                                 }
-                                alert(response.message);
-                            } else {
-                                alert(response.message);
-                            }
-                        },
-                        error: function () {
-                            alert('Có lỗi xảy ra khi xóa truyện khỏi thư viện.');
+                            });
+                            showAlert('success', response.message);
+                        } else {
+                            showAlert('danger', response.message);
                         }
-                    });
-                }
+                    },
+                    error: function (xhr) {
+                        var errorMessage = xhr.responseJSON && xhr.responseJSON.message
+                            ? xhr.responseJSON.message
+                            : 'Có lỗi xảy ra khi xóa truyện khỏi thư viện.';
+                        showAlert('danger', errorMessage);
+                    }
+                });
             });
         });
     </script>

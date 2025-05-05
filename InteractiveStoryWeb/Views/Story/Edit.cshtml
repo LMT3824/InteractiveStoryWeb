@@ -26,6 +26,26 @@
             padding: 2px 5px;
             border-radius: 3px;
         }
+
+    /* Khung ảnh bìa */
+    .cover-image-preview {
+        width: 210px;
+        height: 280px;
+        border: 1px solid #e0e0e0;
+        border-radius: 5px;
+        overflow: hidden;
+        margin-top: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #f8f9fa;
+    }
+
+        .cover-image-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
 </style>
 
 <h2 class="mb-4">@ViewData["Title"]</h2>
@@ -75,15 +95,12 @@
 
     <div class="mb-3">
         <label for="NewCoverImage" class="form-label">Ảnh bìa mới (tuỳ chọn)</label>
-        <input type="file" name="NewCoverImage" class="form-control" accept="image/*" />
+        <input type="file" name="NewCoverImage" id="coverImageInput" class="form-control" accept="image/*" />
         <small class="form-text text-muted">Chọn ảnh bìa mới (định dạng: jpg, png, ...)</small>
-        @if (!string.IsNullOrEmpty(ViewBag.CoverImageUrl))
-        {
-            <div class="mt-2">
-                <p>Ảnh hiện tại:</p>
-                <img src="@ViewBag.CoverImageUrl" class="img-thumbnail" style="max-height: 200px;" />
-            </div>
-        }
+        <small class="form-text text-muted">Lưu ý: hãy dùng ảnh có định dạng 210x280 để có được chất lượng tốt nhất.</small>
+        <div class="cover-image-preview">
+            <img src="@(string.IsNullOrEmpty(ViewBag.CoverImageUrl) ? "/images/ImageNotFound.png" : ViewBag.CoverImageUrl)" id="coverImagePreview" alt="Ảnh bìa truyện" />
+        </div>
     </div>
 
     <div class="mb-3">
@@ -125,6 +142,20 @@
 
             // Cập nhật số ký tự ngay khi tải trang
             updateCharCounter();
+
+            // Hiển thị ảnh bìa ngay khi chọn file (thêm đoạn này)
+            $('#coverImageInput').on('change', function (e) {
+                var file = e.target.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    var reader = new FileReader();
+                    reader.onload = function (e) {
+                        $('#coverImagePreview').attr('src', e.target.result);
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    $('#coverImagePreview').attr('src', '@(string.IsNullOrEmpty(ViewBag.CoverImageUrl) ? "/images/ImageNotFound.png" : ViewBag.CoverImageUrl)');
+                }
+            });
         });
     </script>
 }
