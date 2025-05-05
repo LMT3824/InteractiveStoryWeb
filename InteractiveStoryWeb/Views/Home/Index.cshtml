@@ -3,59 +3,357 @@
     ViewData["Title"] = "Trang chủ";
 }
 
-<h2 class="mb-4">🔥 Truyện nổi bật</h2>
-<div class="row row-cols-2 row-cols-md-4 g-4 mb-5">
-    @foreach (var story in Model.TopViewed)
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+    .hero-section {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .container {
+        max-width: 1600px;
+    }
+
+    .hero-content {
+        max-width: 50%;
+    }
+
+        .hero-content h1 {
+            font-family: 'STIX Two Text', serif;
+            font-weight: 700;
+            font-size: 40px;
+            color: #000000;
+            margin-bottom: 20px;
+        }
+
+        .hero-content p {
+            font-size: 21px;
+            color: #000000;
+            margin-bottom: 30px;
+        }
+
+        .hero-content .btn-read-now {
+            background-color: #000000;
+            color: #ffffff;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 21px;
+            text-transform: uppercase;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+            .hero-content .btn-read-now:hover {
+                background-color: #333333;
+            }
+
+    .hero-image {
+        width: 390px;
+        height: 300px;
+        overflow: hidden;
+    }
+
+        .hero-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+    .search-section {
+        padding: 10px;
+        background-color: #FFF3E6;
+        text-align: right;
+    }
+
+        .search-section .search-container {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .search-section input[type="text"] {
+            width: 100%;
+            padding: 10px 10px 10px 40px;
+            border: 1px solid #672B00;
+            border-radius: 5px;
+            font-size: 18px;
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        .search-section .search-icon {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            color: #666666;
+        }
+
+    .search-results {
+        padding: 20px;
+        background-color: #FFF3E6;
+    }
+
+    h2.mb-4 {
+        font-family: 'STIX Two Text', serif;
+        font-weight: 700;
+        font-size: 30px;
+        margin-bottom: 20px;
+    }
+
+    .story-card {
+        width: 500px;
+        height: 280px;
+        background-color: #ffffff;
+        border: 1px solid #e0e0e0;
+        border-radius: 5px;
+        overflow: hidden;
+        display: flex;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        text-decoration: none;
+        color: inherit;
+        margin: 0;
+    }
+
+        .story-card:hover {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+    .story-image {
+        width: 210px;
+        height: 280px;
+        overflow: hidden;
+    }
+
+        .story-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+    .story-content {
+        padding: 10px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .story-title {
+        font-size: 20px;
+        font-weight: 600;
+        margin: 0;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.3;
+        height: 2.6em;
+    }
+
+    .story-stats {
+        display: flex;
+        gap: 15px;
+        margin: 0;
+    }
+
+    .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 16px;
+        color: #666666;
+        line-height: 1.2;
+    }
+
+        .stat-item svg {
+            width: 16px;
+            height: 16px;
+        }
+
+    .story-description {
+        font-size: 16px;
+        color: #666666;
+        margin: 0;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.3;
+        flex-grow: 1;
+    }
+
+    .story-row {
+        display: flex;
+        justify-content: flex-start;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin: -10px;
+    }
+
+        .story-row .col {
+            flex: 0 0 calc(33.33% - 20px);
+            min-width: 500px;
+            max-width: calc(33.33% - 20px);
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+    .load-more-section {
+        margin-top: 20px;
+        text-align: left;
+    }
+
+    .load-more-btn {
+        background-color: #5B2A00;
+        color: #ffffff;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        font-size: 18px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+        .load-more-btn:hover {
+            background-color: #4a2300;
+        }
+</style>
+
+<!-- Hero Section -->
+<div class="hero-section">
+    <div class="hero-content">
+        <h1>WEBSITE TRUYỆN TƯƠNG TÁC</h1>
+        <p>Khám phá những câu chuyện hấp dẫn và đưa ra lựa chọn của riêng bạn.</p>
+        <a asp-controller="Story" asp-action="Index" class="btn-read-now">Đọc ngay</a>
+    </div>
+    <div class="hero-image">
+        <img src="/images/HomePic.png" alt="Home Illustration">
+    </div>
+</div>
+<hr />
+
+<!-- Search Section -->
+<div class="search-section">
+    <div class="search-container">
+        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <form id="searchForm" method="get">
+            <input type="text" name="query" placeholder="Tìm kiếm..." />
+        </form>
+    </div>
+</div>
+
+<!-- Search Results -->
+<div class="search-results" id="searchResults"></div>
+<hr />
+
+<!-- TRUYỆN NỔI BẬT -->
+<h2 class="mb-4">TRUYỆN NỔI BẬT</h2>
+<div class="story-row mb-5" id="popular-stories">
+    @await Html.PartialAsync("_StoryList", Model.TopViewed.Take(6).ToList())
+</div>
+<div class="load-more-section">
+    @if (Model.TopViewed.Count > 6)
     {
-        <div class="col">
-            <a asp-controller="Story" asp-action="Details" asp-route-id="@story.Id" class="text-decoration-none text-dark">
-                <div class="card h-100">
-                    <img src="@(!string.IsNullOrEmpty(story.CoverImageUrl) ? story.CoverImageUrl : "/images/ImageNotFound.png")"
-                         class="card-img-top" style="height:200px; object-fit:cover;" />
-                    <div class="card-body">
-                        <h5 class="card-title">@story.Title</h5>
-                        <p class="card-text text-muted">@ViewBag.ViewCounts[story.Id] lượt xem</p>
-                    </div>
-                </div>
-            </a>
-        </div>
+        <button class="load-more-btn" data-category="Popular" data-offset="6" data-total="@ViewBag.TotalPopularStories">Xem thêm</button>
+    }
+</div>
+<hr />
+
+<!-- TRUYỆN MỚI RA MẮT -->
+<h2 class="mb-4">TRUYỆN MỚI RA MẮT</h2>
+<div class="story-row mb-5" id="new-stories">
+    @await Html.PartialAsync("_StoryList", Model.NewStories.Take(6).ToList())
+</div>
+<div class="load-more-section">
+    @if (Model.NewStories.Count > 6)
+    {
+        <button class="load-more-btn" data-category="New" data-offset="6" data-total="@ViewBag.TotalNewStories">Xem thêm</button>
+    }
+</div>
+<hr />
+
+<!-- TRUYỆN HOÀN THÀNH -->
+<h2 class="mb-4">TRUYỆN HOÀN THÀNH</h2>
+<div class="story-row mb-5" id="completed-stories">
+    @await Html.PartialAsync("_StoryList", Model.CompletedStories.Take(6).ToList())
+</div>
+<div class="load-more-section">
+    @if (Model.CompletedStories.Count > 6)
+    {
+        <button class="load-more-btn" data-category="Completed" data-offset="6" data-total="@ViewBag.TotalCompletedStories">Xem thêm</button>
     }
 </div>
 
-<h2 class="mb-4">🆕 Truyện mới</h2>
-<div class="row row-cols-2 row-cols-md-4 g-4 mb-5">
-    @foreach (var story in Model.NewStories)
-    {
-        <div class="col">
-            <a asp-controller="Story" asp-action="Details" asp-route-id="@story.Id" class="text-decoration-none text-dark">
-                <div class="card h-100">
-                    <img src="@(!string.IsNullOrEmpty(story.CoverImageUrl) ? story.CoverImageUrl : "/images/ImageNotFound.png")"
-                         class="card-img-top" style="height:200px; object-fit:cover;" />
-                    <div class="card-body">
-                        <h5 class="card-title">@story.Title</h5>
-                        <p class="card-text text-muted">Ngày đăng: @story.CreatedAt.ToString("dd/MM/yyyy")</p>
-                    </div>
-                </div>
-            </a>
-        </div>
-    }
-</div>
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            $('#searchForm').on('submit', function (e) {
+                e.preventDefault();
 
-<h2 class="mb-4">✅ Truyện đã hoàn thành</h2>
-<div class="row row-cols-2 row-cols-md-4 g-4 mb-5">
-    @foreach (var story in Model.CompletedStories)
-    {
-        <div class="col">
-            <a asp-controller="Story" asp-action="Details" asp-route-id="@story.Id" class="text-decoration-none text-dark">
-                <div class="card h-100">
-                    <img src="@(!string.IsNullOrEmpty(story.CoverImageUrl) ? story.CoverImageUrl : "/images/ImageNotFound.png")"
-                         class="card-img-top" style="height:200px; object-fit:cover;" />
-                    <div class="card-body">
-                        <h5 class="card-title">@story.Title</h5>
-                        <p class="card-text text-muted">Đã hoàn thành</p>
-                    </div>
-                </div>
-            </a>
-        </div>
-    }
-</div>
+                var query = $(this).find('input[name="query"]').val();
+                if (!query.trim()) {
+                    $('#searchResults').html('<p>Vui lòng nhập từ khóa tìm kiếm.</p>');
+                    return;
+                }
+
+                $.ajax({
+                    url: '@Url.Action("Search", "Story")',
+                    type: 'GET',
+                    data: { query: query },
+                    success: function (data) {
+                        $('#searchResults').html(data);
+                    },
+                    error: function () {
+                        $('#searchResults').html('<p>Có lỗi xảy ra khi tìm kiếm. Vui lòng thử lại.</p>');
+                    }
+                });
+            });
+
+            $('#searchForm input[name="query"]').on('keypress', function (e) {
+                if (e.which === 13) {
+                    $('#searchForm').submit();
+                }
+            });
+
+            $('.load-more-btn').on('click', function () {
+                var button = $(this);
+                var category = button.data('category');
+                var offset = parseInt(button.data('offset'));
+                var total = parseInt(button.data('total'));
+                var container = $('#' + category.toLowerCase() + '-stories');
+
+                $.ajax({
+                    url: '@Url.Action("LoadMoreStories", "Home")',
+                    type: 'GET',
+                    data: { category: category, offset: offset },
+                    success: function (data) {
+                        container.append(data);
+                        var newOffset = offset + 6;
+                        button.data('offset', newOffset);
+
+                        if (newOffset >= total) {
+                            button.hide();
+                        }
+                    },
+                    error: function () {
+                        container.append('<p>Có lỗi xảy ra khi tải thêm truyện. Vui lòng thử lại.</p>');
+                    }
+                });
+            });
+        });
+    </script>
+}

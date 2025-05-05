@@ -1,48 +1,207 @@
 ﻿@model IEnumerable<InteractiveStoryWeb.Models.Story>
 @{
     ViewData["Title"] = "Danh sách truyện";
+    string genre = Context.Request.Query["genre"];
+    if (!string.IsNullOrEmpty(genre))
+    {
+        ViewData["Title"] = $"Danh sách truyện - Thể loại: {genre}";
+    }
 }
 
-<h2 class="mb-4">@ViewData["Title"]</h2>
+<style>
+    .page-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+        .page-header .back-arrow {
+            cursor: pointer;
+            color: #000;
+            text-decoration: none;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            vertical-align: middle;
+        }
+
+            .page-header .back-arrow svg {
+                width: 100%;
+                height: 100%;
+            }
+
+        .page-header h2 {
+            font-family: 'STIX Two Text', serif;
+            font-weight: 700;
+            font-size: 32px;
+            margin-top: 26px;
+            margin-bottom: 20px;
+            line-height: 30px;
+        }
+
+    .story-card {
+        width: 500px;
+        height: 280px;
+        background-color: #ffffff;
+        border: 1px solid #e0e0e0;
+        border-radius: 5px;
+        overflow: hidden;
+        display: flex;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        text-decoration: none;
+        color: inherit;
+        margin: 0;
+    }
+
+        .story-card:hover {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+    .story-image {
+        width: 210px;
+        height: 280px;
+        overflow: hidden;
+    }
+
+        .story-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+    .story-content {
+        padding: 10px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .story-title {
+        font-size: 20px;
+        font-weight: 600;
+        margin: 0;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.3;
+        height: 2.6em;
+    }
+
+    .story-stats {
+        display: flex;
+        gap: 15px;
+        margin: 0;
+    }
+
+    .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 16px;
+        color: #666666;
+        line-height: 1.2;
+    }
+
+        .stat-item svg {
+            width: 16px;
+            height: 16px;
+        }
+
+    .story-description {
+        font-size: 16px;
+        color: #666666;
+        margin: 0;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.3;
+        flex-grow: 1;
+    }
+
+    .story-row {
+        display: flex;
+        justify-content: flex-start;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin: -10px;
+    }
+
+        .story-row .col {
+            flex: 0 0 calc(33.33% - 20px);
+            min-width: 500px;
+            max-width: calc(33.33% - 20px);
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+    .load-more-section {
+        margin-top: 20px;
+        text-align: left;
+    }
+
+    .load-more-btn {
+        background-color: #5B2A00;
+        color: #ffffff;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        font-size: 18px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+        .load-more-btn:hover {
+            background-color: #4a2300;
+        }
+</style>
+
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text&display=swap" rel="stylesheet">
+
+<div class="page-header">
+    <a href="javascript:history.back()" class="back-arrow">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+    </a>
+    <h2>DANH SÁCH TRUYỆN</h2>
+</div>
 
 @if (User.Identity.IsAuthenticated)
 {
     <div class="mb-4">
-        <a asp-action="Create" class="btn btn-success">📖 Đăng truyện mới</a>
+        @if (!string.IsNullOrEmpty(genre))
+        {
+            <a asp-action="Index" class="btn btn-secondary ms-2">Xóa bộ lọc</a>
+        }
     </div>
 }
 
 @if (!Model.Any())
 {
     <div class="alert alert-info">
-        Hiện tại chưa có truyện nào được công khai.
+        @if (!string.IsNullOrEmpty(genre))
+        {
+            <span>Không tìm thấy truyện nào thuộc thể loại "@genre".</span>
+        }
+        else
+        {
+            <span>Hiện tại chưa có truyện nào được công khai.</span>
+        }
     </div>
 }
 else
 {
-    <div class="row row-cols-1 row-cols-md-3 g-4">
-        @foreach (var story in Model)
-        {
-            <div class="col">
-                <div class="card h-100 shadow-sm">
-                    <img src="@(string.IsNullOrEmpty(story.CoverImageUrl)
-                        ? Url.Content("~/images/ImageNotFound.png")
-                        : story.CoverImageUrl)"
-                         class="card-img-top" style="height: 200px; object-fit: cover;" alt="Ảnh bìa truyện" />
-                    <div class="card-body">
-                        <h5 class="card-title">@story.Title</h5>
-                        <p class="card-text"><strong>Thể loại:</strong> @story.Genre</p>
-                        <p class="card-text"><strong>Mô tả:</strong> @(story.Description.Length > 100 ? story.Description.Substring(0, 100) + "..." : story.Description)</p>
-                        <p class="card-text"><strong>Lượt xem:</strong> @ViewBag.ViewCounts[story.Id]</p> <!-- Sử dụng ViewBag -->
-                        <p class="card-text"><strong>Tùy chỉnh nhân vật:</strong> @(story.AllowCustomization ? "Có" : "Không")</p>
-                        <p class="card-text"><small class="text-muted">Tác giả: @story.Author?.UserName</small></p>
-                        <p class="card-text"><small class="text-muted">Ngày đăng: @story.CreatedAt.ToString("dd/MM/yyyy")</small></p>
-                    </div>
-                    <div class="card-footer bg-white border-top-0">
-                        <a asp-action="Details" asp-route-id="@story.Id" class="btn btn-primary w-100">Xem chi tiết</a>
-                    </div>
-                </div>
-            </div>
-        }
+    <div class="story-row mb-5">
+        @await Html.PartialAsync("_StoryList", Model.ToList())
     </div>
 }
+

@@ -1,78 +1,159 @@
 ﻿@page
 @model RegisterModel
 @{
-    ViewData["Title"] = "Register";
+    ViewData["Title"] = "Đăng ký";
 }
 
-<h1>@ViewData["Title"]</h1>
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:wght@400;700&display=swap" rel="stylesheet">
 
-<div class="row">
-    <div class="col-md-4">
+<style>
+    html, body {
+        margin: 0;
+        padding: 0;
+        height: 100vh;
+        overflow-x: hidden;
+    }
+
+    .background-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(to right, #FFE6CE 50%, #FFFBF8 50%); /* Nửa trái #FFE6CE, nửa phải #FFF3E6 */
+        z-index: -1; /* Đặt background ở phía sau nội dung */
+    }
+
+    .main-content {
+        position: relative;
+        min-height: 100vh; /* Đảm bảo chiếm toàn bộ chiều cao viewport */
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        margin-top: 20px; /* Khoảng cách từ header, điều chỉnh nếu cần */
+    }
+
+    .register-container {
+        width: 620px;
+        height: 680px;
+        background-color: #ffffff;
+        border: 1px solid #e0e0e0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+        .register-container h2 {
+            font-size: 42px;
+            color: #000000;
+            margin-bottom: 10px;
+            font-family: 'STIX Two Text', serif; /* Áp dụng font STIX Two Text */
+            font-weight: 700;
+        }
+
+    .login-link {
+        font-size: 20px;
+        color: #000000;
+        margin-bottom: 30px;
+    }
+
+        .login-link a {
+            color: #000000;
+            text-decoration: none;
+        }
+
+            .login-link a:hover {
+                text-decoration: underline;
+            }
+
+    .form-floating {
+        margin-bottom: 20px;
+    }
+
+        .form-floating input {
+            width: 500px;
+            height: 60px;
+            border: 2px solid #672B00;
+            border-radius: 5px;
+            font-size: 18px;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        .form-floating label {
+            color: #999999;
+            font-size: 18px;
+            padding: 10px;
+        }
+
+    .btn-primary {
+        width: 200px;
+        height: 50px;
+        background-color: #5B2A00;
+        color: #ffffff;
+        border: none;
+        border-radius: 5px;
+        font-size: 23px;
+        cursor: pointer;
+        display: block;
+        margin: 20px auto;
+    }
+
+        .btn-primary:hover {
+            background-color: #4a2300;
+        }
+
+    .text-danger {
+        font-size: 16px;
+        color: #ff0000;
+        text-align: center;
+        margin-top: 10px;
+    }
+</style>
+
+<div class="background-container"></div>
+<div class="main-content">
+    <div class="register-container">
+        <h2>Đăng ký tài khoản</h2>
+        <div class="login-link">
+            Đã có tài khoản? <a asp-page="/Account/Login" asp-area="Identity">Đăng nhập</a>
+        </div>
+
         <form id="registerForm" asp-route-returnUrl="@Model.ReturnUrl" method="post" autocomplete="off">
-            <h2>Đăng ký tài khoản mới</h2>
-            <hr />
             <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
 
             <!-- Username -->
-            <div class="form-floating mb-3">
-                <input asp-for="Input.Username" class="form-control" autocomplete="username" aria-required="true" placeholder="Tên người dùng" />
-                <label asp-for="Input.Username">Tên người dùng</label>
+            <div class="form-floating">
+                <input asp-for="Input.Username" class="form-control" autocomplete="username" aria-required="true" placeholder="Tên người dùng..." />
+                <label asp-for="Input.Username">Tên người dùng...</label>
                 <span asp-validation-for="Input.Username" class="text-danger"></span>
             </div>
 
             <!-- Gmail -->
-            <div class="form-floating mb-3">
-                <input asp-for="Input.Email" class="form-control" autocomplete="email" aria-required="true" placeholder="name@gmail.com" />
-                <label asp-for="Input.Email">Gmail</label>
+            <div class="form-floating">
+                <input asp-for="Input.Email" class="form-control" autocomplete="email" aria-required="true" placeholder="Email..." />
+                <label asp-for="Input.Email">Email...</label>
                 <span asp-validation-for="Input.Email" class="text-danger"></span>
             </div>
 
             <!-- Password -->
-            <div class="form-floating mb-3">
-                <input asp-for="Input.Password" class="form-control" autocomplete="off" aria-required="true" placeholder="Mật khẩu" />
-                <label asp-for="Input.Password">Mật khẩu</label>
+            <div class="form-floating">
+                <input asp-for="Input.Password" class="form-control" autocomplete="off" aria-required="true" placeholder="Mật khẩu..." />
+                <label asp-for="Input.Password">Mật khẩu...</label>
                 <span asp-validation-for="Input.Password" class="text-danger"></span>
             </div>
 
             <!-- Confirm Password -->
-            <div class="form-floating mb-3">
-                <input asp-for="Input.ConfirmPassword" class="form-control" autocomplete="off" aria-required="true" placeholder="Xác nhận mật khẩu" />
-                <label asp-for="Input.ConfirmPassword">Xác nhận mật khẩu</label>
+            <div class="form-floating">
+                <input asp-for="Input.ConfirmPassword" class="form-control" autocomplete="off" aria-required="true" placeholder="Xác nhận mật khẩu..." />
+                <label asp-for="Input.ConfirmPassword">Xác nhận mật khẩu...</label>
                 <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
             </div>
 
-            <button id="registerSubmit" type="submit" class="w-100 btn btn-lg btn-primary">Đăng ký</button>
+            <button id="registerSubmit" type="submit" class="btn-primary">ĐĂNG KÝ</button>
         </form>
-    </div>
-    <div class="col-md-6 col-md-offset-2">
-        <section>
-            <h3>Use another service to register.</h3>
-            <hr />
-            @{
-                if ((Model.ExternalLogins?.Count ?? 0) == 0)
-                {
-                    <div>
-                        <p>
-                            There are no external authentication services configured. See this <a href="https://go.microsoft.com/fwlink/?LinkID=532715">article
-                            about setting up this ASP.NET application to support logging in via external services</a>.
-                        </p>
-                    </div>
-                }
-                else
-                {
-                    <form id="external-account" asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post" class="form-horizontal">
-                        <div>
-                            <p>
-                                @foreach (var provider in Model.ExternalLogins!)
-                                {
-                                    <button type="submit" class="btn btn-primary" name="provider" value="@provider.Name" title="Log in using your @provider.DisplayName account">@provider.DisplayName</button>
-                                }
-                            </p>
-                        </div>
-                    </form>
-                }
-            }
-        </section>
     </div>
 </div>
 

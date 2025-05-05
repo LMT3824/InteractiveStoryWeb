@@ -4,6 +4,30 @@
     ViewData["Title"] = "Đăng truyện mới";
 }
 
+<style>
+    /* Đưa số ký tự vào trong textarea */
+    .textarea-wrapper {
+        position: relative;
+        width: 100%; /* Chiều rộng của textarea */
+        margin: 0 auto;
+    }
+
+        .textarea-wrapper textarea {
+            padding-bottom: 30px; /* Tạo khoảng trống cho số ký tự ở dưới */
+        }
+
+        .textarea-wrapper .char-counter {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            color: #666;
+            font-size: 14px;
+            background: rgba(255, 255, 255, 0.8); /* Nền mờ để dễ đọc */
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+</style>
+
 <h2 class="mb-4">@ViewData["Title"]</h2>
 
 @if (TempData["SuccessMessage"] != null)
@@ -41,7 +65,10 @@
 
     <div class="form-group mb-3">
         <label asp-for="Description" class="form-label">Mô tả truyện</label>
-        <textarea asp-for="Description" class="form-control" rows="5" placeholder="Nhập mô tả truyện..."></textarea>
+        <div class="textarea-wrapper">
+            <textarea asp-for="Description" class="form-control" id="DescriptionCreate" rows="5" placeholder="Nhập mô tả truyện..." maxlength="1000"></textarea>
+            <span class="char-counter" id="charCounterCreate">0/1000</span>
+        </div>
         <span asp-validation-for="Description" class="text-danger"></span>
     </div>
 
@@ -49,11 +76,6 @@
         <label asp-for="CoverImage" class="form-label">Ảnh bìa</label>
         <input asp-for="CoverImage" type="file" class="form-control" accept="image/*" />
         <small class="form-text text-muted">Chọn ảnh bìa (định dạng: jpg, png, ...)</small>
-    </div>
-
-    <div class="form-check mb-3">
-        <input asp-for="IsPublic" class="form-check-input" />
-        <label asp-for="IsPublic" class="form-check-label">Công khai truyện</label>
     </div>
 
     <div class="form-check mb-3">
@@ -67,4 +89,21 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        $(document).ready(function () {
+            // Cập nhật số ký tự trong textarea
+            function updateCharCounter() {
+                var descriptionLength = $('#DescriptionCreate').val().length;
+                $('#charCounterCreate').text(descriptionLength + '/1000');
+            }
+
+            // Lắng nghe sự kiện input trên textarea
+            $('#DescriptionCreate').on('input', function () {
+                updateCharCounter();
+            });
+
+            // Cập nhật số ký tự ngay khi tải trang
+            updateCharCounter();
+        });
+    </script>
 }

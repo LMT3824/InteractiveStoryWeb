@@ -1,0 +1,29 @@
+﻿@model List<InteractiveStoryWeb.Models.Story>
+
+@if (Model != null && Model.Any())
+{
+    <h2 class="mb-4">Kết quả tìm kiếm cho: "@ViewBag.Query"</h2>
+    <div class="row row-cols-2 row-cols-md-4 g-4 mb-5">
+        @foreach (var story in Model)
+        {
+            <div class="col">
+                <a asp-controller="Story" asp-action="Details" asp-route-id="@story.Id" class="text-decoration-none text-dark">
+                    <div class="card h-100">
+                        <img src="@(!string.IsNullOrEmpty(story.CoverImageUrl) ? story.CoverImageUrl : "/images/ImageNotFound.png")"
+                             class="card-img-top" style="height:200px; object-fit:cover;" />
+                        <div class="card-body">
+                            <h5 class="card-title">@story.Title</h5>
+                            <p class="card-text text-muted">Tác giả: @story.Author.UserName</p>
+                            <p class="card-text text-muted">@ViewBag.ViewCounts[story.Id] lượt xem</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        }
+    </div>
+}
+else if (!string.IsNullOrEmpty(ViewBag.Query))
+{
+    <h2 class="mb-4">Kết quả tìm kiếm cho: "@ViewBag.Query"</h2>
+    <p>Không tìm thấy truyện nào phù hợp với từ khóa "@ViewBag.Query".</p>
+}

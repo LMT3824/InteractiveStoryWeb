@@ -1,0 +1,245 @@
+﻿@model InteractiveStoryWeb.Models.Story
+@{
+    ViewData["Title"] = "Bình luận - " + Model.Title;
+    var comments = ViewBag.Comments as List<InteractiveStoryWeb.Models.Comment>;
+    var user = ViewBag.CurrentUser as InteractiveStoryWeb.Models.ApplicationUser;
+}
+
+<style>
+    .page-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+        .page-header .back-arrow {
+            cursor: pointer;
+            color: #000;
+            text-decoration: none;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            vertical-align: middle;
+        }
+
+            .page-header .back-arrow svg {
+                width: 100%;
+                height: 100%;
+            }
+
+        .page-header h2 {
+            font-family: 'STIX Two Text', serif;
+            font-weight: 700;
+            font-size: 32px;
+            margin-top: 26px;
+            margin-bottom: 20px;
+            line-height: 30px;
+        }
+
+</style>
+
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text&display=swap" rel="stylesheet">
+
+<div class="page-header">
+    <a href="javascript:history.back()" class="back-arrow">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+    </a>
+    <h2>BÌNH LUẬN | Truyện: @Model.Title</h2>
+</div>
+
+<div class="alert alert-danger error-message mt-2" style="display: none;"></div>
+
+@if (User.Identity.IsAuthenticated)
+{
+    <!-- Form thêm bình luận -->
+    <form id="addCommentForm" class="mb-3">
+        <input type="hidden" name="storyId" value="@Model.Id" />
+        <div class="mb-3">
+            <textarea class="form-control" name="content" rows="3" placeholder="Viết bình luận của bạn..." required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Gửi bình luận</button>
+    </form>
+}
+
+<!-- Hiển thị danh sách bình luận -->
+<div class="comment-list-container">
+    <div class="list-group comment-list" style="@(comments != null && comments.Any() ? "" : "display: none;")">
+        @if (comments != null && comments.Any())
+        {
+            @foreach (var comment in comments.OrderByDescending(c => c.CreatedAt))
+            {
+                <div class="list-group-item mb-2 comment-item" data-comment-id="@comment.Id">
+                    <div class="comment-display">
+                        <div class="d-flex align-items-center">
+                            <img src="@(string.IsNullOrEmpty(comment.User.AvatarUrl)
+                                ? Url.Content("~/images/AvatarNull.jpg")
+                                : comment.User.AvatarUrl)"
+                                 class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;" alt="Avatar người dùng" />
+                            <p class="mb-0">
+                                <strong>@comment.User.UserName:</strong> <span class="comment-content">@comment.Content</span>
+                                <small>(@comment.CreatedAt.ToString("dd/MM/yyyy HH:mm"))</small>
+                                @if (User.Identity.IsAuthenticated && comment.UserId == user?.Id)
+                                {
+                                    <button type="button" class="btn btn-warning btn-sm edit-comment-btn ms-2">✏️ Sửa</button>
+                                    <button type="button" class="btn btn-danger btn-sm delete-comment-btn ms-2">🗑️ Xóa</button>
+                                }
+                            </p>
+                        </div>
+                    </div>
+                    <div class="comment-edit" style="display: none;">
+                        <textarea class="form-control comment-content-input mb-2" rows="3" required>@comment.Content</textarea>
+                        <button type="button" class="btn btn-success save-comment-btn">💾 Lưu</button>
+                        <button type="button" class="btn btn-secondary cancel-comment-btn ms-2">Hủy</button>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+    <div class="alert alert-info mt-3 comment-no-data" style="@(comments != null && comments.Any() ? "display: none;" : "")">
+        Truyện chưa có bình luận nào.
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            // Thêm bình luận
+            $(document).on('submit', '#addCommentForm', function (e) {
+                e.preventDefault();
+                var content = $(this).find('textarea[name="content"]').val().trim();
+                if (!content) {
+                    $('.error-message').text('Nội dung bình luận không được để trống.').show();
+                    return;
+                }
+                var formData = $(this).serialize();
+
+                $.ajax({
+                    url: '/Story/AddComment',
+                    type: 'POST',
+                    data: formData,
+                    success: function (response) {
+                        if (response.success) {
+                            var commentHtml = `
+                                <div class="list-group-item mb-2 comment-item" data-comment-id="${response.commentId}">
+                                    <div class="comment-display">
+                                        <div class="d-flex align-items-center">
+                                            <img src="${response.avatarUrl}"
+                                                 class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;" alt="Avatar người dùng" />
+                                            <p class="mb-0">
+                                                <strong>${response.userName}:</strong> <span class="comment-content">${response.content}</span>
+                                                <small>(${response.createdAt})</small>
+                                                <button type="button" class="btn btn-warning btn-sm edit-comment-btn ms-2">✏️ Sửa</button>
+                                                <button type="button" class="btn btn-danger btn-sm delete-comment-btn ms-2">🗑️ Xóa</button>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="comment-edit" style="display: none;">
+                                        <textarea class="form-control comment-content-input mb-2" rows="3" required>${response.content}</textarea>
+                                        <button type="button" class="btn btn-success save-comment-btn">💾 Lưu</button>
+                                        <button type="button" class="btn btn-secondary cancel-comment-btn ms-2">Hủy</button>
+                                    </div>
+                                </div>`;
+                            $('.comment-list').prepend(commentHtml);
+                            $('.comment-list').show();
+                            $('.comment-no-data').hide();
+                            $('#addCommentForm')[0].reset();
+                            $('.error-message').hide();
+                        } else {
+                            $('.error-message').text(response.message).show();
+                        }
+                    },
+                    error: function () {
+                        $('.error-message').text('Có lỗi xảy ra khi gửi bình luận.').show();
+                    }
+                });
+            });
+
+            // Chỉnh sửa bình luận
+            $(document).on('click', '.edit-comment-btn', function () {
+                var $row = $(this).closest('.comment-item');
+                $row.find('.comment-display').hide();
+                $row.find('.comment-edit').show();
+            });
+
+            $(document).on('click', '.cancel-comment-btn', function () {
+                var $row = $(this).closest('.comment-item');
+                $row.find('.comment-display').show();
+                $row.find('.comment-edit').hide();
+                $row.find('.comment-content-input').val($row.find('.comment-content').text().trim());
+            });
+
+            $(document).on('click', '.save-comment-btn', function () {
+                var $row = $(this).closest('.comment-item');
+                var commentId = $row.data('comment-id');
+                var content = $row.find('.comment-content-input').val().trim();
+
+                if (!content) {
+                    $('.error-message').text('Nội dung bình luận không được để trống.').show();
+                    return;
+                }
+
+                $.ajax({
+                    url: '/Story/EditComment',
+                    type: 'POST',
+                    data: {
+                        id: commentId,
+                        content: content,
+                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            $row.find('.comment-content').text(response.content);
+                            $row.find('.comment-display').show();
+                            $row.find('.comment-edit').hide();
+                            $('.error-message').hide();
+                        } else {
+                            $('.error-message').text(response.message).show();
+                        }
+                    },
+                    error: function () {
+                        $('.error-message').text('Có lỗi xảy ra khi chỉnh sửa bình luận.').show();
+                    }
+                });
+            });
+
+            // Xóa bình luận
+            $(document).on('click', '.delete-comment-btn', function () {
+                var $row = $(this).closest('.comment-item');
+                var commentId = $row.data('comment-id');
+
+                if (confirm('Bạn có chắc chắn muốn xóa bình luận này?')) {
+                    $.ajax({
+                        url: '/Story/DeleteComment',
+                        type: 'POST',
+                        data: {
+                            id: commentId,
+                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        success: function (response) {
+                            if (response.success) {
+                                $row.remove();
+                                if ($('.comment-item').length === 0) {
+                                    $('.comment-list').hide();
+                                    $('.comment-no-data').show();
+                                }
+                                $('.error-message').hide();
+                            } else {
+                                $('.error-message').text(response.message).show();
+                            }
+                        },
+                        error: function () {
+                            $('.error-message').text('Có lỗi xảy ra khi xóa bình luận.').show();
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+}

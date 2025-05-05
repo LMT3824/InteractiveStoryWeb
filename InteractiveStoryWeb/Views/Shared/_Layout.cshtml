@@ -1,4 +1,5 @@
-﻿<!DOCTYPE html>
+﻿@inject InteractiveStoryWeb.Data.ApplicationDbContext Context
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -22,25 +23,46 @@
             background-color: #FFFBF8;
             margin: 0;
             padding: 0;
-            font-size: 21px;
+            font-size: 15px;
         }
 
         header .navbar-brand {
             font-family: 'Itim', serif;
             font-weight: 700;
-            font-size: 28px;
+            font-size: 24px;
         }
 
         .navbar, .navbar-nav {
             background-color: #FFFBF8;
-            font-size: 24px;
+            font-size: 22px;
         }
+
+        .dropdown:hover .dropdown-menu {
+            display: block;
+        }
+
+        .dropdown-menu {
+            background-color: #FFFBF8;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .dropdown-item {
+            font-family: 'Itim', cursive;
+            font-size: 18px;
+            color: #000;
+        }
+
+            .dropdown-item:hover {
+                background-color: #FFF3E6;
+            }
     </style>
 </head>
 <body>
     <header>
         <nav class="navbar navbar-expand-sm navbar-light border-bottom box-shadow mb-3" style="background-color: #FFFBF8;">
-            <div class="container-fluid">
+            <div class="container" style="max-width: 1600px;">
                 <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">PLOTTY</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
                         aria-expanded="false" aria-label="Toggle navigation">
@@ -48,11 +70,24 @@
                 </button>
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Story" asp-action="Index">Danh sách truyện</a>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link text-dark dropdown-toggle" href="#" id="exploreDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Khám phá
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="exploreDropdown">
+                                <li><a class="dropdown-item" asp-controller="Story" asp-action="Index">Tất cả thể loại</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                @foreach (var genre in Context.Genres.ToList())
+                                {
+                                    <li><a class="dropdown-item" asp-controller="Story" asp-action="Index" asp-route-genre="@genre.Name">@genre.Name</a></li>
+                                }
+                            </ul>
                         </li>
                         @if (User.Identity.IsAuthenticated)
                         {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-controller="Story" asp-action="Library">Thư viện</a>
+                            </li>
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-controller="Story" asp-action="Create">Đăng truyện</a>
                             </li>
@@ -63,7 +98,7 @@
             </div>
         </nav>
     </header>
-    <div class="container">
+    <div class="container" style="max-width: 1600px;">
         <main role="main" class="pb-3">
             @RenderBody()
         </main>

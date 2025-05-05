@@ -1,80 +1,183 @@
 ﻿@page
 @model LoginModel
-
 @{
-    ViewData["Title"] = "Log in";
+    ViewData["Title"] = "Đăng nhập";
 }
 
-<h1>@ViewData["Title"]</h1>
-<div class="row">
-    <div class="col-md-4">
-        <section>
-            <form id="account" method="post">
-                <h2>Use a local account to log in.</h2>
-                <hr />
-                <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
-                <div class="form-floating mb-3">
-                    <input asp-for="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
-                    <label asp-for="Input.Email" class="form-label">Email</label>
-                    <span asp-validation-for="Input.Email" class="text-danger"></span>
-                </div>
-                <div class="form-floating mb-3">
-                    <input asp-for="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="password" />
-                    <label asp-for="Input.Password" class="form-label">Mật khẩu</label>
-                    <span asp-validation-for="Input.Password" class="text-danger"></span>
-                </div>
-                <div class="checkbox mb-3">
-                    <label asp-for="Input.RememberMe" class="form-label">
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+    html, body {
+        margin: 0;
+        padding: 0;
+        height: 100vh;
+        overflow-x: hidden;
+    }
+
+    .background-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(to right, #FFE6CE 50%, #FFFBF8 50%);
+        z-index: -1;
+    }
+
+    .main-content {
+        position: relative;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        margin-top: 20px;
+    }
+
+    .login-container {
+        width: 620px;
+        height: 530px;
+        background-color: #ffffff;
+        border: 1px solid #e0e0e0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+        .login-container h2 {
+            font-size: 42px;
+            color: #000000;
+            margin-bottom: 10px;
+            font-family: 'STIX Two Text', serif;
+            font-weight: 700;
+            text-align: center;
+            width: 500px;
+        }
+
+    .register-link {
+        font-size: 20px;
+        color: #000000;
+        margin-bottom: 30px;
+        text-align: center;
+        width: 500px;
+    }
+
+        .register-link a {
+            color: #000000;
+            text-decoration: none;
+        }
+
+            .register-link a:hover {
+                text-decoration: underline;
+            }
+
+    .form-floating {
+        margin-bottom: 20px;
+    }
+
+        .form-floating input {
+            width: 500px;
+            height: 60px;
+            border: 2px solid #672B00;
+            border-radius: 5px;
+            font-size: 18px;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        .form-floating label {
+            color: #999999;
+            font-size: 18px;
+            padding: 10px;
+        }
+
+    .links-container {
+        display: flex;
+        justify-content: space-between;
+        width: 500px;
+        margin-top: 10px;
+    }
+
+    .checkbox-label {
+        font-size: 18px;
+        color: #000000;
+    }
+
+    .forgot-password-link {
+        font-size: 18px;
+        color: #000000;
+        text-decoration: none;
+    }
+
+        .forgot-password-link:hover {
+            text-decoration: underline;
+        }
+
+    .btn-primary {
+        width: 200px;
+        height: 50px;
+        background-color: #5B2A00;
+        color: #ffffff;
+        border: none;
+        border-radius: 5px;
+        font-size: 23px;
+        cursor: pointer;
+        display: block;
+        margin: 20px auto;
+    }
+
+        .btn-primary:hover {
+            background-color: #4a2300;
+        }
+
+    .text-danger {
+        font-size: 16px;
+        color: #ff0000;
+        text-align: center;
+        margin-top: 10px;
+        width: 500px;
+    }
+</style>
+
+<div class="background-container"></div>
+<div class="main-content">
+    <div class="login-container">
+        <h2>Đăng nhập tài khoản</h2>
+        <div class="register-link">
+            Chưa có tài khoản? <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl">Đăng ký</a>
+        </div>
+
+        <form id="account" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+
+            <!-- Email -->
+            <div class="form-floating">
+                <input asp-for="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="Email..." />
+                <label asp-for="Input.Email">Email...</label>
+                <span asp-validation-for="Input.Email" class="text-danger"></span>
+            </div>
+
+            <!-- Password -->
+            <div class="form-floating">
+                <input asp-for="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="Mật khẩu..." />
+                <label asp-for="Input.Password">Mật khẩu...</label>
+                <span asp-validation-for="Input.Password" class="text-danger"></span>
+            </div>
+
+            <!-- Remember Me and Forgot Password -->
+            <div class="links-container">
+                <div class="checkbox-label">
+                    <label asp-for="Input.RememberMe">
                         <input class="form-check-input" asp-for="Input.RememberMe" />
-                        @Html.DisplayNameFor(m => m.Input.RememberMe)
+                        Ghi nhớ tôi
                     </label>
                 </div>
-                <div>
-                    <button id="login-submit" type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
-                </div>
-                <div>
-                    <p>
-                        <a id="forgot-password" asp-page="./ForgotPassword">Forgot your password?</a>
-                    </p>
-                    <p>
-                        <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl">Register as a new user</a>
-                    </p>
-                    <p>
-                        <a id="resend-confirmation" asp-page="./ResendEmailConfirmation">Resend email confirmation</a>
-                    </p>
-                </div>
-            </form>
-        </section>
-    </div>
-    <div class="col-md-6 col-md-offset-2">
-        <section>
-            <h3>Use another service to log in.</h3>
-            <hr />
-            @{
-                if ((Model.ExternalLogins?.Count ?? 0) == 0)
-                {
-                    <div>
-                        <p>
-                            There are no external authentication services configured. See this <a href="https://go.microsoft.com/fwlink/?LinkID=532715">article
-                            about setting up this ASP.NET application to support logging in via external services</a>.
-                        </p>
-                    </div>
-                }
-                else
-                {
-                    <form id="external-account" asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post" class="form-horizontal">
-                        <div>
-                            <p>
-                                @foreach (var provider in Model.ExternalLogins!)
-                                {
-                                    <button type="submit" class="btn btn-primary" name="provider" value="@provider.Name" title="Log in using your @provider.DisplayName account">@provider.DisplayName</button>
-                                }
-                            </p>
-                        </div>
-                    </form>
-                }
-            }
-        </section>
+                <a class="forgot-password-link" asp-page="./ForgotPassword">Quên mật khẩu?</a>
+            </div>
+
+            <button id="login-submit" type="submit" class="btn btn-primary">ĐĂNG NHẬP</button>
+        </form>
     </div>
 </div>
 

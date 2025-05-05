@@ -2,7 +2,6 @@
 
 @{
     ViewData["Title"] = "Thêm đoạn mới vào chương";
-
 }
 
 <h2 class="mb-4">📄 Thêm đoạn mới</h2>
@@ -23,7 +22,7 @@
     </div>
 }
 
-<form asp-action="Create" method="post" enctype="multipart/form-data">
+<form asp-action="Create" method="post" enctype="multipart/form-data" id="createSegmentForm">
     <input type="hidden" asp-for="ChapterId" />
 
     <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
@@ -36,34 +35,94 @@
 
     <div class="mb-3">
         <label asp-for="Content" class="form-label">Nội dung đoạn</label>
-        <textarea asp-for="Content" class="form-control" rows="6" placeholder="Nhập nội dung đoạn..."></textarea>
+        <textarea asp-for="Content" class="form-control" rows="6" placeholder="Nhập nội dung đoạn..." id="contentInput"></textarea>
         <span asp-validation-for="Content" class="text-danger"></span>
-        @if (ViewBag.AllowCustomization == true)
-        {
-            <small class="form-text text-muted">
-                Bạn có thể dùng các từ khóa: [Tên], [XưngHôThứNhất], [XưngHôThứHai]. Chúng sẽ được thay thế bằng thông tin người đọc nhập.
-                <br />Ví dụ: "[Tên] nói: [XưngHôThứNhất] sẽ đi đâu?" trở thành "Anna nói: Tôi sẽ đi đâu?"
-            </small>
-        }
-        else
-        {
-            <small class="form-text text-muted">
-                Truyện này không bật tùy chỉnh nhân vật. Nội dung sẽ hiển thị như bạn nhập.
-            </small>
-        }
+        <small class="form-text text-muted">
+            @if (ViewBag.AllowCustomization == true)
+            {
+                <text>Bạn có thể dùng các từ khóa: [Tên], [XưngHôThứNhất], [XưngHôThứHai]. Chúng sẽ được thay thế bằng thông tin người đọc nhập.</text>
+				<br></br>
+            }
+            Hỗ trợ Markdown:
+            <ul>
+                <li><code>*nghiêng*</code> → <em>nghiêng</em></li>
+                <li><code>**đậm**</code> → <strong>đậm</strong></li>
+                <li><code>***đậm và nghiêng***</code> → <strong><em>đậm và nghiêng</em></strong></li>
+            </ul>
+        </small>
     </div>
-
 
     <div class="mb-3">
         <label asp-for="Image" class="form-label">Ảnh minh họa (nếu có)</label>
-        <input asp-for="Image" type="file" class="form-control" accept="image/*" />
+        <input asp-for="Image" type="file" class="form-control" accept="image/*" id="imageInput" />
         <small class="form-text text-muted">Chọn ảnh minh họa (định dạng: jpg, png, ...)</small>
     </div>
 
+    <div class="mb-3">
+        <label asp-for="ImagePosition" class="form-label">Vị trí ảnh</label>
+        <select asp-for="ImagePosition" class="form-select">
+            <option value="Top">Đầu trang</option>
+            <option value="Bottom" selected>Cuối trang</option>
+        </select>
+    </div>
+
     <button type="submit" class="btn btn-primary">📄 Lưu đoạn</button>
+    <button type="button" class="btn btn-info" id="previewButton">👁️ Xem trước</button>
     <a asp-controller="Chapter" asp-action="Manage" asp-route-storyId="@ViewBag.StoryId" class="btn btn-secondary ms-2">⬅️ Quay lại</a>
 </form>
 
+<!-- Khu vực xem trước -->
+<div class="mt-4" id="previewArea" style="display: none;">
+    <h4>Xem trước nội dung</h4>
+    <div id="previewContent" class="border p-3" style="min-height: 100px; white-space: pre-wrap; margin-bottom: 0.5em;"></div>
+</div>
+
+<style>
+    #previewContent .segment-image {
+        max-width: 1500px;
+        width: 100%;
+    }
+</style>
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            $('#previewButton').click(function () {
+                var content = $('#contentInput').val();
+                var chapterId = $('#ChapterId').val();
+                var imagePosition = $('#ImagePosition').val();
+                var imageFile = $('#imageInput')[0].files[0];
+
+                var formData = new FormData();
+                formData.append('ChapterId', chapterId);
+                formData.append('Content', content);
+                formData.append('ImagePosition', imagePosition);
+                if (imageFile) {
+                    formData.append('image', imageFile);
+                }
+                formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
+
+                $.ajax({
+                    url: '@Url.Action("Preview", "Segment")',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function (response) {
+                        if (response.success) {
+                            $('#previewContent').html(response.previewContent);
+                            $('#previewArea').show();
+                        } else {
+                            alert(response.message);
+                        }
+                    },
+                    error: function () {
+                        alert('Có lỗi xảy ra khi xem trước.');
+                    }
+                });
+            });
+        });
+    </script>
 }

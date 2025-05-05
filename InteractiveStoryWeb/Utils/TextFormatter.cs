@@ -7,15 +7,6 @@
             if (string.IsNullOrEmpty(content) || string.IsNullOrEmpty(placeholder) || string.IsNullOrEmpty(replacement))
                 return content;
 
-            // Chuẩn hóa placeholder để sửa lỗi chính tả
-            string normalizedPlaceholder = placeholder switch
-            {
-                "[XungHôThứNhất]" => "[XưngHôThứNhất]",
-                "[XungHôThứHai]" => "[XưngHôThứHai]",
-                "[Tên]" => "[Tên]",
-                _ => placeholder
-            };
-
             // Tách nội dung thành các đoạn (dựa trên xuống dòng)
             var paragraphs = content.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
             for (int i = 0; i < paragraphs.Length; i++)
@@ -25,6 +16,7 @@
 
                 // Tách đoạn thành các câu (dựa trên dấu chấm, chấm than, chấm hỏi)
                 var sentenceSeparators = new List<string>(); // Lưu dấu câu (bao gồm cả tổ hợp như !?)
+                var separatorSpaces = new List<bool>(); // Lưu thông tin có dấu cách sau dấu câu hay không
                 var sentences = new List<string>();
                 int startIndex = 0;
                 for (int j = 0; j < paragraph.Length; j++)
@@ -32,15 +24,27 @@
                     if (paragraph[j] == '.' || paragraph[j] == '!' || paragraph[j] == '?')
                     {
                         int separatorLength = 1;
+                        bool hasSpaceAfter = false;
                         if (j < paragraph.Length - 1 && (paragraph[j + 1] == '!' || paragraph[j + 1] == '?' || paragraph[j + 1] == '.'))
                         {
                             separatorLength = 2; // Xử lý trường hợp như !? hoặc !!
                         }
+                        // Kiểm tra có dấu cách sau dấu câu không
+                        if (j + separatorLength < paragraph.Length && paragraph[j + separatorLength] == ' ')
+                        {
+                            hasSpaceAfter = true;
+                        }
                         string separator = paragraph.Substring(j, separatorLength);
                         sentenceSeparators.Add(separator);
+                        separatorSpaces.Add(hasSpaceAfter);
                         sentences.Add(paragraph.Substring(startIndex, j - startIndex).Trim());
                         j += separatorLength - 1;
                         startIndex = j + 1;
+                        // Bỏ qua các dấu cách sau dấu câu để tránh Trim() xóa chúng
+                        while (startIndex < paragraph.Length && paragraph[startIndex] == ' ')
+                        {
+                            startIndex++;
+                        }
                     }
                 }
                 if (startIndex < paragraph.Length)
@@ -54,7 +58,7 @@
                     if (string.IsNullOrEmpty(sentence)) continue;
 
                     // Sử dụng Regex để tìm tất cả vị trí của placeholder trong câu
-                    var matches = System.Text.RegularExpressions.Regex.Matches(sentence, @$"(?<!\w){System.Text.RegularExpressions.Regex.Escape(normalizedPlaceholder)}(?!\w)");
+                    var matches = System.Text.RegularExpressions.Regex.Matches(sentence, @$"(?<!\w){System.Text.RegularExpressions.Regex.Escape(placeholder)}(?!\w)");
                     if (matches.Count == 0) continue;
 
                     string updatedSentence = sentence;
@@ -97,7 +101,7 @@
 
                         // Thay thế placeholder với từ phù hợp
                         string formattedReplacement;
-                        if (normalizedPlaceholder == "[Tên]")
+                        if (placeholder == "[Tên]")
                         {
                             // Đối với [Tên], giữ nguyên cách viết hoa/thường do người dùng nhập
                             formattedReplacement = replacement;
@@ -118,14 +122,18 @@
                     sentences[j] = updatedSentence;
                 }
 
-                // Ghép lại các câu với dấu câu gốc, đảm bảo có dấu cách sau dấu câu
+                // Ghép lại các câu với dấu câu gốc, bảo toàn dấu cách sau dấu câu
                 var resultSentence = new List<string>();
                 for (int j = 0; j < sentences.Count; j++)
                 {
                     resultSentence.Add(sentences[j]);
                     if (j < sentenceSeparators.Count)
                     {
-                        resultSentence.Add(sentenceSeparators[j] + " "); // Thêm dấu cách sau dấu câu
+                        resultSentence.Add(sentenceSeparators[j]);
+                        if (separatorSpaces[j])
+                        {
+                            resultSentence.Add(" "); // Khôi phục dấu cách nếu có trong nội dung gốc
+                        }
                     }
                 }
                 paragraphs[i] = string.Join("", resultSentence);

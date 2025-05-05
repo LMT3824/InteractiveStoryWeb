@@ -1,0 +1,58 @@
+﻿@model List<InteractiveStoryWeb.Models.Story>
+
+@foreach (var story in Model)
+{
+    <div class="col">
+        <a asp-controller="Story" asp-action="Details" asp-route-id="@story.Id" class="story-card">
+            <div class="story-image">
+                <img src="@(!string.IsNullOrEmpty(story.CoverImageUrl) ? story.CoverImageUrl : "/images/ImageNotFound.png")" alt="@story.Title" />
+            </div>
+            <div class="story-content">
+                <h5 class="story-title">@story.Title</h5>
+                <div class="story-stats">
+                    <div class="stat-item">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                        <span>@ViewBag.ViewCounts[story.Id]</span>
+                    </div>
+                    <div class="stat-item">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                        </svg>
+                        <span>@ViewBag.Ratings[story.Id].ToString("F1")</span>
+                    </div>
+                    <div class="stat-item">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                        <span>@ViewBag.ChapterCounts[story.Id]</span>
+                    </div>
+                </div>
+                <p class="story-description">@story.Description</p>
+                <div class="story-genre">
+                    <span class="genre-tag">@story.Genre</span>
+                </div>
+            </div>
+        </a>
+    </div>
+}
+
+<style>
+    .story-genre {
+        margin-top: 5px;
+    }
+
+    .genre-tag {
+        display: inline-block;
+        background-color: #e0e0e0;
+        color: #000000;
+        padding: 5px 10px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 500;
+    }
+</style>

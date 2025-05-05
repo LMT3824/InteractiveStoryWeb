@@ -8,5 +8,6 @@ namespace InteractiveStoryWeb.ViewModels
         public List<Story> TopViewed { get; set; }
         public List<Story> NewStories { get; set; }
         public List<Story> CompletedStories { get; set; }
+        public List<Story> TopRatedStories { get; set; }
     }
 }

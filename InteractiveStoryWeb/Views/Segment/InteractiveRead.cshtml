@@ -4,6 +4,22 @@
     var customization = ViewBag.Customization as InteractiveStoryWeb.Models.ReaderStoryCustomization;
 }
 
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
 <h2 class="mb-4">📖 Đọc truyện tương tác</h2>
 
 <div class="mb-3">
@@ -19,16 +35,23 @@
 
 <div class="card mb-3">
     <div class="card-body">
-        @Html.Raw(Model.Content.Replace("\n", "<br/>"))
+        @if (!string.IsNullOrEmpty(Model.ImageUrl) && Model.ImagePosition == ImagePosition.Top)
+        {
+            <div class="text-center mb-3">
+                <img src="@Model.ImageUrl" class="img-fluid rounded shadow segment-image" alt="Ảnh minh họa" />
+            </div>
+        }
+
+        @Html.Raw(Model.Content)
+
+        @if (!string.IsNullOrEmpty(Model.ImageUrl) && Model.ImagePosition == ImagePosition.Bottom)
+        {
+            <div class="text-center mb-3">
+                <img src="@Model.ImageUrl" class="img-fluid rounded shadow segment-image" alt="Ảnh minh họa" />
+            </div>
+        }
     </div>
 </div>
-
-@if (!string.IsNullOrEmpty(Model.ImageUrl))
-{
-    <div class="text-center mb-3">
-        <img src="@Model.ImageUrl" class="img-fluid rounded shadow" alt="Ảnh minh họa" />
-    </div>
-}
 
 @if (Model.Choices != null && Model.Choices.Any())
 {
@@ -40,7 +63,7 @@
             <li class="list-group-item">
                 <form asp-controller="Choice" asp-action="Choose" method="post">
                     <input type="hidden" name="id" value="@choice.Id" />
-                    <button type="submit" class="btn btn-outline-primary w-100">
+                    <button type="submit" class="btn btn-outline-primary w-100 choice-button">
                         @choice.ChoiceText
                     </button>
                 </form>
@@ -70,3 +93,44 @@ else
 }
 
 <a asp-controller="Story" asp-action="Details" asp-route-id="@Model.Chapter.StoryId" class="btn btn-secondary mt-3">⬅️ Quay lại chi tiết truyện</a>
+
+<style>
+    .card-body p {
+        margin-bottom: 0.5em; /* Đảm bảo các đoạn văn bản xuống dòng */
+        white-space: pre-wrap; /* Bảo toàn dấu cách và xuống dòng */
+    }
+
+    .card-body br {
+        content: ""; /* Đảm bảo xuống dòng hiển thị đúng */
+    }
+
+    .card-body ul {
+        margin-left: 20px; /* Định dạng cho danh sách Markdown (nếu có) */
+    }
+
+    .card-body li {
+        margin-bottom: 0.5em; /* Khoảng cách giữa các mục danh sách */
+    }
+
+    .choice-button {
+        overflow-wrap: break-word; /* Đảm bảo nội dung dài xuống dòng */
+        max-width: 100%; /* Giới hạn chiều rộng */
+        white-space: normal; /* Cho phép xuống dòng */
+        text-align: left; /* Căn trái để dễ đọc */
+    }
+
+    .list-group-item {
+        word-break: break-word; /* Đảm bảo nội dung không tràn khung */
+    }
+
+    .segment-image {
+        max-width: 1500px; /* Giới hạn chiều rộng ảnh ở 1500px */
+        width: 100%; /* Đảm bảo ảnh responsive */
+    }
+</style>
+
+@section Scripts {
+    <script>
+        // Có thể thêm script để xử lý tương tác nếu cần
+    </script>
+}

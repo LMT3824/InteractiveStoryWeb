@@ -1,4 +1,5 @@
 ﻿@model List<InteractiveStoryWeb.Models.Chapter>
+@using InteractiveStoryWeb.ViewModels
 @{
     ViewData["Title"] = "Quản lý chương & phân nhánh của truyện";
     var storyId = ViewBag.StoryId;
@@ -22,13 +23,25 @@
     </div>
 }
 
-<div class="mb-3">
-    <a asp-controller="Chapter" asp-action="Create" asp-route-storyId="@storyId" class="btn btn-success">
-        <i class="bi bi-plus-lg"></i> Thêm chương mới
-    </a>
-    <a asp-controller="Story" asp-action="Index" class="btn btn-secondary ms-2">
-        <i class="bi bi-arrow-left"></i> Quay lại danh sách truyện
-    </a>
+<div class="card mb-3">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0">Thêm chương mới</h5>
+    </div>
+    <div class="card-body">
+        <form asp-controller="Chapter" asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="StoryId" value="@storyId" />
+            <div class="row g-3">
+                <div class="col-md-9">
+                    <label class="form-label">Tiêu đề chương</label>
+                    <input name="Title" class="form-control" placeholder="Nhập tiêu đề chương..." required />
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary w-100 mt-4">Thêm chương</button>
+                </div>
+            </div>
+        </form>
+    </div>
 </div>
 
 @if (!Model.Any())
@@ -52,9 +65,9 @@ else
                 </span>
 
                 <div class="float-end">
-                    <a asp-controller="Chapter" asp-action="Edit" asp-route-id="@chapter.Id" class="btn btn-warning btn-sm">
+                    <button type="button" class="btn btn-warning btn-sm toggle-edit-form" data-chapter-id="@chapter.Id">
                         <i class="bi bi-pencil"></i> Sửa
-                    </a>
+                    </button>
                     <form asp-controller="Chapter" asp-action="Delete" asp-route-id="@chapter.Id" method="post" class="d-inline">
                         @Html.AntiForgeryToken()
                         <button type="submit" class="btn btn-danger btn-sm ms-2" onclick="return confirm('Bạn có chắc chắn muốn xóa chương này?');">
@@ -64,6 +77,31 @@ else
                 </div>
             </div>
             <div class="card-body">
+                <!-- Form chỉnh sửa chương -->
+                <div class="edit-chapter-form" id="edit-chapter-@chapter.Id" style="display: none;">
+                    <form asp-controller="Chapter" asp-action="Edit" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="Id" value="@chapter.Id" />
+                        <input type="hidden" name="StoryId" value="@chapter.StoryId" />
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Tiêu đề chương</label>
+                                <input name="Title" class="form-control" value="@chapter.Title" required />
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check mt-4">
+                                    <input name="IsPublic" type="checkbox" class="form-check-input" value="true" @(chapter.IsPublic ? "checked" : "") />
+                                    <label class="form-check-label">Công khai chương này</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <button type="submit" class="btn btn-primary w-100 mt-4">Lưu</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
                 <a class="btn btn-outline-success mb-2"
                    asp-controller="Segment" asp-action="Create" asp-route-chapterId="@chapter.Id">
                     <i class="bi bi-plus-circle"></i> Thêm đoạn mới
@@ -174,11 +212,30 @@ else
     }
 }
 
+<style>
+    .choice-text {
+        overflow-wrap: break-word;
+        max-width: 100%;
+        display: inline-block;
+    }
+
+    .list-group-item {
+        word-break: break-word;
+    }
+</style>
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         $(document).ready(function () {
+            // Toggle form chỉnh sửa chương
+            $('.toggle-edit-form').on('click', function () {
+                var chapterId = $(this).data('chapter-id');
+                $('#edit-chapter-' + chapterId).toggle();
+            });
+
+            // Xử lý chỉnh sửa lựa chọn
             $('.edit-choice-btn').on('click', function () {
                 var $row = $(this).closest('.choice-item');
                 $row.find('.choice-display').hide();
@@ -192,7 +249,6 @@ else
                 $row.find('.choice-actions').show();
                 $row.find('.choice-edit').hide();
 
-                // Đặt lại giá trị ban đầu
                 var $textInput = $row.find('.edit-choice-text');
                 var originalText = $textInput.data('original-value');
                 $textInput.val(originalText);
@@ -243,7 +299,6 @@ else
                 });
             });
 
-            // Lưu giá trị ban đầu của các input
             $('.choice-item').each(function () {
                 var $row = $(this);
                 $row.find('.edit-choice-text').data('original-value', $row.find('.choice-text').text().trim());

@@ -1,0 +1,299 @@
+﻿@model List<InteractiveStoryWeb.Models.Library>
+@{
+    ViewData["Title"] = "Thư viện của tôi";
+    var readingProgresses = ViewBag.ReadingProgresses as List<InteractiveStoryWeb.Models.ReadingProgress>;
+    var viewCounts = ViewBag.ViewCounts as Dictionary<int, int>;
+    var ratings = ViewBag.Ratings as Dictionary<int, double>;
+    var chapterCounts = ViewBag.ChapterCounts as Dictionary<int, int>;
+}
+
+<style>
+    .page-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+        .page-header .back-arrow {
+            cursor: pointer;
+            color: #000;
+            text-decoration: none;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            vertical-align: middle;
+        }
+
+            .page-header .back-arrow svg {
+                width: 100%;
+                height: 100%;
+            }
+
+        .page-header h2 {
+            font-family: 'STIX Two Text', serif;
+            font-weight: 700;
+            font-size: 32px;
+            margin-top: 26px;
+            margin-bottom: 20px;
+            line-height: 30px;
+        }
+
+    .story-card {
+        width: 500px;
+        height: 280px;
+        background-color: #ffffff;
+        border: 1px solid #e0e0e0;
+        border-radius: 5px;
+        overflow: hidden;
+        display: flex;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        text-decoration: none;
+        color: inherit;
+        cursor: pointer;
+    }
+
+        .story-card:hover {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+    .story-image {
+        width: 210px;
+        height: 280px;
+        overflow: hidden;
+    }
+
+        .story-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+    .story-content {
+        padding: 10px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .story-title {
+        font-size: 20px;
+        font-weight: 600;
+        margin: 0;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.3;
+        height: 2.6em;
+    }
+
+    .story-stats {
+        display: flex;
+        gap: 15px;
+        margin: 0;
+    }
+
+    .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 16px;
+        color: #666666;
+        line-height: 1.2;
+    }
+
+        .stat-item svg {
+            width: 16px;
+            height: 16px;
+        }
+
+    .story-description {
+        font-size: 16px;
+        color: #666666;
+        margin: 0;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.3;
+        flex-grow: 1;
+    }
+
+    .story-row {
+        display: flex;
+        justify-content: flex-start;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin: -10px;
+    }
+
+        .story-row .col {
+            flex: 0 0 calc(33.33% - 20px);
+            min-width: 500px;
+            max-width: calc(33.33% - 20px);
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+    .card-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        padding: 10px;
+        background-color: #f8f9fa;
+        width: 500px;
+        box-sizing: border-box;
+    }
+
+    .btn-sm {
+        font-size: 14px;
+        padding: 5px 10px;
+    }
+</style>
+
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text&display=swap" rel="stylesheet">
+
+<div class="page-header">
+    <a href="javascript:history.back()" class="back-arrow">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+    </a>
+    <h2>THƯ VIỆN CỦA TÔI</h2>
+</div>
+
+@if (Model != null && Model.Any())
+{
+    <div class="story-row mb-5">
+        @foreach (var entry in Model.OrderByDescending(e => e.Story.CreatedAt))
+        {
+            var story = entry.Story;
+            var progress = readingProgresses?.FirstOrDefault(rp => rp.StoryId == story.Id);
+            var firstSegment = story.Chapters
+            .Where(ch => ch.IsPublic && ch.Segments != null && ch.Segments.Any())
+            .OrderBy(ch => ch.CreatedAt)
+            .SelectMany(ch => ch.Segments)
+            .OrderBy(s => s.Id)
+            .FirstOrDefault();
+
+            <div class="col">
+                <div class="story-card" onclick="window.location.href='@Url.Action("Details", "Story", new { id = story.Id })'">
+                    <div class="story-image">
+                        <img src="@(string.IsNullOrEmpty(story.CoverImageUrl)
+                            ? Url.Content("~/images/ImageNotFound.png")
+                            : story.CoverImageUrl)"
+                             alt="@story.Title" />
+                    </div>
+                    <div class="story-content">
+                        <h5 class="story-title">@story.Title</h5>
+                        <p class="story-stats">
+                            <span class="stat-item">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                                @(viewCounts.ContainsKey(story.Id) ? viewCounts[story.Id] : 0)
+                            </span>
+                            <span class="stat-item">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                                </svg>
+                                @(ratings != null && ratings.ContainsKey(story.Id) ? ratings[story.Id].ToString("F1") : "0.0")
+                            </span>
+                            <span class="stat-item">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                                </svg>
+                                @(chapterCounts != null && chapterCounts.ContainsKey(story.Id) ? chapterCounts[story.Id] : 0)
+                            </span>
+                        </p>
+                        <p class="story-description">
+                            <strong>Đang đọc:</strong>
+                            @(progress != null && progress.ChapterSegment != null
+                                ? $"{progress.ChapterSegment.Title} (Chương: {progress.ChapterSegment.Chapter.Title})"
+                                : "Đoạn không còn tồn tại")
+                        </p>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    @if (progress != null && progress.ChapterSegmentId.HasValue && progress.ChapterSegment != null)
+                    {
+                        <a asp-controller="Segment" asp-action="InteractiveRead" asp-route-id="@progress.ChapterSegmentId"
+                           class="btn btn-outline-dark btn-sm">
+                            Tiếp tục đọc
+                        </a>
+                    }
+                    else if (firstSegment != null)
+                    {
+                        <a asp-controller="Segment" asp-action="InteractiveRead" asp-route-id="@firstSegment.Id"
+                           class="btn btn-outline-dark btn-sm">
+                            Bắt đầu đọc
+                        </a>
+                    }
+                    else
+                    {
+                        <span class="text-muted small">Chưa có nội dung</span>
+                    }
+                    <button class="btn btn-outline-dark btn-sm remove-from-library" data-story-id="@story.Id">Xóa</button>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="alert alert-info mt-3">
+        Bạn chưa có truyện nào trong thư viện. Hãy thêm truyện yêu thích để bắt đầu!
+    </div>
+}
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            // Xóa truyện khỏi thư viện
+            $(document).on('click', '.remove-from-library', function () {
+                var storyId = $(this).data('story-id');
+                if (confirm('Bạn có chắc chắn muốn xóa truyện này khỏi thư viện?')) {
+                    $.ajax({
+                        url: '/Story/RemoveFromLibrary',
+                        type: 'POST',
+                        data: {
+                            storyId: storyId,
+                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        success: function (response) {
+                            if (response.success) {
+                                $(`button[data-story-id="${storyId}"]`).closest('.col').remove();
+                                if ($('.col').length === 0) {
+                                    $('.story-row').after(`
+                                        <div class="alert alert-info mt-3">
+                                            Bạn chưa có truyện nào trong thư viện. Hãy thêm truyện yêu thích để bắt đầu!
+                                        </div>
+                                    `);
+                                    $('.story-row').remove();
+                                }
+                                alert(response.message);
+                            } else {
+                                alert(response.message);
+                            }
+                        },
+                        error: function () {
+                            alert('Có lỗi xảy ra khi xóa truyện khỏi thư viện.');
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+}

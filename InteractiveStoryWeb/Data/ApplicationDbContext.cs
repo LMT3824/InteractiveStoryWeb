@@ -26,6 +26,7 @@ namespace InteractiveStoryWeb.Data
         public DbSet<Report> Reports { get; set; }
         public DbSet<ReaderStoryCustomization> ReaderStoryCustomizations { get; set; }
         public DbSet<ReadingProgress> ReadingProgresses { get; set; }
+        public DbSet<ApplicationUser> ApplicationUsers { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -45,8 +46,8 @@ namespace InteractiveStoryWeb.Data
                 .HasForeignKey(c => c.ChapterSegmentId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-           // 🔸 CHOICE → CHAPTER SEGMENT
-            builder.Entity<Choice>()
+            // 🔸 CHOICE → CHAPTER SEGMENT
+             builder.Entity<Choice>()
                 .HasOne(c => c.ChapterSegment)
                 .WithMany(s => s.Choices)
                 .HasForeignKey(c => c.ChapterSegmentId)
@@ -60,10 +61,10 @@ namespace InteractiveStoryWeb.Data
 
             // 🔸 LIBRARY → STORY + USER
             builder.Entity<Library>()
-                .HasOne(l => l.Story)
-                .WithMany()
-                .HasForeignKey(l => l.StoryId)
-                .OnDelete(DeleteBehavior.Restrict);
+                 .HasOne(l => l.Story)
+                 .WithMany()
+                 .HasForeignKey(l => l.StoryId)
+                 .OnDelete(DeleteBehavior.Cascade);
             builder.Entity<Library>()
                 .HasOne(l => l.User)
                 .WithMany()
@@ -75,7 +76,7 @@ namespace InteractiveStoryWeb.Data
                 .HasOne(r => r.Story)
                 .WithMany()
                 .HasForeignKey(r => r.StoryId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Cascade);
             builder.Entity<Rating>()
                 .HasOne(r => r.User)
                 .WithMany()
@@ -84,10 +85,10 @@ namespace InteractiveStoryWeb.Data
 
             // 🔸 COMMENT → STORY + CHAPTER + USER
             builder.Entity<Comment>()
-                .HasOne(c => c.Story)
-                .WithMany()
-                .HasForeignKey(c => c.StoryId)
-                .OnDelete(DeleteBehavior.Restrict);
+                 .HasOne(c => c.Story)
+                 .WithMany()
+                 .HasForeignKey(c => c.StoryId)
+                 .OnDelete(DeleteBehavior.Cascade);
             builder.Entity<Comment>()
                 .HasOne(c => c.Chapter)
                 .WithMany()
@@ -104,7 +105,7 @@ namespace InteractiveStoryWeb.Data
                 .HasOne(r => r.Story)
                 .WithMany()
                 .HasForeignKey(r => r.StoryId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.SetNull);
             builder.Entity<Report>()
                 .HasOne(r => r.Comment)
                 .WithMany()
@@ -115,13 +116,18 @@ namespace InteractiveStoryWeb.Data
                 .WithMany()
                 .HasForeignKey(r => r.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
+            builder.Entity<Report>()
+                .HasOne(r => r.Author)
+                .WithMany()
+                .HasForeignKey(r => r.AuthorId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             // 🔸 BLOCK → STORY + BLOCKED USER + BLOCKER USER
             builder.Entity<Block>()
                 .HasOne(b => b.BlockedStory)
                 .WithMany()
                 .HasForeignKey(b => b.BlockedStoryId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Cascade);
             builder.Entity<Block>()
                 .HasOne(b => b.BlockedUser)
                 .WithMany()
@@ -200,6 +206,10 @@ namespace InteractiveStoryWeb.Data
             builder.Entity<ReadingProgress>()
                 .HasIndex(rp => new { rp.UserId, rp.StoryId })
                 .IsUnique();
+
+            builder.Entity<ChapterSegment>()
+                .Property(s => s.ImagePosition)
+                .HasConversion<int>();
         }
     }
 }

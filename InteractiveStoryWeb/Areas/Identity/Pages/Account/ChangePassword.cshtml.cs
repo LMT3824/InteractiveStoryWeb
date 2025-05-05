@@ -59,7 +59,7 @@ namespace InteractiveStoryWeb.Areas.Identity.Pages.Account
             {
                 foreach (var error in result.Errors)
                 {
-                    ModelState.AddModelError(string.Empty, error.Description);
+                    ModelState.AddModelError("Input.CurrentPassword", "Mật khẩu không đúng.");
                 }
                 return Page();
             }
@@ -67,7 +67,7 @@ namespace InteractiveStoryWeb.Areas.Identity.Pages.Account
             await _signInManager.RefreshSignInAsync(user);
             TempData["StatusMessage"] = "Mật khẩu được thay đổi thành công.";
 
-            return RedirectToAction("MyProfile", "Account");
+            return RedirectToPage("./ChangePasswordConfirmation");
         }
     }
 }

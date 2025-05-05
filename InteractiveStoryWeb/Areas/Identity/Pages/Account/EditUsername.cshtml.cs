@@ -48,7 +48,7 @@ namespace InteractiveStoryWeb.Areas.Identity.Pages.Account
             var passwordValid = await _userManager.CheckPasswordAsync(user, Input.Password);
             if (!passwordValid)
             {
-                ModelState.AddModelError(string.Empty, "Mật khẩu không đúng.");
+                ModelState.AddModelError("Input.Password", "Mật khẩu không đúng.");
                 return Page();
             }
 

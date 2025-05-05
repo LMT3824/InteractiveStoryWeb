@@ -16,6 +16,8 @@ namespace InteractiveStoryWeb.Models
 
         public string? ImageUrl { get; set; }
 
+        public ImagePosition ImagePosition { get; set; } = ImagePosition.Bottom;
+
         public DateTime CreatedAt { get; set; } = DateTime.Now; // Bỏ [Required]
         public DateTime? UpdatedAt { get; set; }
 

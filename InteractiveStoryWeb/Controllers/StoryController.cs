@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using InteractiveStoryWeb.Utils;
 
 namespace InteractiveStoryWeb.Controllers
 {
@@ -68,8 +69,8 @@ namespace InteractiveStoryWeb.Controllers
                 Description = model.Description,
                 Genre = model.Genre,
                 CoverImageUrl = imagePath,
-                IsPublic = model.IsPublic,
-                AllowCustomization = model.AllowCustomization, // Lưu tùy chọn
+                IsPublic = false, // Mặc định không công khai
+                AllowCustomization = model.AllowCustomization,
                 CreatedAt = DateTime.Now,
                 AuthorId = user.Id
             };
@@ -77,8 +78,8 @@ namespace InteractiveStoryWeb.Controllers
             _context.Stories.Add(story);
             await _context.SaveChangesAsync();
 
-            TempData["SuccessMessage"] = "Truyện đã được tạo thành công! Tiếp tục tạo chương.";
-            return RedirectToAction("Create", "Chapter", new { storyId = story.Id });
+            TempData["SuccessMessage"] = "Truyện đã được tạo thành công! Tiếp tục quản lý chương.";
+            return RedirectToAction("Manage", "Chapter", new { storyId = story.Id });
         }
 
         [HttpGet]
@@ -89,22 +90,29 @@ namespace InteractiveStoryWeb.Controllers
             if (story == null) return NotFound();
 
             ViewBag.Genres = await _context.Genres.ToListAsync();
-            return View(story);
+            ViewBag.CoverImageUrl = story.CoverImageUrl;
+            var model = new StoryCreateViewModel
+            {
+                Id = story.Id,
+                Title = story.Title,
+                Description = story.Description,
+                Genre = story.Genre,
+                IsPublic = story.IsPublic,
+                AllowCustomization = story.AllowCustomization,
+                IsCompleted = story.IsCompleted
+            };
+            return View(model);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(Story model, IFormFile? NewCoverImage)
+        public async Task<IActionResult> Edit(StoryCreateViewModel model, IFormFile? NewCoverImage)
         {
-            // Xóa lỗi cho các trường không cần thiết
-            ModelState.Remove("CreatedAt");
-            ModelState.Remove("AuthorId");
-            ModelState.Remove("Author");
-            ModelState.Remove("Chapters");
-
             if (!ModelState.IsValid)
             {
                 ViewBag.Genres = await _context.Genres.ToListAsync();
+                var storyForCover = await _context.Stories.FindAsync(model.Id);
+                ViewBag.CoverImageUrl = storyForCover?.CoverImageUrl;
                 TempData["ErrorMessage"] = "Vui lòng kiểm tra lại thông tin.";
                 return View(model);
             }
@@ -112,29 +120,31 @@ namespace InteractiveStoryWeb.Controllers
             var story = await _context.Stories.FindAsync(model.Id);
             if (story == null) return NotFound();
 
-            if (model.IsPublic)
-            {
-                var hasValidPublicChapter = await _context.Chapters
-                    .Include(c => c.Segments)
-                    .AnyAsync(c => c.StoryId == model.Id && c.IsPublic && c.Segments.Any());
+            // Kiểm tra trạng thái chương công khai
+            var hasValidPublicChapter = await _context.Chapters
+                .Include(c => c.Segments)
+                .AnyAsync(c => c.StoryId == model.Id && c.IsPublic && c.Segments.Any());
 
-                if (!hasValidPublicChapter)
-                {
-                    ViewBag.Genres = await _context.Genres.ToListAsync();
-                    ModelState.AddModelError(string.Empty, "Truyện cần ít nhất một chương được công khai và có ít nhất một đoạn để được phép hiển thị công khai.");
-                    TempData["ErrorMessage"] = "Không thể công khai truyện do thiếu chương hợp lệ.";
-                    return View(model);
-                }
+            if (model.IsPublic && !hasValidPublicChapter)
+            {
+                ViewBag.Genres = await _context.Genres.ToListAsync();
+                ViewBag.CoverImageUrl = story.CoverImageUrl;
+                TempData["ErrorMessage"] = "Truyện cần ít nhất một chương được công khai và có ít nhất một đoạn để được phép hiển thị công khai.";
+                return View(model);
+            }
+
+            // Nếu không có chương công khai, buộc truyện thành không công khai
+            if (!hasValidPublicChapter)
+            {
+                model.IsPublic = false;
             }
 
             story.Title = model.Title;
             story.Description = model.Description;
             story.Genre = model.Genre;
             story.IsPublic = model.IsPublic;
-            story.AllowCustomization = model.AllowCustomization; // Cập nhật tùy chọn cá nhân hóa
+            story.AllowCustomization = model.AllowCustomization;
             story.IsCompleted = model.IsCompleted;
-            story.AuthorId = model.AuthorId;
-            story.CreatedAt = story.CreatedAt;
             story.UpdatedAt = DateTime.Now;
 
             if (NewCoverImage != null && NewCoverImage.Length > 0)
@@ -150,13 +160,13 @@ namespace InteractiveStoryWeb.Controllers
                     await NewCoverImage.CopyToAsync(stream);
                 }
 
-                story.CoverImageUrl = "/uploads/stories/" + fileName;
+                story.CoverImageUrl = "/Uploads/stories/" + fileName;
             }
 
             await _context.SaveChangesAsync();
 
             TempData["SuccessMessage"] = "Truyện đã được cập nhật thành công!";
-            return RedirectToAction("Details", new { id = story.Id });
+            return RedirectToAction("MyProfile", "Account");
         }
 
         [AllowAnonymous]
@@ -213,24 +223,31 @@ namespace InteractiveStoryWeb.Controllers
         }
 
 
-
         [AllowAnonymous]
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string genre)
         {
-            var stories = await _context.Stories
-                .Where(s => s.IsPublic)
+            var query = _context.Stories
+                .Where(s => s.IsPublic && (string.IsNullOrEmpty(genre) || (s.Genre != null && s.Genre.ToLower() == genre.ToLower())))
                 .Include(s => s.Chapters)
-                .OrderByDescending(s => s.CreatedAt)
-                .ToListAsync();
+                .OrderBy(s => s.CreatedAt); // Sắp xếp từ cũ nhất đến mới nhất
 
-            // Tạo dictionary để lưu tổng ViewCount cho từng Story
+            var stories = await query.ToListAsync();
+
             var viewCounts = new Dictionary<int, int>();
+            var ratings = new Dictionary<int, double>();
+            var chapterCounts = new Dictionary<int, int>();
+
             foreach (var story in stories)
             {
                 viewCounts[story.Id] = story.Chapters?.Sum(ch => ch.ViewCount) ?? 0;
+                var storyRatings = await _context.Ratings.Where(r => r.StoryId == story.Id).ToListAsync();
+                ratings[story.Id] = storyRatings.Any() ? storyRatings.Average(r => r.RatingValue) : 0;
+                chapterCounts[story.Id] = story.Chapters?.Count ?? 0;
             }
 
-            ViewBag.ViewCounts = viewCounts; // Truyền dictionary vào ViewBag
+            ViewBag.ViewCounts = viewCounts;
+            ViewBag.Ratings = ratings;
+            ViewBag.ChapterCounts = chapterCounts;
 
             return View(stories);
         }
@@ -268,11 +285,13 @@ namespace InteractiveStoryWeb.Controllers
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
 
-            // Lấy thông tin người dùng hiện tại
             ApplicationUser currentUser = null;
+            bool isInLibrary = false;
             if (User.Identity.IsAuthenticated)
             {
                 currentUser = await _userManager.GetUserAsync(User);
+                isInLibrary = await _context.Libraries
+                    .AnyAsync(l => l.UserId == currentUser.Id && l.StoryId == id);
             }
 
             ViewBag.FirstSegmentId = firstSegment?.Id;
@@ -280,7 +299,8 @@ namespace InteractiveStoryWeb.Controllers
             ViewBag.Comments = comments;
             ViewBag.Ratings = ratings;
             ViewBag.AverageRating = ratings.Any() ? ratings.Average(r => r.RatingValue) : 0;
-            ViewBag.CurrentUser = currentUser; // Truyền người dùng hiện tại vào ViewBag
+            ViewBag.CurrentUser = currentUser;
+            ViewBag.IsInLibrary = isInLibrary; // Truyền trạng thái vào ViewBag
             if (!string.IsNullOrEmpty(errorMessage))
             {
                 TempData["ErrorMessage"] = errorMessage;
@@ -288,6 +308,33 @@ namespace InteractiveStoryWeb.Controllers
             return View(story);
         }
 
+        [AllowAnonymous]
+        public async Task<IActionResult> Search(string query)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                return PartialView("_SearchResults", new List<Story>());
+            }
+
+            var stories = await _context.Stories
+                .Where(s => s.IsPublic &&
+                           (s.Title.Contains(query) ||
+                            s.Author.UserName.Contains(query)))
+                .Include(s => s.Author)
+                .Include(s => s.Chapters)
+                .OrderByDescending(s => s.CreatedAt)
+                .ToListAsync();
+
+            var viewCounts = new Dictionary<int, int>();
+            foreach (var story in stories)
+            {
+                viewCounts[story.Id] = story.Chapters?.Sum(ch => ch.ViewCount) ?? 0;
+            }
+
+            ViewBag.ViewCounts = viewCounts;
+            ViewBag.Query = query;
+            return PartialView("_SearchResults", stories);
+        }
 
         [AllowAnonymous]
         public async Task<IActionResult> Customize(int storyId)
@@ -397,6 +444,43 @@ namespace InteractiveStoryWeb.Controllers
             return RedirectToAction("Read", new { id = model.StoryId });
         }
 
+        // Action mới để định dạng đoạn văn bản xem trước
+        [HttpPost]
+        [AllowAnonymous]
+        public IActionResult PreviewCustomization(string name, string firstPersonPronoun, string secondPersonPronoun)
+        {
+            // Đoạn văn bản mặc định
+            string previewText1 =
+                 "\"Xin chào, tên của [XưngHôThứNhất] là [Tên]. Rất vui được gặp mặt.\"\n" +
+                 "[XưngHôThứHai] đặt tay lên ngực, lịch sự cúi đầu chào đối phương. Đối phương vui vẻ đáp lại lời chào của [XưngHôThứHai].\n" +
+                 "\"Tôi cũng vậy, rất vui khi được quen biết [Tên].\"";
+
+            string previewText2 =
+                "\"Anh đến rồi à?\"\n" +
+                "[Tên] ngẩng đầu lên khi nghe tiếng bước chân quen thuộc. Trong ánh sáng nhạt, khuôn mặt của anh ta hiện ra rõ ràng, vẫn ánh mắt đó – ánh mắt khiến [XưngHôThứHai] không thể nào quên.\n" +
+                "\"[XưngHôThứNhất] đang đợi anh đấy. Tưởng anh lạc trôi xó nào rồi, [XưngHôThứNhất] còn đang tính bỏ về đây.\" Giọng của [Tên] mang ý trách móc nhẹ đối phương.\n" +
+                "Anh khẽ cười, chỉ bước lại gần, đưa tay chạm nhẹ vào vai [Tên].\n" +
+                "\"Xin lỗi nhé, may là tôi tới kịp lúc trước khi khiến [XưngHôThứHai] đây mất hết sự kiên nhẫn.\"\n" +
+                "[Tên] hừ nhẹ."; ;
+
+            // Thay thế các placeholder bằng TextFormatter
+            // Thay thế các placeholder bằng TextFormatter cho đoạn 1
+            previewText1 = TextFormatter.ReplaceWithContextualCapitalization(previewText1, "[Tên]", name ?? "[Tên]");
+            previewText1 = TextFormatter.ReplaceWithContextualCapitalization(previewText1, "[XưngHôThứNhất]", firstPersonPronoun ?? "[XưngHôThứNhất]");
+            previewText1 = TextFormatter.ReplaceWithContextualCapitalization(previewText1, "[XưngHôThứHai]", secondPersonPronoun ?? "[Xưng Hô Thứ Hai]");
+
+            // Thay thế các placeholder bằng TextFormatter cho đoạn 2
+            previewText2 = TextFormatter.ReplaceWithContextualCapitalization(previewText2, "[Tên]", name ?? "[Tên]");
+            previewText2 = TextFormatter.ReplaceWithContextualCapitalization(previewText2, "[XưngHôThứNhất]", firstPersonPronoun ?? "[XưngHôThứNhất]");
+            previewText2 = TextFormatter.ReplaceWithContextualCapitalization(previewText2, "[XưngHôThứHai]", secondPersonPronoun ?? "[Xưng Hô Thứ Hai]");
+
+            // Tách các đoạn để trả về dưới dạng danh sách
+            var paragraphs1 = previewText1.Split('\n');
+            var paragraphs2 = previewText2.Split('\n');
+
+            return Json(new { success = true, paragraphs1 = paragraphs1, paragraphs2 = paragraphs2 });
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize]
@@ -420,12 +504,21 @@ namespace InteractiveStoryWeb.Controllers
                 return RedirectToAction("Index");
             }
 
-            // Đặt ChapterSegmentId trong ReadingProgress thành null trước khi xóa
+            // Tìm tất cả các ChapterSegment thuộc Story
             var segmentIds = story.Chapters
                 .SelectMany(c => c.Segments)
                 .Select(s => s.Id)
                 .ToList();
 
+            // Tìm tất cả các Choices có NextSegmentId tham chiếu đến các ChapterSegment của Story
+            var choicesReferencingSegments = await _context.Choices
+                .Where(c => segmentIds.Contains(c.NextSegmentId))
+                .ToListAsync();
+
+            // Xóa các Choices này để tránh xung đột ràng buộc
+            _context.Choices.RemoveRange(choicesReferencingSegments);
+
+            // Đặt ChapterSegmentId trong ReadingProgress thành null trước khi xóa
             var relatedProgresses = await _context.ReadingProgresses
                 .Where(rp => segmentIds.Contains(rp.ChapterSegmentId.Value))
                 .ToListAsync();
@@ -442,7 +535,33 @@ namespace InteractiveStoryWeb.Controllers
             return RedirectToAction("MyProfile", "Account");
         }
 
-        // Actions for Comments
+        [AllowAnonymous]
+        public async Task<IActionResult> Comments(int storyId)
+        {
+            var story = await _context.Stories
+                .Include(s => s.Author)
+                .FirstOrDefaultAsync(s => s.Id == storyId);
+
+            if (story == null)
+                return NotFound("Truyện không tồn tại.");
+
+            var comments = await _context.Comments
+                .Where(c => c.StoryId == storyId)
+                .Include(c => c.User)
+                .OrderByDescending(c => c.CreatedAt)
+                .ToListAsync();
+
+            ApplicationUser currentUser = null;
+            if (User.Identity.IsAuthenticated)
+            {
+                currentUser = await _userManager.GetUserAsync(User);
+            }
+
+            ViewBag.Comments = comments;
+            ViewBag.CurrentUser = currentUser;
+            return View(story);
+        }
+
         [HttpPost]
         [Authorize]
         public async Task<IActionResult> AddComment(int storyId, string content)
@@ -459,7 +578,7 @@ namespace InteractiveStoryWeb.Controllers
                 return Json(new { success = false, message = "Truyện không tồn tại." });
             }
 
-            if (string.IsNullOrEmpty(content))
+            if (string.IsNullOrWhiteSpace(content))
             {
                 return Json(new { success = false, message = "Nội dung bình luận không được để trống." });
             }
@@ -482,7 +601,8 @@ namespace InteractiveStoryWeb.Controllers
                 userName = user.UserName,
                 content = comment.Content,
                 createdAt = comment.CreatedAt.ToString("dd/MM/yyyy HH:mm"),
-                avatarUrl = string.IsNullOrEmpty(user.AvatarUrl) ? "/images/AvatarNotFound.png" : user.AvatarUrl // Thêm avatarUrl vào phản hồi
+                updatedAt = comment.UpdatedAt?.ToString("dd/MM/yyyy HH:mm"), // Thêm UpdatedAt vào phản hồi
+                avatarUrl = string.IsNullOrEmpty(user.AvatarUrl) ? "/images/AvatarNotFound.png" : user.AvatarUrl
             });
         }
 
@@ -505,15 +625,21 @@ namespace InteractiveStoryWeb.Controllers
                 return Json(new { success = false, message = "Bạn không có quyền chỉnh sửa bình luận này." });
             }
 
-            if (string.IsNullOrEmpty(content))
+            if (string.IsNullOrWhiteSpace(content))
             {
                 return Json(new { success = false, message = "Nội dung bình luận không được để trống." });
             }
 
             comment.Content = content;
+            comment.UpdatedAt = DateTime.Now; // Cập nhật UpdatedAt khi chỉnh sửa
             await _context.SaveChangesAsync();
 
-            return Json(new { success = true, content = comment.Content });
+            return Json(new
+            {
+                success = true,
+                content = comment.Content,
+                updatedAt = comment.UpdatedAt?.ToString("dd/MM/yyyy HH:mm") // Thêm UpdatedAt vào phản hồi
+            });
         }
 
         [HttpPost]
@@ -538,10 +664,43 @@ namespace InteractiveStoryWeb.Controllers
             _context.Comments.Remove(comment);
             await _context.SaveChangesAsync();
 
-            return Json(new { success = true });
+            var ratings = await _context.Ratings
+                .Where(r => r.StoryId == comment.StoryId)
+                .ToListAsync();
+            var averageRating = ratings.Any() ? ratings.Average(r => r.RatingValue) : 0;
+
+            return Json(new { success = true, averageRating = averageRating });
         }
 
         // Actions for Ratings
+        [AllowAnonymous]
+        public async Task<IActionResult> Ratings(int storyId)
+        {
+            var story = await _context.Stories
+                .Include(s => s.Author)
+                .FirstOrDefaultAsync(s => s.Id == storyId);
+
+            if (story == null)
+                return NotFound("Truyện không tồn tại.");
+
+            var ratings = await _context.Ratings
+                .Where(r => r.StoryId == storyId)
+                .Include(r => r.User)
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+
+            ApplicationUser currentUser = null;
+            if (User.Identity.IsAuthenticated)
+            {
+                currentUser = await _userManager.GetUserAsync(User);
+            }
+
+            ViewBag.Ratings = ratings;
+            ViewBag.AverageRating = ratings.Any() ? ratings.Average(r => r.RatingValue) : 0;
+            ViewBag.CurrentUser = currentUser;
+            return View(story);
+        }
+
         [HttpPost]
         [Authorize]
         public async Task<IActionResult> AddRating(int storyId, int ratingValue)
@@ -575,8 +734,7 @@ namespace InteractiveStoryWeb.Controllers
             {
                 UserId = user.Id,
                 StoryId = storyId,
-                RatingValue = ratingValue,
-                CreatedAt = DateTime.Now
+                RatingValue = ratingValue
             };
 
             _context.Ratings.Add(rating);
@@ -591,10 +749,12 @@ namespace InteractiveStoryWeb.Controllers
             {
                 success = true,
                 ratingId = rating.Id,
+                userId = user.Id, // Thêm userId
                 userName = user.UserName,
                 ratingValue = rating.RatingValue,
                 createdAt = rating.CreatedAt.ToString("dd/MM/yyyy HH:mm"),
-                averageRating = averageRating
+                averageRating = averageRating,
+                avatarUrl = string.IsNullOrEmpty(user.AvatarUrl) ? "/images/AvatarNull.jpg" : user.AvatarUrl // Thêm avatarUrl
             });
         }
 
@@ -634,6 +794,7 @@ namespace InteractiveStoryWeb.Controllers
             return Json(new
             {
                 success = true,
+                userId = user.Id, // Thêm userId
                 ratingValue = rating.RatingValue,
                 averageRating = averageRating,
                 updatedAt = rating.UpdatedAt?.ToString("dd/MM/yyyy HH:mm")
@@ -668,6 +829,117 @@ namespace InteractiveStoryWeb.Controllers
             var averageRating = ratings.Any() ? ratings.Average(r => r.RatingValue) : 0;
 
             return Json(new { success = true, averageRating = averageRating });
+        }
+
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> AddToLibrary(int storyId)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Json(new { success = false, message = "Người dùng không tồn tại." });
+            }
+
+            var story = await _context.Stories.FindAsync(storyId);
+            if (story == null)
+            {
+                return Json(new { success = false, message = "Truyện không tồn tại." });
+            }
+
+            // Kiểm tra xem truyện đã có trong thư viện chưa
+            var existingEntry = await _context.Libraries
+                .FirstOrDefaultAsync(l => l.UserId == user.Id && l.StoryId == storyId);
+
+            if (existingEntry != null)
+            {
+                return Json(new { success = false, message = "Truyện đã có trong thư viện." });
+            }
+
+            var libraryEntry = new Library
+            {
+                UserId = user.Id,
+                StoryId = storyId
+            };
+
+            _context.Libraries.Add(libraryEntry);
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, message = "Đã thêm truyện vào thư viện!" });
+        }
+
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> RemoveFromLibrary(int storyId)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Json(new { success = false, message = "Người dùng không tồn tại." });
+            }
+
+            var libraryEntry = await _context.Libraries
+                .FirstOrDefaultAsync(l => l.UserId == user.Id && l.StoryId == storyId);
+
+            if (libraryEntry == null)
+            {
+                return Json(new { success = false, message = "Truyện không có trong thư viện." });
+            }
+
+            _context.Libraries.Remove(libraryEntry);
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, message = "Đã xóa truyện khỏi thư viện!" });
+        }
+
+        [Authorize]
+        public async Task<IActionResult> Library()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return NotFound("Người dùng không tồn tại.");
+            }
+
+            var libraryEntries = await _context.Libraries
+                .Where(l => l.UserId == user.Id)
+                .Include(l => l.Story)
+                    .ThenInclude(s => s.Author)
+                .Include(l => l.Story)
+                    .ThenInclude(s => s.Chapters)
+                        .ThenInclude(c => c.Segments)
+                .ToListAsync();
+
+            var readingProgresses = await _context.ReadingProgresses
+                .Where(rp => rp.UserId == user.Id)
+                .Include(rp => rp.Story)
+                .Include(rp => rp.ChapterSegment)
+                    .ThenInclude(cs => cs.Chapter)
+                .ToListAsync();
+
+            var viewCounts = new Dictionary<int, int>();
+            var ratings = new Dictionary<int, double>();
+            var chapterCounts = new Dictionary<int, int>();
+
+            foreach (var entry in libraryEntries)
+            {
+                var story = entry.Story;
+                // Tính tổng lượt xem
+                viewCounts[story.Id] = story.Chapters?.Sum(ch => ch.ViewCount) ?? 0;
+                // Tính đánh giá trung bình
+                ratings[story.Id] = _context.Ratings.Where(r => r.StoryId == story.Id).Any()
+                    ? _context.Ratings.Where(r => r.StoryId == story.Id).Average(r => r.RatingValue)
+                    : 0;
+                // Tính số chương
+                chapterCounts[story.Id] = story.Chapters?.Count ?? 0;
+            }
+
+            ViewBag.ReadingProgresses = readingProgresses;
+            ViewBag.ViewCounts = viewCounts;
+            ViewBag.Ratings = ratings;
+            ViewBag.ChapterCounts = chapterCounts;
+
+            return View(libraryEntries);
         }
     }
 }

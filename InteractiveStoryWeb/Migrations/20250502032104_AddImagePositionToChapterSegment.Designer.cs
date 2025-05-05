@@ -4,6 +4,7 @@ using InteractiveStoryWeb.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InteractiveStoryWeb.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250502032104_AddImagePositionToChapterSegment")]
+    partial class AddImagePositionToChapterSegment
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -475,10 +478,6 @@ namespace InteractiveStoryWeb.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("AuthorId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<int?>("CommentId")
                         .HasColumnType("int");
 
@@ -497,8 +496,6 @@ namespace InteractiveStoryWeb.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("AuthorId");
 
                     b.HasIndex("CommentId");
 
@@ -734,7 +731,7 @@ namespace InteractiveStoryWeb.Migrations
                     b.HasOne("InteractiveStoryWeb.Models.Story", "BlockedStory")
                         .WithMany()
                         .HasForeignKey("BlockedStoryId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("InteractiveStoryWeb.Models.ApplicationUser", "BlockedUser")
                         .WithMany()
@@ -805,7 +802,7 @@ namespace InteractiveStoryWeb.Migrations
                     b.HasOne("InteractiveStoryWeb.Models.Story", "Story")
                         .WithMany()
                         .HasForeignKey("StoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("InteractiveStoryWeb.Models.ApplicationUser", "User")
@@ -845,7 +842,7 @@ namespace InteractiveStoryWeb.Migrations
                     b.HasOne("InteractiveStoryWeb.Models.Story", "Story")
                         .WithMany()
                         .HasForeignKey("StoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("InteractiveStoryWeb.Models.ApplicationUser", "User")
@@ -874,7 +871,7 @@ namespace InteractiveStoryWeb.Migrations
                     b.HasOne("InteractiveStoryWeb.Models.Story", "Story")
                         .WithMany()
                         .HasForeignKey("StoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("InteractiveStoryWeb.Models.ApplicationUser", "User")
@@ -935,12 +932,6 @@ namespace InteractiveStoryWeb.Migrations
 
             modelBuilder.Entity("InteractiveStoryWeb.Models.Report", b =>
                 {
-                    b.HasOne("InteractiveStoryWeb.Models.ApplicationUser", "Author")
-                        .WithMany()
-                        .HasForeignKey("AuthorId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("InteractiveStoryWeb.Models.Comment", "Comment")
                         .WithMany()
                         .HasForeignKey("CommentId")
@@ -949,15 +940,13 @@ namespace InteractiveStoryWeb.Migrations
                     b.HasOne("InteractiveStoryWeb.Models.Story", "Story")
                         .WithMany()
                         .HasForeignKey("StoryId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("InteractiveStoryWeb.Models.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.Navigation("Author");
 
                     b.Navigation("Comment");
 

@@ -34,7 +34,7 @@ namespace InteractiveStoryWeb.Areas.Identity.Pages.Account
        
         public class InputModel
         {
-            [Required]
+            [Required(ErrorMessage = "Email là bắt buộc.")]
             [EmailAddress]
             public string Email { get; set; }
         }

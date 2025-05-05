@@ -37,27 +37,33 @@ namespace InteractiveStoryWeb.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize]
         public async Task<IActionResult> Create(ChapterSegmentCreateViewModel model)
         {
-            // Kiểm tra ChapterId có tồn tại không
             var chapter = await _context.Chapters
-                .Include(c => c.Story) // Bao gồm Story để lấy StoryId
+                .Include(c => c.Story)
                 .FirstOrDefaultAsync(c => c.Id == model.ChapterId);
 
             if (chapter == null)
             {
                 TempData["ErrorMessage"] = "Chương không tồn tại.";
-                return RedirectToAction("Index", "Story"); // Chuyển hướng về danh sách truyện nếu chương không tồn tại
+                return RedirectToAction("Manage", "Chapter", new { storyId = ViewBag.StoryId });
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+            if (chapter.Story.AuthorId != user.Id)
+            {
+                TempData["ErrorMessage"] = "Bạn không có quyền thêm đoạn vào chương này.";
+                return RedirectToAction("Manage", "Chapter", new { storyId = chapter.StoryId });
             }
 
             if (!ModelState.IsValid)
             {
-                ViewBag.StoryId = chapter.StoryId;
                 TempData["ErrorMessage"] = "Vui lòng kiểm tra lại thông tin.";
                 return View(model);
             }
 
-            string? imagePath = null;
+            string imagePath = null;
             if (model.Image != null && model.Image.Length > 0)
             {
                 var uploads = Path.Combine(_env.WebRootPath, "uploads/segments");
@@ -79,6 +85,7 @@ namespace InteractiveStoryWeb.Controllers
                 Title = model.Title,
                 Content = model.Content,
                 ImageUrl = imagePath,
+                ImagePosition = model.ImagePosition, // Lưu giá trị ImagePosition
                 CreatedAt = DateTime.Now
             };
 
@@ -86,7 +93,7 @@ namespace InteractiveStoryWeb.Controllers
             await _context.SaveChangesAsync();
 
             TempData["SuccessMessage"] = "Đoạn đã được tạo thành công!";
-            return RedirectToAction("Manage", "Chapter", new { storyId = chapter.StoryId }); // Sử dụng chapter.StoryId đã được tải
+            return RedirectToAction("Manage", "Chapter", new { storyId = chapter.StoryId });
         }
 
         [AllowAnonymous]
@@ -129,7 +136,6 @@ namespace InteractiveStoryWeb.Controllers
 
                 if (progress == null)
                 {
-                    // Tạo mới tiến trình
                     progress = new ReadingProgress
                     {
                         UserId = user.Id,
@@ -147,18 +153,18 @@ namespace InteractiveStoryWeb.Controllers
                 await _context.SaveChangesAsync();
             }
 
-            // Thay thế từ khóa nếu tính năng cá nhân hóa được bật
+            // Thay thế từ khóa và định dạng Markdown
             ReaderStoryCustomization customization = null;
             if (story.AllowCustomization)
             {
                 string userId = user?.Id ?? "anonymous";
 
-                if (user != null) // Người dùng đã đăng nhập, đọc từ database
+                if (user != null)
                 {
                     customization = await _context.ReaderStoryCustomizations
                         .FirstOrDefaultAsync(rsc => rsc.StoryId == story.Id && rsc.UserId == userId);
                 }
-                else // Người dùng chưa đăng nhập, đọc từ session
+                else
                 {
                     var sessionKey = $"Customization_{story.Id}";
                     var sessionData = HttpContext.Session.GetString(sessionKey);
@@ -167,33 +173,10 @@ namespace InteractiveStoryWeb.Controllers
                         customization = JsonSerializer.Deserialize<ReaderStoryCustomization>(sessionData);
                     }
                 }
-
-                if (customization != null)
-                {
-                    // Debug dữ liệu customization
-                    if (string.IsNullOrEmpty(customization.Name))
-                    {
-                        Console.WriteLine($"Customization Name is empty for UserId: {userId}, StoryId: {story.Id}");
-                    }
-                    if (string.IsNullOrEmpty(customization.FirstPersonPronoun))
-                    {
-                        Console.WriteLine($"Customization FirstPersonPronoun is empty for UserId: {userId}, StoryId: {story.Id}");
-                    }
-                    if (string.IsNullOrEmpty(customization.SecondPersonPronoun))
-                    {
-                        Console.WriteLine($"Customization SecondPersonPronoun is empty for UserId: {userId}, StoryId: {story.Id}");
-                    }
-
-                    // Thay thế từ khóa với viết hoa theo ngữ cảnh
-                    segment.Content = TextFormatter.ReplaceWithContextualCapitalization(segment.Content, "[Tên]", customization.Name);
-                    segment.Content = TextFormatter.ReplaceWithContextualCapitalization(segment.Content, "[XưngHôThứNhất]", customization.FirstPersonPronoun);
-                    segment.Content = TextFormatter.ReplaceWithContextualCapitalization(segment.Content, "[XưngHôThứHai]", customization.SecondPersonPronoun);
-                }
-                else
-                {
-                    Console.WriteLine($"Customization is null for UserId: {userId}, StoryId: {story.Id}");
-                }
             }
+
+            // Chuyển đổi nội dung thành HTML với Markdown và tùy chỉnh
+            segment.Content = MarkdownFormatter.FormatContent(segment.Content, customization);
 
             // Lọc các lựa chọn
             segment.Choices = segment.Choices
@@ -279,71 +262,103 @@ namespace InteractiveStoryWeb.Controllers
             });
         }
 
-        [HttpGet]
+        [Authorize]
         public async Task<IActionResult> Edit(int id)
         {
             var segment = await _context.ChapterSegments
                 .Include(s => s.Chapter)
+                .ThenInclude(c => c.Story)
                 .FirstOrDefaultAsync(s => s.Id == id);
-            if (segment == null) return NotFound();
 
-            ViewBag.StoryId = segment.Chapter.StoryId; // Gán StoryId cho nút "Quay lại"
-            ViewBag.AllowCustomization = segment.Chapter.Story?.AllowCustomization ?? false;
-            return View(segment);
+            if (segment == null)
+                return NotFound("Đoạn không tồn tại.");
+
+            var user = await _userManager.GetUserAsync(User);
+            if (segment.Chapter.Story.AuthorId != user.Id)
+            {
+                TempData["ErrorMessage"] = "Bạn không có quyền chỉnh sửa đoạn này.";
+                return RedirectToAction("Manage", "Chapter", new { storyId = segment.Chapter.StoryId });
+            }
+
+            var model = new ChapterSegmentEditViewModel
+            {
+                Id = segment.Id,
+                ChapterId = segment.ChapterId,
+                Title = segment.Title,
+                Content = segment.Content,
+                ImageUrl = segment.ImageUrl,
+                ImagePosition = segment.ImagePosition,
+                CreatedAt = segment.CreatedAt
+            };
+
+            ViewBag.StoryId = segment.Chapter.StoryId;
+            ViewBag.AllowCustomization = segment.Chapter.Story.AllowCustomization;
+
+            return View(model);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(ChapterSegment model, IFormFile? NewImage)
+        [Authorize]
+        public async Task<IActionResult> Edit(ChapterSegmentEditViewModel model)
         {
-            // Xóa lỗi cho các trường không cần thiết
-            ModelState.Remove("CreatedAt");
-            ModelState.Remove("Chapter");
-            ModelState.Remove("Choices");
+            var segment = await _context.ChapterSegments
+                .Include(s => s.Chapter)
+                .ThenInclude(c => c.Story)
+                .FirstOrDefaultAsync(s => s.Id == model.Id);
+
+            if (segment == null)
+                return NotFound("Đoạn không tồn tại.");
+
+            var user = await _userManager.GetUserAsync(User);
+            if (segment.Chapter.Story.AuthorId != user.Id)
+            {
+                TempData["ErrorMessage"] = "Bạn không có quyền chỉnh sửa đoạn này.";
+                return RedirectToAction("Manage", "Chapter", new { storyId = segment.Chapter.StoryId });
+            }
 
             if (!ModelState.IsValid)
             {
-                var segmentTemp = await _context.ChapterSegments
-                    .Include(s => s.Chapter)
-                    .FirstOrDefaultAsync(s => s.Id == model.Id);
-                ViewBag.StoryId = segmentTemp?.Chapter?.StoryId;
                 TempData["ErrorMessage"] = "Vui lòng kiểm tra lại thông tin.";
                 return View(model);
             }
 
-            var segment = await _context.ChapterSegments.FindAsync(model.Id);
-            if (segment == null) return NotFound();
-
-            segment.Title = model.Title;
-            segment.Content = model.Content;
-            segment.CreatedAt = segment.CreatedAt;
-            segment.UpdatedAt = DateTime.Now;
-
-            if (NewImage != null && NewImage.Length > 0)
+            // Giữ giá trị ImageUrl hiện tại nếu không có ảnh mới
+            string imagePath = model.ImageUrl;
+            if (model.NewImage != null && model.NewImage.Length > 0)
             {
                 var uploads = Path.Combine(_env.WebRootPath, "uploads/segments");
                 Directory.CreateDirectory(uploads);
-
-                var fileName = Guid.NewGuid().ToString() + Path.GetExtension(NewImage.FileName);
+                var fileName = Guid.NewGuid().ToString() + Path.GetExtension(model.NewImage.FileName);
                 var filePath = Path.Combine(uploads, fileName);
 
                 using (var stream = new FileStream(filePath, FileMode.Create))
                 {
-                    await NewImage.CopyToAsync(stream);
+                    await model.NewImage.CopyToAsync(stream);
                 }
 
-                segment.ImageUrl = "/uploads/segments/" + fileName;
+                imagePath = "/uploads/segments/" + fileName;
+
+                if (!string.IsNullOrEmpty(segment.ImageUrl))
+                {
+                    var oldImagePath = Path.Combine(_env.WebRootPath, segment.ImageUrl.TrimStart('/'));
+                    if (System.IO.File.Exists(oldImagePath))
+                    {
+                        System.IO.File.Delete(oldImagePath);
+                    }
+                }
             }
+
+            segment.Title = model.Title;
+            segment.Content = model.Content;
+            segment.ImageUrl = imagePath;
+            segment.ImagePosition = model.ImagePosition;
+            segment.CreatedAt = model.CreatedAt;
 
             await _context.SaveChangesAsync();
 
-            var chapter = await _context.Chapters
-                .FirstOrDefaultAsync(c => c.Id == segment.ChapterId);
-
-            if (chapter == null) return NotFound();
-
             TempData["SuccessMessage"] = "Đoạn đã được cập nhật thành công!";
-            return RedirectToAction("Manage", "Chapter", new { storyId = chapter.StoryId });
+            return RedirectToAction("Manage", "Chapter", new { storyId = segment.Chapter.StoryId });
         }
 
         [HttpPost]
@@ -394,8 +409,105 @@ namespace InteractiveStoryWeb.Controllers
             _context.ChapterSegments.Remove(segment);
             await _context.SaveChangesAsync();
 
+            // Sau khi xóa đoạn, kiểm tra xem chương có còn đoạn nào không
+            var chapter = await _context.Chapters
+                .Include(c => c.Segments)
+                .Include(c => c.Story)
+                .FirstOrDefaultAsync(c => c.Id == segment.ChapterId);
+
+            if (chapter != null && chapter.Segments != null && !chapter.Segments.Any())
+            {
+                // Nếu chương không còn đoạn nào, kiểm tra xem Story có còn chương công khai nào có đoạn không
+                var story = chapter.Story;
+                var hasValidPublicChapter = await _context.Chapters
+                    .Include(c => c.Segments)
+                    .AnyAsync(c => c.StoryId == story.Id && c.IsPublic && c.Segments.Any());
+
+                if (!hasValidPublicChapter && story.IsPublic)
+                {
+                    // Nếu không còn chương công khai nào có đoạn, đặt Story thành không công khai
+                    story.IsPublic = false;
+                    await _context.SaveChangesAsync();
+                }
+            }
+
             TempData["SuccessMessage"] = "Đoạn đã được xóa thành công!";
             return RedirectToAction("Manage", "Chapter", new { storyId = segment.Chapter.StoryId });
+        }
+
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> Preview(int chapterId, string content, ImagePosition imagePosition, IFormFile image, string imageUrl)
+        {
+            var chapter = await _context.Chapters
+                .Include(c => c.Story)
+                .FirstOrDefaultAsync(c => c.Id == chapterId);
+
+            if (chapter == null)
+            {
+                return Json(new { success = false, message = "Chương không tồn tại." });
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+            if (chapter.Story.AuthorId != user.Id)
+            {
+                return Json(new { success = false, message = "Bạn không có quyền xem trước đoạn này." });
+            }
+
+            ReaderStoryCustomization customization = null;
+            if (chapter.Story.AllowCustomization)
+            {
+                string userId = user.Id;
+                customization = await _context.ReaderStoryCustomizations
+                    .FirstOrDefaultAsync(rsc => rsc.StoryId == chapter.StoryId && rsc.UserId == userId);
+
+                if (customization == null)
+                {
+                    customization = new ReaderStoryCustomization
+                    {
+                        Name = "Người đọc",
+                        FirstPersonPronoun = "Tôi",
+                        SecondPersonPronoun = "Bạn"
+                    };
+                }
+            }
+
+            var previewContent = MarkdownFormatter.FormatContent(content, customization);
+            var html = new System.Text.StringBuilder();
+
+            string finalImageUrl = imageUrl; // Sử dụng imageUrl nếu không có ảnh mới
+            if (image != null && image.Length > 0)
+            {
+                var uploads = Path.Combine(_env.WebRootPath, "uploads/temp");
+                Directory.CreateDirectory(uploads);
+                var fileName = Guid.NewGuid().ToString() + Path.GetExtension(image.FileName);
+                var filePath = Path.Combine(uploads, fileName);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await image.CopyToAsync(stream);
+                }
+
+                finalImageUrl = "/uploads/temp/" + fileName;
+            }
+
+            if (!string.IsNullOrEmpty(finalImageUrl) && imagePosition == ImagePosition.Top)
+            {
+                html.AppendLine("<div class=\"text-center mb-3\">");
+                html.AppendLine($"<img src=\"{finalImageUrl}\" class=\"img-fluid rounded shadow segment-image\" alt=\"Ảnh minh họa\" />");
+                html.AppendLine("</div>");
+            }
+
+            html.AppendLine(previewContent);
+
+            if (!string.IsNullOrEmpty(finalImageUrl) && imagePosition == ImagePosition.Bottom)
+            {
+                html.AppendLine("<div class=\"text-center mb-3\">");
+                html.AppendLine($"<img src=\"{finalImageUrl}\" class=\"img-fluid rounded shadow segment-image\" alt=\"Ảnh minh họa\" />");
+                html.AppendLine("</div>");
+            }
+
+            return Json(new { success = true, previewContent = html.ToString() });
         }
     }
 }

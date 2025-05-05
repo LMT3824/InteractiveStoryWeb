@@ -1,0 +1,153 @@
+﻿@model List<InteractiveStoryWeb.Models.ApplicationUser>
+@{
+    ViewData["Title"] = "Người theo dõi";
+    var targetUser = ViewBag.TargetUser as InteractiveStoryWeb.Models.ApplicationUser;
+    var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+}
+
+<style>
+    .page-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+        .page-header .back-arrow {
+            cursor: pointer;
+            color: #000;
+            text-decoration: none;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            vertical-align: middle;
+        }
+
+            .page-header .back-arrow svg {
+                width: 100%;
+                height: 100%;
+            }
+
+        .page-header h2 {
+            font-family: 'STIX Two Text', serif;
+            font-weight: 700;
+            font-size: 32px;
+            margin-top: 26px;
+            margin-bottom: 20px;
+            line-height: 30px;
+        }
+
+    .card-img-top {
+        width: 100px;
+        height: 100px;
+        object-fit: cover;
+    }
+
+    .card-body {
+        text-align: center;
+    }
+
+    .card-title a {
+        text-decoration: none;
+    }
+
+    .card-text {
+        color: #666;
+    }
+
+    .btn-sm {
+        font-size: 14px;
+        padding: 5px 10px;
+    }
+</style>
+
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text&display=swap" rel="stylesheet">
+
+<div class="page-header">
+    <a href="javascript:history.back()" class="back-arrow">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+    </a>
+    <h2>NGƯỜI THEO DÕI | @targetUser.UserName</h2>
+</div>
+
+@if (Model != null && Model.Any())
+{
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        @foreach (var user in Model)
+        {
+            // Kiểm tra xem người dùng có đang được theo dõi bởi currentUser không
+            bool isFollowing = ViewBag.IsFollowing != null && ViewBag.IsFollowing.GetType() == typeof(Dictionary<string, bool>)
+            ? ((Dictionary<string, bool>)ViewBag.IsFollowing).ContainsKey(user.Id) && ((Dictionary<string, bool>)ViewBag.IsFollowing)[user.Id]
+            : false;
+
+            <div class="col">
+                <div class="card h-100 shadow">
+                    <img src="@(string.IsNullOrEmpty(user.AvatarUrl) ? Url.Content("~/images/AvatarNull.jpg") : user.AvatarUrl)"
+                         class="card-img-top rounded-circle mx-auto mt-3" alt="Avatar" />
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <a asp-action="MyProfile" asp-route-userId="@user.Id">@user.UserName</a>
+                        </h5>
+                        <p class="card-text">@(string.IsNullOrEmpty(user.Caption) ? "Chưa có giới thiệu" : user.Caption)</p>
+                        @if (user.Id != currentUserId)
+                        {
+                            <button class="btn btn-sm @(isFollowing ? "btn-danger" : "btn-success") follow-btn"
+                                    data-user-id="@user.Id"
+                                    data-is-following="@isFollowing.ToString().ToLower()">
+                                @(isFollowing ? "Hủy theo dõi" : "Theo dõi")
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="alert alert-info mt-3">
+        @(targetUser.UserName) chưa có người theo dõi.
+    </div>
+}
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('.follow-btn').click(function () {
+                var button = $(this);
+                var userId = button.data('user-id');
+                var isFollowing = button.data('is-following') === true;
+                var url = isFollowing ? '@Url.Action("UnfollowUser", "Account")' : '@Url.Action("FollowUser", "Account")';
+
+                $.ajax({
+                    url: url,
+                    type: 'POST',
+                    data: { targetUserId: userId },
+                    headers: {
+                        'X-CSRF-TOKEN': $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            button.text(isFollowing ? 'Theo dõi' : 'Hủy theo dõi');
+                            button.toggleClass('btn-success btn-danger');
+                            button.data('is-following', !isFollowing);
+                            // Cập nhật số lượng followers nếu cần
+                            if (response.followersCount !== undefined) {
+                                // Có thể thêm logic để cập nhật số liệu followers trên giao diện
+                            }
+                        } else {
+                            alert(response.message);
+                        }
+                    },
+                    error: function () {
+                        alert('Có lỗi xảy ra. Vui lòng thử lại.');
+                    }
+                });
+            });
+        });
+    </script>
+}

@@ -1,7 +1,32 @@
-﻿@model InteractiveStoryWeb.Models.Story
+﻿@model InteractiveStoryWeb.ViewModels.StoryCreateViewModel
+
 @{
     ViewData["Title"] = "Chỉnh sửa truyện";
 }
+
+<style>
+    /* Đưa số ký tự vào trong textarea */
+    .textarea-wrapper {
+        position: relative;
+        width: 100%; /* Chiều rộng của textarea */
+        margin: 0 auto;
+    }
+
+        .textarea-wrapper textarea {
+            padding-bottom: 30px; /* Tạo khoảng trống cho số ký tự ở dưới */
+        }
+
+        .textarea-wrapper .char-counter {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            color: #666;
+            font-size: 14px;
+            background: rgba(255, 255, 255, 0.8); /* Nền mờ để dễ đọc */
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+</style>
 
 <h2 class="mb-4">@ViewData["Title"]</h2>
 
@@ -21,12 +46,9 @@
     </div>
 }
 
-<form asp-action="Edit" method="post" enctype="multipart/form-data">
+<form asp-action="Edit" enctype="multipart/form-data" method="post">
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
     <input type="hidden" asp-for="Id" />
-    <input type="hidden" asp-for="AuthorId" />
-    <input type="hidden" asp-for="CreatedAt" />
-
-    <div asp-validation-summary="All" class="text-danger mb-3"></div>
 
     <div class="mb-3">
         <label asp-for="Title" class="form-label">Tiêu đề truyện</label>
@@ -44,13 +66,32 @@
 
     <div class="mb-3">
         <label asp-for="Description" class="form-label">Mô tả truyện</label>
-        <textarea asp-for="Description" class="form-control" rows="5" placeholder="Nhập mô tả truyện..."></textarea>
+        <div class="textarea-wrapper">
+            <textarea asp-for="Description" class="form-control" id="DescriptionEdit" rows="5" placeholder="Nhập mô tả truyện..." maxlength="1000"></textarea>
+            <span class="char-counter" id="charCounterEdit">0/1000</span>
+        </div>
         <span asp-validation-for="Description" class="text-danger"></span>
     </div>
 
     <div class="mb-3">
-        <label asp-for="IsPublic" class="form-check-label">Công khai?</label>
+        <label for="NewCoverImage" class="form-label">Ảnh bìa mới (tuỳ chọn)</label>
+        <input type="file" name="NewCoverImage" class="form-control" accept="image/*" />
+        <small class="form-text text-muted">Chọn ảnh bìa mới (định dạng: jpg, png, ...)</small>
+        @if (!string.IsNullOrEmpty(ViewBag.CoverImageUrl))
+        {
+            <div class="mt-2">
+                <p>Ảnh hiện tại:</p>
+                <img src="@ViewBag.CoverImageUrl" class="img-thumbnail" style="max-height: 200px;" />
+            </div>
+        }
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="IsPublic" class="form-check-label">Công khai truyện</label>
         <input asp-for="IsPublic" class="form-check-input ms-2" type="checkbox" />
+        <small class="form-text text-muted">
+            Truyện sẽ không được công khai nếu không có ít nhất một chương công khai và chứa ít nhất một đoạn.
+        </small>
     </div>
 
     <div class="mb-3">
@@ -63,23 +104,27 @@
         <input asp-for="IsCompleted" class="form-check-input ms-2" type="checkbox" />
     </div>
 
-    <div class="mb-3">
-        <label for="NewCoverImage" class="form-label">Ảnh bìa mới (tuỳ chọn)</label>
-        <input type="file" name="NewCoverImage" class="form-control" accept="image/*" />
-        <small class="form-text text-muted">Chọn ảnh bìa mới (định dạng: jpg, png, ...)</small>
-        @if (!string.IsNullOrEmpty(Model.CoverImageUrl))
-        {
-            <div class="mt-2">
-                <p>Ảnh hiện tại:</p>
-                <img src="@Model.CoverImageUrl" class="img-thumbnail" style="max-height: 200px;" />
-            </div>
-        }
-    </div>
-
     <button type="submit" class="btn btn-primary">💾 Lưu thay đổi</button>
-    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-secondary ms-2">⬅️ Quay lại</a>
+    <a asp-controller="Account" asp-action="MyProfile" class="btn btn-secondary ms-2">⬅️ Quay lại</a>
 </form>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        $(document).ready(function () {
+            // Cập nhật số ký tự trong textarea
+            function updateCharCounter() {
+                var descriptionLength = $('#DescriptionEdit').val().length;
+                $('#charCounterEdit').text(descriptionLength + '/1000');
+            }
+
+            // Lắng nghe sự kiện input trên textarea
+            $('#DescriptionEdit').on('input', function () {
+                updateCharCounter();
+            });
+
+            // Cập nhật số ký tự ngay khi tải trang
+            updateCharCounter();
+        });
+    </script>
 }

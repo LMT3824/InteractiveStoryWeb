@@ -4,8 +4,10 @@ using System.ComponentModel.DataAnnotations;
 
 namespace InteractiveStoryWeb.ViewModels
 {
-    public class ChapterSegmentCreateViewModel
+    public class ChapterSegmentEditViewModel
     {
+        public int Id { get; set; }
+
         public int ChapterId { get; set; }
 
         [Required(ErrorMessage = "Vui lòng nhập tiêu đề đoạn.")]
@@ -13,8 +15,13 @@ namespace InteractiveStoryWeb.ViewModels
 
         [Required(ErrorMessage = "Nội dung đoạn không được để trống.")]
         public string Content { get; set; }
-        public IFormFile? Image { get; set; }
-        public ImagePosition ImagePosition { get; set; } = ImagePosition.Bottom;
-        public string? PreviewContent { get; set; }
+
+        public string ImageUrl { get; set; }
+
+        public IFormFile? NewImage { get; set; }
+
+        public ImagePosition ImagePosition { get; set; }
+
+        public DateTime CreatedAt { get; set; }
     }
 }

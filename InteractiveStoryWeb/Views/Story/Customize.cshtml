@@ -4,6 +4,37 @@
     ViewData["Title"] = "Tùy chỉnh nhân vật";
 }
 
+<style>
+    .preview-section {
+        margin-top: 20px;
+        padding: 15px;
+        background-color: #FFFFFF;
+        border-radius: 5px;
+        border: 1px solid #e0e0e0;
+    }
+
+        .preview-section h6 {
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .preview-section p {
+            margin: 5px 0;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .preview-section .placeholder {
+            color: #ffffff;
+            font-style: italic;
+        }
+
+        .preview-section hr {
+            margin: 15px 0;
+            border-top: 1px solid #e0e0e0;
+        }
+</style>
+
 <h2 class="mb-4">@ViewData["Title"]</h2>
 
 @if (TempData["SuccessMessage"] != null)
@@ -29,29 +60,130 @@
 
     <div class="mb-3">
         <label asp-for="Name" class="form-label">Tên nhân vật</label>
-        <input asp-for="Name" class="form-control" placeholder="Nhập tên nhân vật của bạn..." />
+        <input asp-for="Name" class="form-control" id="nameInput" placeholder="Nhập tên nhân vật của bạn..." />
         <small class="form-text text-muted">Tên này sẽ thay thế [Tên] trong truyện.</small>
         <span asp-validation-for="Name" class="text-danger"></span>
     </div>
 
     <div class="mb-3">
         <label asp-for="FirstPersonPronoun" class="form-label">Xưng hô thứ nhất</label>
-        <input asp-for="FirstPersonPronoun" class="form-control" placeholder="Ví dụ: tôi, mình, tớ..." />
+        <input asp-for="FirstPersonPronoun" class="form-control" id="firstPersonInput" placeholder="Ví dụ: tôi, mình, tớ..." />
         <small class="form-text text-muted">Cách xưng hô của bạn, thay thế [XưngHôThứNhất].</small>
         <span asp-validation-for="FirstPersonPronoun" class="text-danger"></span>
     </div>
 
     <div class="mb-3">
         <label asp-for="SecondPersonPronoun" class="form-label">Xưng hô thứ hai</label>
-        <input asp-for="SecondPersonPronoun" class="form-control" placeholder="Ví dụ: cô ấy, anh ấy, họ..." />
+        <input asp-for="SecondPersonPronoun" class="form-control" id="secondPersonInput" placeholder="Ví dụ: bạn, cô, anh, chị..." />
         <small class="form-text text-muted">Cách gọi bạn trong mô tả, thay thế [XưngHôThứHai].</small>
         <span asp-validation-for="SecondPersonPronoun" class="text-danger"></span>
     </div>
 
-    <button type="submit" class="btn btn-primary">💾 Lưu và bắt đầu đọc</button>
-    <a asp-action="Details" asp-route-id="@Model.StoryId" class="btn btn-secondary ms-2">⬅️ Quay lại</a>
+    <!-- Đoạn văn bản xem trước -->
+    <div class="preview-section">
+        <h5>Xem trước:</h5>
+
+        <div>
+            <h6>Đoạn 1:</h6>
+            <div id="previewContent1">
+                <p>
+                    “Xin chào, tên của <span class="first-person-pronoun placeholder">[XưngHôThứNhất]</span> là <span class="name placeholder">[Tên]</span>. Rất vui được gặp mặt.”
+                </p>
+                <p>
+                    <span class="second-person-pronoun placeholder">[XưngHôThứHai]</span> đặt tay lên ngực, lịch sự cúi đầu chào đối phương. Đối phương vui vẻ đáp lại lời chào của <span class="second-person-pronoun placeholder">[XưngHôThứHai]</span>.
+                </p>
+                <p>
+                    “Tôi cũng vậy, rất vui khi được quen biết <span class="name placeholder">[Tên]</span>.”
+                </p>
+            </div>
+        </div>
+
+        <hr />
+
+        <div>
+            <h6>Đoạn 2:</h6>
+            <div id="previewContent2">
+                <p>
+                    "Anh đến rồi à?"
+                </p>
+                <p>
+                    <span class="name placeholder">[Tên]</span> ngẩng đầu lên khi nghe tiếng bước chân quen thuộc. Trong ánh sáng nhạt, khuôn mặt của anh ta hiện ra rõ ràng, vẫn ánh mắt đó – ánh mắt khiến <span class="second-person-pronoun placeholder">[XưngHôThứHai]</span> không thể nào quên.
+                </p>
+                <p>
+                    "<span class="first-person-pronoun placeholder">[XưngHôThứNhất]</span> đang đợi anh đấy. Tưởng anh lạc trôi xó nào rồi, <span class="first-person-pronoun placeholder">[XưngHôThứNhất]</span> còn đang tính bỏ về đây." Giọng của <span class="name placeholder">[Tên]</span> mang ý trách móc nhẹ đối phương.
+                </p>
+                <p>
+                    Anh khẽ cười, chỉ bước lại gần, đưa tay chạm nhẹ vào vai <span class="name placeholder">[Tên]</span>.
+                </p>
+                <p>
+                    "Xin lỗi nhé, may là tôi tới kịp lúc trước khi khiến <span class="second-person-pronoun placeholder">[XưngHôThứHai]</span> đây mất hết sự kiên nhẫn."
+                </p>
+                <p>
+                    <span class="name placeholder">[Tên]</span> hừ nhẹ.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary mt-3">💾 Lưu và bắt đầu đọc</button>
+    <a href="javascript:history.back()" class="btn btn-secondary ms-2 mt-3">⬅️ Quay lại</a>
 </form>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            // Hàm cập nhật đoạn văn bản xem trước
+            function updatePreview() {
+                var name = $('#nameInput').val().trim();
+                var firstPerson = $('#firstPersonInput').val().trim();
+                var secondPerson = $('#secondPersonInput').val().trim();
+
+                // Gửi yêu cầu AJAX đến action PreviewCustomization
+                $.ajax({
+                    url: '/Story/PreviewCustomization',
+                    type: 'POST',
+                    data: {
+                        name: name,
+                        firstPersonPronoun: firstPerson,
+                        secondPersonPronoun: secondPerson,
+                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            // Cập nhật đoạn 1
+                            var paragraphs1 = response.paragraphs1;
+                            var html1 = '';
+                            for (var i = 0; i < paragraphs1.length; i++) {
+                                html1 += '<p>' + paragraphs1[i] + '</p>';
+                            }
+                            $('#previewContent1').html(html1);
+
+                            // Cập nhật đoạn 2
+                            var paragraphs2 = response.paragraphs2;
+                            var html2 = '';
+                            for (var j = 0; j < paragraphs2.length; j++) {
+                                html2 += '<p>' + paragraphs2[j] + '</p>';
+                            }
+                            $('#previewContent2').html(html2);
+                        } else {
+                            console.error('Lỗi khi lấy đoạn văn bản xem trước:', response.message);
+                        }
+                    },
+                    error: function () {
+                        console.error('Có lỗi xảy ra khi gọi AJAX.');
+                    }
+                });
+            }
+
+            // Lắng nghe sự kiện input trên các ô nhập liệu
+            $('#nameInput, #firstPersonInput, #secondPersonInput').on('input', function () {
+                updatePreview();
+            });
+
+            // Cập nhật ngay khi tải trang
+            updatePreview();
+        });
+    </script>
 }

@@ -3,7 +3,320 @@
     ViewData["Title"] = "Tài khoản của tôi";
     var user = ViewBag.User as InteractiveStoryWeb.Models.ApplicationUser;
     var readingProgresses = ViewBag.ReadingProgresses as List<InteractiveStoryWeb.Models.ReadingProgress>;
+    var followingCount = ViewBag.FollowingCount as int?;
+    var followersCount = ViewBag.FollowersCount as int?;
+    var storiesCount = ViewBag.StoriesCount as int?;
+    var isOwnProfile = ViewBag.IsOwnProfile as bool?;
+    var isFollowing = ViewBag.IsFollowing as bool?;
 }
+
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+    .container {
+        max-width: 1600px;
+        padding: 0;
+        margin: 0 auto;
+    }
+
+    .profile-container {
+        position: relative;
+        background-image: url('/images/AccountBG.jpg');
+        background-size: cover;
+        background-position: center;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        overflow: hidden;
+    }
+
+        .profile-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: inherit;
+            filter: blur(6px);
+            z-index: 0;
+        }
+
+    .profile-content {
+        position: relative;
+        z-index: 1;
+        color: #fff;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        font-size: 20px;
+    }
+
+    .profile-left {
+        display: flex;
+        align-items: flex-start;
+    }
+
+    .profile-avatar {
+        border: 5px solid #FFD0A2;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        width: 110px;
+        height: 110px;
+        object-fit: cover;
+        image-rendering: auto;
+    }
+
+    .profile-info {
+        margin-left: 20px;
+    }
+
+    .profile-username {
+        font-size: 2rem;
+        margin-bottom: 10px;
+    }
+
+    .profile-caption {
+        width: 520px;
+        height: 140px;
+        border: 3px solid rgba(255, 255, 255, 0.3);
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+        padding: 10px;
+        margin-bottom: 15px;
+    }
+
+    .profile-right {
+        text-align: right;
+    }
+
+    .follow-stats p {
+        margin-bottom: 10px;
+    }
+
+    .follow-stats a {
+        color: #fff;
+        text-decoration: none;
+    }
+
+        .follow-stats a:hover {
+            text-decoration: underline;
+        }
+
+    .profile-actions button, .profile-actions a {
+        margin-bottom: 10px;
+        background: #000;
+        color: #fff;
+        border-radius: 10px;
+        padding: 5px 15px;
+        border: none;
+    }
+
+        .profile-actions button:hover, .profile-actions a:hover {
+            background: #333;
+            color: #fff;
+        }
+
+    .btn-custom {
+        background: #000;
+        color: #fff;
+        border-radius: 10px;
+        padding: 5px 15px;
+        border: none;
+    }
+
+        .btn-custom:hover {
+            background: #333;
+            color: #fff;
+        }
+
+    h2.mb-4 {
+        font-family: 'STIX Two Text', serif;
+        font-weight: 700;
+        font-size: 30px;
+        margin-bottom: 20px;
+    }
+
+    .story-card {
+        width: 500px;
+        height: 280px;
+        background-color: #ffffff;
+        border: 1px solid #e0e0e0;
+        border-radius: 5px;
+        overflow: hidden;
+        display: flex;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        text-decoration: none;
+        color: inherit;
+        cursor: pointer;
+    }
+
+        .story-card:hover {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+    .story-image {
+        width: 210px;
+        height: 280px;
+        overflow: hidden;
+    }
+
+        .story-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+    .story-content {
+        padding: 10px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        position: relative; /* Để cố định story-genre ở dưới cùng */
+    }
+
+    .story-title {
+        font-size: 20px;
+        font-weight: 600;
+        margin: 0;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.3;
+        height: 52px; /* Cố định chiều cao cho 2 dòng (2 x 26px) */
+    }
+
+    .story-stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 5px 0;
+        position: absolute;
+        top: 62px; /* 52px (chiều cao tiêu đề) + 10px (padding/margin) */
+        width: calc(100% - 20px); /* Trừ padding 10px mỗi bên */
+    }
+
+    .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 16px;
+        color: #666666;
+        line-height: 1.2;
+    }
+
+        .stat-item svg {
+            width: 16px;
+            height: 16px;
+        }
+
+    .story-description {
+        font-size: 16px;
+        color: #666666;
+        margin: 0;
+        line-height: 1.3;
+        position: absolute;
+        top: 92px; /* 62px (vị trí story-stats) + 30px (chiều cao story-stats) */
+        bottom: 40px; /* Chừa chỗ cho story-genre (30px) + padding */
+        overflow: hidden;
+        width: calc(100% - 20px); /* Trừ padding 10px mỗi bên */
+    }
+
+    .story-genre {
+        position: absolute;
+        bottom: 5px; /* Cố định ở dưới cùng của khung */
+        width: calc(100% - 20px); /* Trừ padding 10px mỗi bên */
+    }
+
+    .genre-tag {
+        display: inline-block;
+        background-color: #e0e0e0;
+        color: #000000;
+        padding: 5px 10px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .story-row {
+        display: flex;
+        justify-content: flex-start;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin: -10px;
+    }
+
+        .story-row .col {
+            flex: 0 0 calc(33.33% - 20px);
+            min-width: 480px;
+            max-width: calc(33.33% - 20px);
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+    .card-footer {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        padding: 10px;
+        background-color: #f8f9fa;
+        width: 480px;
+        box-sizing: border-box;
+    }
+
+    .btn-sm {
+        font-size: 14px;
+        padding: 5px 10px;
+    }
+
+    .profile-edit {
+        text-align: center;
+    }
+
+        .profile-edit .form-label {
+            font-size: 18px;
+            color: #fff;
+        }
+
+        .profile-edit .form-control {
+            width: 620px;
+            margin: 0 auto;
+        }
+
+        .profile-edit .mb-3 {
+            margin-bottom: 15px !important;
+        }
+
+        .profile-edit small {
+            display: block;
+            text-align: center;
+            margin-top: 5px;
+        }
+
+        .profile-edit .textarea-wrapper {
+            position: relative;
+            width: 620px;
+            margin: 0 auto;
+        }
+
+            .profile-edit .textarea-wrapper textarea {
+                padding-bottom: 30px;
+            }
+
+        .profile-edit .char-counter {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            color: #666;
+            font-size: 14px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+</style>
 
 @if (TempData["SuccessMessage"] != null)
 {
@@ -21,138 +334,221 @@
     </div>
 }
 
-<div class="row mb-4">
-    <div class="col-md-3 text-center">
-        <img src="@(string.IsNullOrEmpty(user.AvatarUrl)
-            ? Url.Content("~/images/AvatarNull.jpg")
-            : user.AvatarUrl)"
-             class="img-fluid rounded-circle shadow profile-avatar" style="width: 150px; height: 150px; object-fit: cover;" alt="Ảnh đại diện" />
-    </div>
-    <div class="col-md-9">
-        <h2 class="mb-3">👤 Tài khoản: @user.UserName</h2>
-        <div class="profile-display">
-            @if (!string.IsNullOrEmpty(user.Caption))
+<div class="container">
+    <div class="profile-container">
+        <div class="profile-content">
+            <div class="profile-left">
+                <img src="@(string.IsNullOrEmpty(user.AvatarUrl)
+                    ? Url.Content("~/images/AvatarNull.jpg")
+                    : user.AvatarUrl)"
+                     class="profile-avatar rounded-circle" alt="Ảnh đại diện" />
+                <div class="profile-info">
+                    <h2 class="profile-username">@user.UserName</h2>
+                    @if (!string.IsNullOrEmpty(user.Caption))
+                    {
+                        <p class="profile-caption">@user.Caption</p>
+                    }
+                    else
+                    {
+                        <p class="profile-caption">Hiện không có nội dung</p>
+                    }
+                </div>
+            </div>
+
+            <div class="profile-right">
+                <div class="follow-stats">
+                    <p><a href="@Url.Action("Followers", "Account", new { userId = user.Id })"><strong>Người theo dõi:</strong> <span class="followers-count">@followersCount</span></a></p>
+                    <p><a href="@Url.Action("Following", "Account", new { userId = user.Id })"><strong>Đang theo dõi:</strong> @followingCount</a></p>
+                    <p><strong>Tác phẩm:</strong> @storiesCount</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="profile-actions profile-display mt-3" style="position: relative; z-index: 1;">
+            @if (isOwnProfile == true)
             {
-                <p><strong>Giới thiệu:</strong> <span class="profile-caption">@user.Caption</span></p>
+                <button type="button" class="btn edit-profile-btn me-2">Sửa hồ sơ</button>
+                <a asp-area="Identity" asp-page="/Account/ChangePassword" class="btn me-2">Đổi mật khẩu</a>
+                <a asp-area="Identity" asp-page="/Account/EditUsername" class="btn">Đổi tên người dùng</a>
             }
             else
             {
-                <p><strong>Giới thiệu:</strong> <span class="profile-caption text-muted">Chưa có giới thiệu</span></p>
+                if (isFollowing == true)
+                {
+                    <button class="btn btn-custom unfollow-btn" data-user-id="@user.Id">Bỏ theo dõi</button>
+                }
+                else
+                {
+                    <button class="btn btn-custom follow-btn" data-user-id="@user.Id">Theo dõi</button>
+                }
             }
-            <button type="button" class="btn btn-primary edit-profile-btn">✏️ Chỉnh sửa hồ sơ</button>
-            <div class="mt-3">
-                <a asp-area="Identity" asp-page="/Account/ChangePassword" class="btn btn-outline-secondary me-2">
-                    🔐 Đổi mật khẩu
-                </a>
-                <a asp-area="Identity" asp-page="/Account/EditUsername" class="btn btn-outline-warning">
-                    🆔 Đổi tên người dùng
-                </a>
-            </div>
         </div>
-        <div class="profile-edit" style="display: none;">
+
+        <div class="profile-edit mt-3" style="display: none; position: relative; z-index: 1;">
             <form id="editProfileForm" enctype="multipart/form-data">
-                @Html.AntiForgeryToken() <!-- Thêm mã thông báo chống giả mạo -->
+                @Html.AntiForgeryToken()
                 <div class="mb-3">
-                    <label for="avatarFile" class="form-label">Ảnh đại diện mới</label>
+                    <label for="avatarFile" class="form-label text-white">Ảnh đại diện</label>
                     <input type="file" class="form-control" id="avatarFile" name="avatarFile" accept="image/*" />
                 </div>
                 <div class="mb-3">
-                    <label for="Caption" class="form-label">Giới thiệu</label>
-                    <textarea class="form-control profile-caption-input" id="Caption" name="Caption" rows="3">@user.Caption</textarea>
+                    <label for="Caption" class="form-label text-white">Nội dung caption</label>
+                    <div class="textarea-wrapper">
+                        <textarea class="form-control profile-caption-input" id="Caption" name="Caption" rows="3" style="height: 126px;" maxlength="200">@user.Caption</textarea>
+                        <span class="char-counter" id="charCounter">0/200</span>
+                    </div>
+                    <small class="text-white">Tối đa 200 ký tự</small>
                 </div>
-                <button type="submit" class="btn btn-success save-profile-btn">💾 Lưu thay đổi</button>
-                <button type="button" class="btn btn-secondary cancel-profile-btn ms-2">Hủy</button>
+                <button type="submit" class="btn btn-custom save-profile-btn me-2">Lưu thay đổi</button>
+                <button type="button" class="btn btn-custom cancel-profile-btn">Hủy</button>
             </form>
         </div>
     </div>
+
+    <hr />
+    <h2 class="mb-4">TRUYỆN CỦA TÔI</h2>
+
+    @if (!Model.Any())
+    {
+        <p>@(isOwnProfile == true ? "Bạn chưa đăng truyện nào." : "Người dùng này chưa đăng truyện nào.")</p>
+    }
+    else
+    {
+        <div class="story-row mb-5">
+            @foreach (var story in (isOwnProfile == true ? Model.OrderBy(s => s.CreatedAt) : Model.Where(s => s.IsPublic).OrderBy(s => s.CreatedAt)))
+            {
+                <div class="col">
+                    <a asp-controller="Story" asp-action="Details" asp-route-id="@story.Id" class="story-card">
+                        <div class="story-image">
+                            <img src="@(!string.IsNullOrEmpty(story.CoverImageUrl) ? story.CoverImageUrl : "/images/ImageNotFound.png")" alt="@story.Title" />
+                        </div>
+                        <div class="story-content">
+                            <h5 class="story-title">@story.Title</h5>
+                            <div class="story-stats">
+                                <div class="stat-item">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                        <circle cx="12" cy="12" r="3"></circle>
+                                    </svg>
+                                    <span>@ViewBag.ViewCounts[story.Id]</span>
+                                </div>
+                                <div class="stat-item">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                                    </svg>
+                                    <span>@ViewBag.Ratings[story.Id].ToString("F1")</span>
+                                </div>
+                                <div class="stat-item">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                                    </svg>
+                                    <span>@ViewBag.ChapterCounts[story.Id]</span>
+                                </div>
+                                <span class="badge @(story.IsPublic ? "bg-success" : "bg-secondary")">
+                                    @(story.IsPublic ? "Công khai" : "Bản thảo")
+                                </span>
+                            </div>
+                            <p class="story-description">
+                                @(string.IsNullOrEmpty(story.Description) ? "Không có mô tả." : story.Description)
+                            </p>
+                            <div class="story-genre">
+                                <span class="genre-tag">@(string.IsNullOrEmpty(story.Genre) ? "Không có thể loại" : story.Genre)</span>
+                            </div>
+                        </div>
+                    </a>
+                    @if (isOwnProfile == true)
+                    {
+                        <div class="card-footer">
+                            <a asp-controller="Story" asp-action="Edit" asp-route-id="@story.Id" class="btn btn-outline-dark btn-sm">Sửa truyện</a>
+                            <a asp-controller="Chapter" asp-action="Manage" asp-route-storyId="@story.Id" class="btn btn-outline-dark btn-sm">
+                                Quản lý chương
+                            </a>
+                            <form asp-controller="Story" asp-action="Delete" asp-route-id="@story.Id" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-outline-dark btn-sm" onclick="return confirm('Bạn có chắc chắn muốn xóa truyện này?');">
+                                    Xóa truyện
+                                </button>
+                            </form>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+
+    @if (isOwnProfile == true)
+    {
+        <hr />
+        <h2 class="mb-4">LỊCH SỬ ĐỌC</h2>
+
+        @if (readingProgresses == null || !readingProgresses.Any())
+        {
+            <p>Bạn chưa đọc truyện nào hoặc chưa có lịch sử đọc.</p>
+        }
+        else
+        {
+            <div class="story-row mb-5">
+                @foreach (var progress in readingProgresses)
+                {
+                    <div class="col">
+                        <div class="story-card" onclick="window.location.href='@Url.Action("Details", "Story", new { id = progress.Story.Id })'">
+                            <div class="story-image">
+                                <img src="@(string.IsNullOrEmpty(progress.Story.CoverImageUrl)
+                                    ? Url.Content("~/images/ImageNotFound.png")
+                                    : progress.Story.CoverImageUrl)"
+                                     alt="@progress.Story.Title" />
+                            </div>
+                            <div class="story-content">
+                                <h5 class="story-title">@progress.Story.Title</h5>
+                                <p class="story-stats">
+                                    <span class="stat-item">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                            <circle cx="12" cy="12" r="3"></circle>
+                                        </svg>
+                                        @(ViewBag.ViewCounts.ContainsKey(progress.Story.Id) ? ViewBag.ViewCounts[progress.Story.Id] : 0)
+                                    </span>
+                                    <span class="stat-item">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                                        </svg>
+                                        @(ViewBag.Ratings.ContainsKey(progress.Story.Id) ? ViewBag.Ratings[progress.Story.Id].ToString("F1") : "0.0")
+                                    </span>
+                                    <span class="stat-item">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                                        </svg>
+                                        @(ViewBag.ChapterCounts.ContainsKey(progress.Story.Id) ? ViewBag.ChapterCounts[progress.Story.Id] : 0)
+                                    </span>
+                                </p>
+                                <p class="story-description">
+                                    <strong>Đang đọc:</strong>
+                                    @(progress.ChapterSegment != null
+                                        ? $"{progress.ChapterSegment.Title} (Chương: {progress.ChapterSegment.Chapter.Title})"
+                                        : "Đoạn không còn tồn tại")
+                                </p>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            @if (progress.ChapterSegmentId != null)
+                            {
+                                <a asp-controller="Segment" asp-action="InteractiveRead" asp-route-id="@progress.ChapterSegmentId" class="btn btn-outline-dark btn-sm">Tiếp tục đọc</a>
+                            }
+                            else
+                            {
+                                <span class="text-muted">Không thể tiếp tục do đoạn đã bị xóa</span>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
 </div>
-
-<hr />
-<h4 class="mt-4">📚 Truyện đã đăng:</h4>
-
-@if (!Model.Any())
-{
-    <p>Bạn chưa đăng truyện nào.</p>
-}
-else
-{
-    <div class="row row-cols-1 row-cols-md-2 g-4">
-        @foreach (var story in Model)
-        {
-            <div class="col">
-                <div class="card h-100 shadow">
-                    <img src="@(string.IsNullOrEmpty(story.CoverImageUrl)
-                        ? Url.Content("~/images/ImageNotFound.png")
-                        : story.CoverImageUrl)"
-                         class="card-img-top" style="height: 180px; object-fit: cover;" />
-
-                    <div class="card-body">
-                        <h5 class="card-title">@story.Title</h5>
-                        <p class="card-text"><strong>Thể loại:</strong> @story.Genre</p>
-                        <p class="card-text"><strong>Lượt xem:</strong> @ViewBag.ViewCounts[story.Id]</p>
-                    </div>
-                    <div class="card-footer d-flex justify-content-between">
-                        <a asp-controller="Story" asp-action="Edit" asp-route-id="@story.Id" class="btn btn-outline-dark btn-sm mt-2">✏️ Sửa truyện</a>
-                        <a asp-controller="Chapter" asp-action="Manage" asp-route-storyId="@story.Id" class="btn btn-outline-dark btn-sm mt-2">
-                            📄 Quản lý chương
-                        </a>
-                        <form asp-controller="Story" asp-action="Delete" asp-route-id="@story.Id" method="post" class="d-inline">
-                            @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-outline-dark btn-sm mt-2" onclick="return confirm('Bạn có chắc chắn muốn xóa truyện này?');">
-                                🗑️ Xóa truyện
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        }
-    </div>
-}
-
-<hr />
-<h4 class="mt-4">📖 Tiến trình đọc:</h4>
-
-@if (readingProgresses == null || !readingProgresses.Any())
-{
-    <p>Bạn chưa đọc truyện nào hoặc chưa lưu tiến trình.</p>
-}
-else
-{
-    <div class="row row-cols-1 row-cols-md-2 g-4">
-        @foreach (var progress in readingProgresses)
-        {
-            <div class="col">
-                <div class="card h-100 shadow">
-                    <img src="@(string.IsNullOrEmpty(progress.Story.CoverImageUrl)
-                        ? Url.Content("~/images/ImageNotFound.png")
-                        : progress.Story.CoverImageUrl)"
-                         class="card-img-top" style="height: 180px; object-fit: cover;" />
-
-                    <div class="card-body">
-                        <h5 class="card-title">@progress.Story.Title</h5>
-                        <p class="card-text">
-                            <strong>Đang đọc:</strong>
-                            @(progress.ChapterSegment != null
-                                ? $"{progress.ChapterSegment.Title} (Chương: {progress.ChapterSegment.Chapter.Title})"
-                                : "Đoạn không còn tồn tại")
-                        </p>
-                        <p class="card-text"><strong>Lần đọc cuối:</strong> @progress.LastReadAt.ToString("dd/MM/yyyy HH:mm")</p>
-                    </div>
-                    <div class="card-footer">
-                        @if (progress.ChapterSegmentId != null)
-                        {
-                            <a asp-controller="Segment" asp-action="InteractiveRead" asp-route-id="@progress.ChapterSegmentId" class="btn btn-primary btn-sm">📖 Tiếp tục đọc</a>
-                        }
-                        else
-                        {
-                            <span class="text-muted">Không thể tiếp tục do đoạn đã bị xóa</span>
-                        }
-                    </div>
-                </div>
-            </div>
-        }
-    </div>
-}
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
@@ -163,6 +559,7 @@ else
             $('.edit-profile-btn').on('click', function () {
                 $('.profile-display').hide();
                 $('.profile-edit').show();
+                updateCharCounter(); // Cập nhật số ký tự khi mở form
             });
 
             // Hủy chỉnh sửa
@@ -173,13 +570,19 @@ else
                 // Đặt lại giá trị ban đầu
                 $('.profile-caption-input').val($('.profile-caption').text().trim());
                 $('#avatarFile').val(''); // Xóa file đã chọn
+                updateCharCounter(); // Cập nhật lại số ký tự
             });
 
             // Lưu thay đổi
             $('#editProfileForm').on('submit', function (e) {
                 e.preventDefault();
-                var formData = new FormData(this);
+                var caption = $('.profile-caption-input').val();
+                if (caption.length > 200) {
+                    alert('Giới thiệu không được vượt quá 200 ký tự.');
+                    return;
+                }
 
+                var formData = new FormData(this);
                 $.ajax({
                     url: '/Account/MyProfile',
                     type: 'POST',
@@ -192,7 +595,7 @@ else
                             if (response.avatarUrl) {
                                 $('.profile-avatar').attr('src', response.avatarUrl);
                             }
-                            $('.profile-caption').text(response.caption || 'Chưa có giới thiệu');
+                            $('.profile-caption').text(response.caption || 'Hiện không có nội dung');
                             $('.profile-display').show();
                             $('.profile-edit').hide();
                         } else {
@@ -205,8 +608,77 @@ else
                 });
             });
 
+            // Theo dõi người dùng
+            $(document).on('click', '.follow-btn', function () {
+                var targetUserId = $(this).data('user-id');
+                $.ajax({
+                    url: '/Account/FollowUser',
+                    type: 'POST',
+                    data: {
+                        targetUserId: targetUserId,
+                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            $(`button[data-user-id="${targetUserId}"]`)
+                                .removeClass('btn-custom follow-btn')
+                                .addClass('btn-custom unfollow-btn')
+                                .text('Bỏ theo dõi');
+                            $('.followers-count').text(response.followersCount);
+                            alert(response.message);
+                        } else {
+                            alert(response.message);
+                        }
+                    },
+                    error: function () {
+                        alert('Có lỗi xảy ra khi theo dõi người dùng.');
+                    }
+                });
+            });
+
+            // Bỏ theo dõi người dùng
+            $(document).on('click', '.unfollow-btn', function () {
+                var targetUserId = $(this).data('user-id');
+                if (confirm('Bạn có chắc chắn muốn bỏ theo dõi người dùng này?')) {
+                    $.ajax({
+                        url: '/Account/UnfollowUser',
+                        type: 'POST',
+                        data: {
+                            targetUserId: targetUserId,
+                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        success: function (response) {
+                            if (response.success) {
+                                $(`button[data-user-id="${targetUserId}"]`)
+                                    .removeClass('btn-custom unfollow-btn')
+                                    .addClass('btn-custom follow-btn')
+                                    .text('Theo dõi');
+                                $('.followers-count').text(response.followersCount);
+                                alert(response.message);
+                            } else {
+                                alert(response.message);
+                            }
+                        },
+                        error: function () {
+                            alert('Có lỗi xảy ra khi bỏ theo dõi người dùng.');
+                        }
+                    });
+                }
+            });
+
             // Lưu giá trị ban đầu của caption
             $('.profile-caption-input').data('original-value', $('.profile-caption').text().trim());
+
+            // Cập nhật số ký tự trong textarea
+            function updateCharCounter() {
+                var captionLength = $('#Caption').val().length;
+                $('#charCounter').text(captionLength + '/200');
+            }
+
+            // Lắng nghe sự kiện input trên textarea
+            $('#Caption').on('input', function () {
+                updateCharCounter();
+            });
         });
     </script>
 }
