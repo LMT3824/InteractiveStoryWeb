@@ -7,28 +7,14 @@
 
 <h2 class="mb-4"><i class="bi bi-journal-bookmark"></i> Quản lý chương & phân nhánh của truyện</h2>
 
-@if (TempData["SuccessMessage"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        @TempData["SuccessMessage"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-}
+<div id="alert-container"></div>
 
-@if (TempData["ErrorMessage"] != null)
-{
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        @TempData["ErrorMessage"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-}
-
-<div class="card mb-3">
+<div class="card mb-3" id="add-chapter-card">
     <div class="card-header bg-success text-white">
         <h5 class="mb-0">Thêm chương mới</h5>
     </div>
     <div class="card-body">
-        <form asp-controller="Chapter" asp-action="Create" method="post">
+        <form id="add-chapter-form">
             @Html.AntiForgeryToken()
             <input type="hidden" name="StoryId" value="@storyId" />
             <div class="row g-3">
@@ -54,10 +40,10 @@ else
 {
     foreach (var chapter in Model.OrderBy(c => c.CreatedAt))
     {
-        <div class="card mb-3 border-primary">
+        <div class="card mb-3 border-primary" id="chapter-@chapter.Id">
             <div class="card-header bg-primary text-white fw-bold">
-                <i class="bi bi-journal-text"></i> Chương @chapter.Title (ID: @chapter.Id)
-                <span class="badge @(chapter.IsPublic ? "bg-success" : "bg-secondary") ms-2">
+                <i class="bi bi-journal-text"></i> <span class="chapter-title">Chương @chapter.Title</span> (ID: @chapter.Id)
+                <span class="badge @(chapter.IsPublic ? "bg-success" : "bg-secondary") ms-2 is-public-badge">
                     @(chapter.IsPublic ? "Công khai" : "Không công khai")
                 </span>
                 <span class="badge bg-info ms-2">
@@ -68,18 +54,15 @@ else
                     <button type="button" class="btn btn-warning btn-sm toggle-edit-form" data-chapter-id="@chapter.Id">
                         <i class="bi bi-pencil"></i> Sửa
                     </button>
-                    <form asp-controller="Chapter" asp-action="Delete" asp-route-id="@chapter.Id" method="post" class="d-inline">
-                        @Html.AntiForgeryToken()
-                        <button type="submit" class="btn btn-danger btn-sm ms-2" onclick="return confirm('Bạn có chắc chắn muốn xóa chương này?');">
-                            <i class="bi bi-trash"></i> Xóa
-                        </button>
-                    </form>
+                    <button type="button" class="btn btn-danger btn-sm ms-2 delete-chapter-btn" data-chapter-id="@chapter.Id">
+                        <i class="bi bi-trash"></i> Xóa
+                    </button>
                 </div>
             </div>
             <div class="card-body">
                 <!-- Form chỉnh sửa chương -->
                 <div class="edit-chapter-form" id="edit-chapter-@chapter.Id" style="display: none;">
-                    <form asp-controller="Chapter" asp-action="Edit" method="post">
+                    <form class="edit-chapter-form-inner" data-chapter-id="@chapter.Id">
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="Id" value="@chapter.Id" />
                         <input type="hidden" name="StoryId" value="@chapter.StoryId" />
@@ -102,64 +85,62 @@ else
                     </form>
                 </div>
 
-                <a class="btn btn-outline-success mb-2"
-                   asp-controller="Segment" asp-action="Create" asp-route-chapterId="@chapter.Id">
+                <button class="btn btn-outline-success mb-2 add-segment-btn" data-chapter-id="@chapter.Id">
                     <i class="bi bi-plus-circle"></i> Thêm đoạn mới
-                </a>
+                </button>
 
                 @if (chapter.Segments != null && chapter.Segments.Any())
                 {
                     foreach (var segment in chapter.Segments.OrderBy(s => s.Id))
                     {
-                        <div class="card mb-2 border-light">
+                        <div class="card mb-2 border-light" id="segment-@segment.Id">
                             <div class="card-header">
-                                <strong>Đoạn @segment.Title</strong> (ID: @segment.Id)
+                                <strong><span class="segment-title">Đoạn @segment.Title</span></strong> (ID: @segment.Id)
 
                                 <div class="float-end">
                                     <a asp-controller="Segment" asp-action="Edit" asp-route-id="@segment.Id"
                                        class="btn btn-sm btn-warning ms-2">
                                         <i class="bi bi-pencil"></i> Sửa
                                     </a>
-                                    <form asp-controller="Segment" asp-action="Delete" asp-route-id="@segment.Id" method="post" class="d-inline">
-                                        @Html.AntiForgeryToken()
-                                        <button type="submit" class="btn btn-sm btn-danger ms-2" onclick="return confirm('Bạn có chắc chắn muốn xóa đoạn này?');">
-                                            <i class="bi bi-trash"></i> Xóa
-                                        </button>
-                                    </form>
+                                    <button type="button" class="btn btn-sm btn-danger ms-2 delete-segment-btn" data-segment-id="@segment.Id" data-story-id="@chapter.StoryId">
+                                        <i class="bi bi-trash"></i> Xóa
+                                    </button>
                                 </div>
                             </div>
                             <div class="card-body">
                                 <p>@(segment.Content?.Length > 80 ? segment.Content.Substring(0, 80) + "..." : segment.Content)</p>
 
                                 <!-- Form thêm lựa chọn -->
-                                <form asp-controller="Choice" asp-action="Add" method="post" class="row g-2 mt-3">
+                                <form class="add-choice-form" data-segment-id="@segment.Id" data-story-id="@chapter.StoryId">
                                     <input type="hidden" name="ChapterSegmentId" value="@segment.Id" />
-                                    <div class="col-md-5">
-                                        <input name="ChoiceText" class="form-control" placeholder="Nội dung lựa chọn" required />
-                                    </div>
-                                    <div class="col-md-5">
-                                        <select name="NextSegmentId" class="form-select" required>
-                                            <option value="">-- Chọn đoạn tiếp theo --</option>
-                                            @foreach (var target in chapter.Segments)
-                                            {
-                                                <option value="@target.Id">@target.Title</option>
-                                            }
-                                        </select>
-                                    </div>
-                                    <div class="col-md-2">
-                                        <button type="submit" class="btn btn-success w-100">Thêm lựa chọn</button>
+                                    <div class="row g-2 mt-3">
+                                        <div class="col-md-5">
+                                            <input name="ChoiceText" class="form-control" placeholder="Nội dung lựa chọn" required />
+                                        </div>
+                                        <div class="col-md-5">
+                                            <select name="NextSegmentId" class="form-select" required>
+                                                <option value="">-- Chọn đoạn tiếp theo --</option>
+                                                @foreach (var target in chapter.Segments)
+                                                {
+                                                    <option value="@target.Id">@target.Title</option>
+                                                }
+                                            </select>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <button type="submit" class="btn btn-success w-100">Thêm lựa chọn</button>
+                                        </div>
                                     </div>
                                 </form>
                                 <!-- Danh sách các lựa chọn -->
                                 @if (segment.Choices != null && segment.Choices.Any())
                                 {
-                                    <ul class="list-group">
+                                    <ul class="list-group" id="choices-@segment.Id">
                                         @foreach (var choice in segment.Choices)
                                         {
                                             <li class="list-group-item d-flex justify-content-between align-items-center choice-item" data-choice-id="@choice.Id">
                                                 <div class="choice-display">
                                                     <span class="choice-text">@choice.ChoiceText</span>
-                                                    <span class="badge bg-dark ms-2">→ Đến đoạn: @(choice.NextSegment != null ? choice.NextSegment.Title : "Không xác định")</span>
+                                                    <span class="badge bg-dark ms-2 next-segment-title">→ Đến đoạn: @(choice.NextSegment != null ? choice.NextSegment.Title : "Không xác định")</span>
                                                 </div>
                                                 <div class="choice-edit" style="display: none;">
                                                     <input type="hidden" class="edit-choice-id" value="@choice.Id" />
@@ -187,9 +168,9 @@ else
                                                     <button type="button" class="btn btn-warning btn-sm edit-choice-btn ms-2">
                                                         <i class="bi bi-pencil"></i> Sửa
                                                     </button>
-                                                    <a asp-controller="Choice" asp-action="Delete" asp-route-id="@choice.Id" class="btn btn-danger btn-sm ms-2" onclick="return confirm('Bạn có chắc chắn muốn xóa lựa chọn này?');">
+                                                    <button type="button" class="btn btn-danger btn-sm ms-2 delete-choice-btn" data-choice-id="@choice.Id" data-story-id="@chapter.StoryId">
                                                         <i class="bi bi-trash"></i> Xóa
-                                                    </a>
+                                                    </button>
                                                 </div>
                                             </li>
                                         }
@@ -229,36 +210,441 @@ else
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         $(document).ready(function () {
+            // Hàm hiển thị thông báo
+            function showAlert(type, message, container = '#alert-container') {
+                var $alert = $('<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
+                    message + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>');
+                $(container).prepend($alert);
+                setTimeout(function () { $alert.alert('close'); }, 3000);
+            }
+
+            // Thêm chương
+            $('#add-chapter-form').on('submit', function (e) {
+                e.preventDefault();
+                var $form = $(this);
+                $.ajax({
+                    url: '/Chapter/Create',
+                    type: 'POST',
+                    data: $form.serialize(),
+                    success: function (response) {
+                        if (response.success) {
+                            // Thêm chương mới vào giao diện
+                            var chapter = response.chapter;
+                            var segmentsHtml = '';
+                            if (chapter.segments && chapter.segments.length > 0) {
+                                chapter.segments.forEach(function(segment) {
+                                    var choicesHtml = '';
+                                    var choicesListHtml = `<ul class="list-group" id="choices-${segment.id}" style="${segment.choices && segment.choices.length > 0 ? '' : 'display: none;'}">`;
+                                    if (segment.choices && segment.choices.length > 0) {
+                                        segment.choices.forEach(function(choice) {
+                                            choicesHtml += `
+                                                <li class="list-group-item d-flex justify-content-between align-items-center choice-item" data-choice-id="${choice.id}">
+                                                    <div class="choice-display">
+                                                        <span class="choice-text">${choice.choiceText}</span>
+                                                        <span class="badge bg-dark ms-2 next-segment-title">→ Đến đoạn: ${choice.nextSegmentTitle}</span>
+                                                    </div>
+                                                    <div class="choice-edit" style="display: none;">
+                                                        <input type="hidden" class="edit-choice-id" value="${choice.id}" />
+                                                        <input type="hidden" class="edit-chapter-segment-id" value="${choice.chapterSegmentId}" />
+                                                        <input type="hidden" class="edit-created-at" value="${choice.createdAt}" />
+                                                        <input type="text" class="form-control edit-choice-text" value="${choice.choiceText}" style="display: inline-block; width: 200px;" required />
+                                                        <select class="form-select edit-next-segment-id" style="display: inline-block; width: 200px;" required data-original-value="${choice.nextSegmentId}">
+                                                            <option value="">-- Chọn đoạn --</option>
+                                                            ${chapter.segments.map(s => `<option value="${s.id}" ${s.id == choice.nextSegmentId ? 'selected' : ''}>${s.title}</option>`).join('')}
+                                                        </select>
+                                                        <button type="button" class="btn btn-success btn-sm save-choice-btn ms-2">Lưu</button>
+                                                        <button type="button" class="btn btn-secondary btn-sm cancel-choice-btn ms-2">Hủy</button>
+                                                    </div>
+                                                    <div class="choice-actions">
+                                                        <button type="button" class="btn btn-warning btn-sm edit-choice-btn ms-2">
+                                                            <i class="bi bi-pencil"></i> Sửa
+                                                        </button>
+                                                        <button type="button" class="btn btn-danger btn-sm ms-2 delete-choice-btn" data-choice-id="${choice.id}" data-story-id="${chapter.storyId}">
+                                                            <i class="bi bi-trash"></i> Xóa
+                                                        </button>
+                                                    </div>
+                                                </li>`;
+                                        });
+                                        choicesListHtml += choicesHtml + '</ul>';
+                                    } else {
+                                        choicesListHtml += '</ul>';
+                                        choicesListHtml += '<div class="alert alert-light mt-2">Không có lựa chọn nào cho đoạn này.</div>';
+                                    }
+
+                                    segmentsHtml += `
+                                        <div class="card mb-2 border-light" id="segment-${segment.id}">
+                                            <div class="card-header">
+                                                <strong><span class="segment-title">Đoạn ${segment.title}</span></strong> (ID: ${segment.id})
+                                                <div class="float-end">
+                                                    <a href="/Segment/Edit/${segment.id}" class="btn btn-sm btn-warning ms-2">
+                                                        <i class="bi bi-pencil"></i> Sửa
+                                                    </a>
+                                                    <button type="button" class="btn btn-sm btn-danger ms-2 delete-segment-btn" data-segment-id="${segment.id}" data-story-id="${chapter.storyId}">
+                                                        <i class="bi bi-trash"></i> Xóa
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="card-body">
+                                                <p>${segment.content}</p>
+                                                <form class="add-choice-form" data-segment-id="${segment.id}" data-story-id="${chapter.storyId}">
+                                                    <input type="hidden" name="ChapterSegmentId" value="${segment.id}" />
+                                                    <div class="row g-2 mt-3">
+                                                        <div class="col-md-5">
+                                                            <input name="ChoiceText" class="form-control" placeholder="Nội dung lựa chọn" required />
+                                                        </div>
+                                                        <div class="col-md-5">
+                                                            <select name="NextSegmentId" class="form-select" required>
+                                                                <option value="">-- Chọn đoạn tiếp theo --</option>
+                                                                ${chapter.segments.map(s => `<option value="${s.id}">${s.title}</option>`).join('')}
+                                                            </select>
+                                                        </div>
+                                                        <div class="col-md-2">
+                                                            <button type="submit" class="btn btn-success w-100">Thêm lựa chọn</button>
+                                                        </div>
+                                                    </div>
+                                                </form>
+                                                ${choicesListHtml}
+                                            </div>
+                                        </div>`;
+                                });
+                            } else {
+                                segmentsHtml = '<div class="alert alert-light">Chương này chưa có đoạn nào.</div>';
+                            }
+
+                            var $newChapter = $(`
+                                <div class="card mb-3 border-primary" id="chapter-${chapter.id}">
+                                    <div class="card-header bg-primary text-white fw-bold">
+                                        <i class="bi bi-journal-text"></i> <span class="chapter-title">Chương ${chapter.title}</span> (ID: ${chapter.id})
+                                        <span class="badge ${chapter.isPublic ? 'bg-success' : 'bg-secondary'} ms-2 is-public-badge">${chapter.isPublic ? 'Công khai' : 'Không công khai'}</span>
+                                        <span class="badge bg-info ms-2"><i class="bi bi-eye"></i> ${chapter.viewCount} lượt xem</span>
+                                        <div class="float-end">
+                                            <button type="button" class="btn btn-warning btn-sm toggle-edit-form" data-chapter-id="${chapter.id}">
+                                                <i class="bi bi-pencil"></i> Sửa
+                                            </button>
+                                            <button type="button" class="btn btn-danger btn-sm ms-2 delete-chapter-btn" data-chapter-id="${chapter.id}">
+                                                <i class="bi bi-trash"></i> Xóa
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="edit-chapter-form" id="edit-chapter-${chapter.id}" style="display: none;">
+                                            <form class="edit-chapter-form-inner" data-chapter-id="${chapter.id}">
+                                                <input type="hidden" name="__RequestVerificationToken" value="${$('input[name="__RequestVerificationToken"]').val()}" />
+                                                <input type="hidden" name="Id" value="${chapter.id}" />
+                                                <input type="hidden" name="StoryId" value="${chapter.storyId}" />
+                                                <div class="row g-3 mb-3">
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">Tiêu đề chương</label>
+                                                        <input name="Title" class="form-control" value="${chapter.title}" required />
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="form-check mt-4">
+                                                            <input name="IsPublic" type="checkbox" class="form-check-input" value="true" ${chapter.isPublic ? 'checked' : ''} />
+                                                            <label class="form-check-label">Công khai chương này</label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <button type="submit" class="btn btn-primary w-100 mt-4">Lưu</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <button class="btn btn-outline-success mb-2 add-segment-btn" data-chapter-id="${chapter.id}">
+                                            <i class="bi bi-plus-circle"></i> Thêm đoạn mới
+                                        </button>
+                                        ${segmentsHtml}
+                                    </div>
+                                </div>`);
+
+                            $('.alert.alert-info').remove();
+                            if ($('.card.mb-3.border-primary').length > 0) {
+                                $('.card.mb-3.border-primary').last().after($newChapter);
+                            } else {
+                                $('#add-chapter-card').after($newChapter);
+                            }
+                            $form.find('input[name="Title"]').val('');
+                            showAlert('success', response.message);
+
+                            // Đảm bảo DOM được render
+                            setTimeout(function() {
+                                $(`#chapter-${chapter.id}`).trigger('change');
+                            }, 0);
+                        } else {
+                            showAlert('danger', response.message);
+                        }
+                    },
+                    error: function () {
+                        showAlert('danger', 'Có lỗi xảy ra khi thêm chương.');
+                    }
+                });
+            });
+
             // Toggle form chỉnh sửa chương
-            $('.toggle-edit-form').on('click', function () {
+            $(document).on('click', '.toggle-edit-form', function () {
                 var chapterId = $(this).data('chapter-id');
                 $('#edit-chapter-' + chapterId).toggle();
             });
 
-            // Xử lý chỉnh sửa lựa chọn
-            $('.edit-choice-btn').on('click', function () {
+            // Chỉnh sửa chương
+            $(document).on('submit', '.edit-chapter-form-inner', function (e) {
+                e.preventDefault();
+                var $form = $(this);
+                var chapterId = $form.data('chapter-id');
+                $.ajax({
+                    url: '/Chapter/Edit',
+                    type: 'POST',
+                    data: $form.serialize(),
+                    success: function (response) {
+                        if (response.success) {
+                            var newTitle = $form.find('input[name="Title"]').val();
+                            var isPublic = $form.find('input[name="IsPublic"]').is(':checked');
+                            var $chapterHeader = $form.closest('.card').find('.card-header');
+                            $chapterHeader.find('.chapter-title').text(`Chương ${newTitle}`);
+                            $chapterHeader.find('.is-public-badge')
+                                .removeClass('bg-success bg-secondary')
+                                .addClass(isPublic ? 'bg-success' : 'bg-secondary')
+                                .text(isPublic ? 'Công khai' : 'Không công khai');
+                            $form.closest('.edit-chapter-form').hide();
+                            showAlert('success', response.message, `#chapter-${chapterId}`);
+                        } else {
+                            showAlert('danger', response.message, `#chapter-${chapterId}`);
+                        }
+                    },
+                    error: function () {
+                        showAlert('danger', 'Có lỗi xảy ra khi lưu thay đổi.', `#chapter-${chapterId}`);
+                    }
+                });
+            });
+
+            // Xóa chương
+            $(document).on('click', '.delete-chapter-btn', function (e) {
+                e.preventDefault();
+                if (!confirm('Bạn có chắc chắn muốn xóa chương này?')) return;
+                var chapterId = $(this).data('chapter-id');
+                var token = $('input[name="__RequestVerificationToken"]').val();
+                if (!token) {
+                    showAlert('danger', 'Không thể xóa chương: Thiếu token xác thực.');
+                    return;
+                }
+                $.ajax({
+                    url: '/Chapter/Delete',
+                    type: 'POST',
+                    data: {
+                        id: chapterId,
+                        __RequestVerificationToken: token
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            $(`#chapter-${chapterId}`).remove();
+                            if ($('.card.mb-3.border-primary').length === 0) {
+                                $('#add-chapter-card').after('<div class="alert alert-info">Truyện này chưa có chương nào.</div>');
+                            }
+                            showAlert('success', response.message);
+                        } else {
+                            showAlert('danger', response.message);
+                        }
+                    },
+                    error: function (xhr) {
+                        var errorMessage = xhr.responseJSON && xhr.responseJSON.message
+                            ? xhr.responseJSON.message
+                            : 'Có lỗi xảy ra khi xóa chương.';
+                        showAlert('danger', errorMessage);
+                    }
+                });
+            });
+
+            // Thêm đoạn (redirect vì cần giao diện chỉnh sửa phức tạp)
+            $(document).on('click', '.add-segment-btn', function (e) {
+                e.preventDefault();
+                var chapterId = $(this).data('chapter-id');
+                window.location.href = `/Segment/Create?chapterId=${chapterId}`;
+            });
+
+                            // Xóa đoạn
+        $(document).on('click', '.delete-segment-btn', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!confirm('Bạn có chắc chắn muốn xóa đoạn này?')) return;
+            var segmentId = $(this).data('segment-id');
+            var storyId = $(this).data('story-id');
+            var token = $('input[name="__RequestVerificationToken"]').val();
+            if (!token) {
+                showAlert('danger', 'Không thể xóa đoạn: Thiếu token xác thực.', `#segment-${segmentId}`);
+                return;
+            }
+            $.ajax({
+                url: '/Segment/Delete',
+                type: 'POST',
+                data: {
+                    id: segmentId,
+                    __RequestVerificationToken: token
+                },
+                success: function (response) {
+                    if (response.success) {
+                        var $segment = $(`#segment-${segmentId}`);
+                        if ($segment.length) {
+                            $segment.fadeOut(300, function() {
+                                $(this).remove();
+                                // Kiểm tra xem chương còn đoạn nào không
+                                var $chapterCard = $segment.closest('.card.mb-3.border-primary');
+                                if ($chapterCard.find('.card.mb-2.border-light').length === 0) {
+                                    $chapterCard.find('.card-body').append('<div class="alert alert-light">Chương này chưa có đoạn nào.</div>');
+                                    $chapterCard.find('.is-public-badge')
+                                        .removeClass('bg-success bg-secondary')
+                                        .addClass('bg-secondary')
+                                        .text('Không công khai');
+                                }
+                            });
+                            showAlert('success', response.message, `#chapter-${response.chapterId}`);
+                        }
+                    } else {
+                        // Hiển thị thông báo lỗi ở vị trí phù hợp
+                        var $segment = $(`#segment-${segmentId}`);
+                        if ($segment.length) {
+                            showAlert('danger', response.message, `#segment-${segmentId} .card-body`);
+                        } else {
+                            showAlert('danger', response.message, `#chapter-${response.chapterId || response.storyId}`);
+                        }
+                    }
+                },
+                error: function (xhr) {
+                    var errorMessage = xhr.responseJSON && xhr.responseJSON.message
+                        ? xhr.responseJSON.message
+                        : 'Có lỗi xảy ra khi xóa đoạn.';
+                    var $segment = $(`#segment-${segmentId}`);
+                    if ($segment.length) {
+                        showAlert('danger', errorMessage, `#segment-${segmentId} .card-body`);
+                    } else {
+                        showAlert('danger', errorMessage);
+                    }
+                }
+            });
+        });
+
+            // Thêm lựa chọn
+            $(document).on('submit', '.add-choice-form', function (e) {
+                e.preventDefault();
+                var $form = $(this);
+                var segmentId = $form.data('segment-id');
+                var storyId = $form.data('story-id');
+                var choiceText = $form.find('input[name="ChoiceText"]').val();
+                var nextSegmentId = $form.find('select[name="NextSegmentId"]').val();
+
+                // Kiểm tra dữ liệu trước khi gửi
+                if (!choiceText) {
+                    showAlert('danger', 'Vui lòng nhập nội dung lựa chọn.', `#segment-${segmentId}`);
+                    return;
+                }
+                if (!nextSegmentId) {
+                    showAlert('danger', 'Vui lòng chọn đoạn tiếp theo.', `#segment-${segmentId}`);
+                    return;
+                }
+
+                // Parse NextSegmentId thành số
+                var parsedNextSegmentId = parseInt(nextSegmentId);
+                if (isNaN(parsedNextSegmentId) || parsedNextSegmentId <= 0) {
+                    showAlert('danger', 'Đoạn tiếp theo không hợp lệ.', `#segment-${segmentId}`);
+                    return;
+                }
+
+                // Lấy token chống giả mạo
+                var token = $('input[name="__RequestVerificationToken"]').val();
+                if (!token) {
+                    showAlert('danger', 'Không thể thêm lựa chọn: Thiếu token xác thực.', `#segment-${segmentId}`);
+                    return;
+                }
+
+                $.ajax({
+                    url: '/Choice/Add',
+                    type: 'POST',
+                    data: {
+                        ChapterSegmentId: segmentId,
+                        ChoiceText: choiceText,
+                        NextSegmentId: parsedNextSegmentId,
+                        __RequestVerificationToken: token
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            var choice = response.choice;
+                            var $choicesList = $(`#choices-${segmentId}`);
+                            if ($choicesList.length === 0) {
+                                $(`#segment-${segmentId} .card-body`).append(`<ul class="list-group" id="choices-${segmentId}"></ul>`);
+                                $choicesList = $(`#choices-${segmentId}`);
+                            }
+                            if ($choicesList.prev('.alert.alert-light').length > 0) {
+                                $choicesList.prev('.alert.alert-light').remove();
+                                $choicesList.show();
+                            }
+                            $choicesList.append(`
+                                <li class="list-group-item d-flex justify-content-between align-items-center choice-item" data-choice-id="${choice.id}">
+                                    <div class="choice-display">
+                                        <span class="choice-text">${choice.choiceText}</span>
+                                        <span class="badge bg-dark ms-2 next-segment-title">→ Đến đoạn: ${choice.nextSegmentTitle}</span>
+                                    </div>
+                                    <div class="choice-edit" style="display: none;">
+                                        <input type="hidden" class="edit-choice-id" value="${choice.id}" />
+                                        <input type="hidden" class="edit-chapter-segment-id" value="${choice.chapterSegmentId}" />
+                                        <input type="hidden" class="edit-created-at" value="${choice.createdAt}" />
+                                        <input type="text" class="form-control edit-choice-text" value="${choice.choiceText}" style="display: inline-block; width: 200px;" required />
+                                        <select class="form-select edit-next-segment-id" style="display: inline-block; width: 200px;" required data-original-value="${choice.nextSegmentId}">
+                                            <option value="">-- Chọn đoạn --</option>
+                                            ${response.segments.map(s => `<option value="${s.id}" ${s.id == choice.nextSegmentId ? 'selected' : ''}>${s.title}</option>`).join('')}
+                                        </select>
+                                        <button type="button" class="btn btn-success btn-sm save-choice-btn ms-2">Lưu</button>
+                                        <button type="button" class="btn btn-secondary btn-sm cancel-choice-btn ms-2">Hủy</button>
+                                    </div>
+                                    <div class="choice-actions">
+                                        <button type="button" class="btn btn-warning btn-sm edit-choice-btn ms-2">
+                                            <i class="bi bi-pencil"></i> Sửa
+                                        </button>
+                                        <button type="button" class="btn btn-danger btn-sm ms-2 delete-choice-btn" data-choice-id="${choice.id}" data-story-id="${storyId}">
+                                            <i class="bi bi-trash"></i> Xóa
+                                        </button>
+                                    </div>
+                                </li>`);
+                            $form.find('input[name="ChoiceText"]').val('');
+                            $form.find('select[name="NextSegmentId"]').val('');
+                            showAlert('success', response.message, `#segment-${segmentId}`);
+
+                            // Đảm bảo DOM được render
+                            setTimeout(function() {
+                                $choicesList.trigger('change');
+                            }, 0);
+                        } else {
+                            showAlert('danger', response.message, `#segment-${segmentId}`);
+                        }
+                    },
+                    error: function (xhr) {
+                        var errorMessage = xhr.responseJSON && xhr.responseJSON.message
+                            ? xhr.responseJSON.message
+                            : 'Có lỗi xảy ra khi thêm lựa chọn.';
+                        showAlert('danger', errorMessage, `#segment-${segmentId}`);
+                    }
+                });
+            });
+
+            // Chỉnh sửa lựa chọn
+            $(document).on('click', '.edit-choice-btn', function () {
                 var $row = $(this).closest('.choice-item');
                 $row.find('.choice-display').hide();
                 $row.find('.choice-actions').hide();
                 $row.find('.choice-edit').show();
             });
 
-            $('.cancel-choice-btn').on('click', function () {
+            $(document).on('click', '.cancel-choice-btn', function () {
                 var $row = $(this).closest('.choice-item');
                 $row.find('.choice-display').show();
                 $row.find('.choice-actions').show();
                 $row.find('.choice-edit').hide();
-
                 var $textInput = $row.find('.edit-choice-text');
                 var originalText = $textInput.data('original-value');
                 $textInput.val(originalText);
-
                 var $selectInput = $row.find('.edit-next-segment-id');
                 var originalNextSegmentId = $selectInput.attr('data-original-value');
                 $selectInput.val(originalNextSegmentId);
             });
 
-            $('.save-choice-btn').on('click', function () {
+            $(document).on('click', '.save-choice-btn', function () {
                 var $row = $(this).closest('.choice-item');
                 var choiceId = $row.find('.edit-choice-id').val();
                 var chapterSegmentId = $row.find('.edit-chapter-segment-id').val();
@@ -267,7 +653,13 @@ else
                 var nextSegmentId = $row.find('.edit-next-segment-id').val();
 
                 if (!choiceText || !nextSegmentId) {
-                    alert('Vui lòng điền đầy đủ thông tin.');
+                    showAlert('danger', 'Vui lòng điền đầy đủ thông tin.', `#choices-${chapterSegmentId}`);
+                    return;
+                }
+
+                var token = $('input[name="__RequestVerificationToken"]').val();
+                if (!token) {
+                    showAlert('danger', 'Không thể lưu thay đổi: Thiếu token xác thực.', `#choices-${chapterSegmentId}`);
                     return;
                 }
 
@@ -280,21 +672,66 @@ else
                         CreatedAt: createdAt,
                         ChoiceText: choiceText,
                         NextSegmentId: nextSegmentId,
-                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                        __RequestVerificationToken: token
                     },
                     success: function (response) {
                         if (response.success) {
                             $row.find('.choice-text').text(response.choiceText);
-                            $row.find('.badge').text('→ Đến đoạn: ' + response.nextSegmentTitle);
+                            $row.find('.next-segment-title').text('→ Đến đoạn: ' + response.nextSegmentTitle);
                             $row.find('.choice-display').show();
                             $row.find('.choice-actions').show();
                             $row.find('.choice-edit').hide();
+                            showAlert('success', response.message, `#choices-${chapterSegmentId}`);
                         } else {
-                            alert(response.message);
+                            showAlert('danger', response.message, `#choices-${chapterSegmentId}`);
                         }
                     },
-                    error: function () {
-                        alert('Có lỗi xảy ra khi lưu thay đổi.');
+                    error: function (xhr) {
+                        var errorMessage = xhr.responseJSON && xhr.responseJSON.message
+                            ? xhr.responseJSON.message
+                            : 'Có lỗi xảy ra khi lưu thay đổi.';
+                        showAlert('danger', errorMessage, `#choices-${chapterSegmentId}`);
+                    }
+                });
+            });
+
+            // Xóa lựa chọn
+            $(document).on('click', '.delete-choice-btn', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!confirm('Bạn có chắc chắn muốn xóa lựa chọn này?')) return;
+                var choiceId = $(this).data('choice-id');
+                var storyId = $(this).data('story-id');
+                var token = $('input[name="__RequestVerificationToken"]').val();
+                if (!token) {
+                    showAlert('danger', 'Không thể xóa lựa chọn: Thiếu token xác thực.', `#segment-${segmentId}`);
+                    return;
+                }
+                $.ajax({
+                    url: '/Choice/Delete',
+                    type: 'POST',
+                    data: {
+                        id: choiceId,
+                        __RequestVerificationToken: token
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            $(`.choice-item[data-choice-id="${choiceId}"]`).remove();
+                            var $choicesList = $(`#choices-${response.segmentId}`);
+                            if ($choicesList.children().length === 0) {
+                                $choicesList.after('<div class="alert alert-light mt-2">Không có lựa chọn nào cho đoạn này.</div>');
+                                $choicesList.hide();
+                            }
+                            showAlert('success', response.message, `#segment-${response.segmentId}`);
+                        } else {
+                            showAlert('danger', response.message, `#segment-${response.segmentId}`);
+                        }
+                    },
+                    error: function (xhr) {
+                        var errorMessage = xhr.responseJSON && xhr.responseJSON.message
+                            ? xhr.responseJSON.message
+                            : 'Có lỗi xảy ra khi xóa lựa chọn.';
+                        showAlert('danger', errorMessage, `#segment-${response.segmentId}`);
                     }
                 });
             });

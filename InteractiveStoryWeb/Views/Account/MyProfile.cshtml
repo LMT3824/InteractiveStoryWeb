@@ -19,6 +19,18 @@
         margin: 0 auto;
     }
 
+    #alert-container {
+        width: 100%;
+        /* Bỏ max-width và margin để sát lề trái và dài bằng container (1600px) */
+    }
+
+    .alert {
+        margin-bottom: 10px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        text-align: left; /* Văn bản trong thông báo sát lề trái */
+        width: 100%; /* Đảm bảo thông báo dài bằng container */
+    }
+
     .profile-container {
         position: relative;
         background-image: url('/images/AccountBG.jpg');
@@ -335,6 +347,7 @@
 }
 
 <div class="container">
+    <div id="alert-container"></div>
     <div class="profile-container">
         <div class="profile-content">
             <div class="profile-left">
@@ -404,7 +417,7 @@
             </form>
         </div>
     </div>
-
+    </div>
     <hr />
     <h2 class="mb-4">TRUYỆN CỦA TÔI</h2>
 
@@ -460,18 +473,15 @@
                     </a>
                     @if (isOwnProfile == true)
                     {
-                        <div class="card-footer">
-                            <a asp-controller="Story" asp-action="Edit" asp-route-id="@story.Id" class="btn btn-outline-dark btn-sm">Sửa truyện</a>
-                            <a asp-controller="Chapter" asp-action="Manage" asp-route-storyId="@story.Id" class="btn btn-outline-dark btn-sm">
-                                Quản lý chương
-                            </a>
-                            <form asp-controller="Story" asp-action="Delete" asp-route-id="@story.Id" method="post" class="d-inline">
-                                @Html.AntiForgeryToken()
-                                <button type="submit" class="btn btn-outline-dark btn-sm" onclick="return confirm('Bạn có chắc chắn muốn xóa truyện này?');">
-                                    Xóa truyện
-                                </button>
-                            </form>
-                        </div>
+                    <div class="card-footer">
+                        <a asp-controller="Story" asp-action="Edit" asp-route-id="@story.Id" class="btn btn-outline-dark btn-sm">Sửa truyện</a>
+                        <a asp-controller="Chapter" asp-action="Manage" asp-route-storyId="@story.Id" class="btn btn-outline-dark btn-sm">
+                            Quản lý chương
+                        </a>
+                        <button type="button" class="btn btn-outline-dark btn-sm delete-story-btn" data-story-id="@story.Id">
+                            Xóa truyện
+                        </button>
+                    </div>
                     }
                 </div>
             }
@@ -555,6 +565,17 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         $(document).ready(function () {
+            // Hàm hiển thị thông báo
+            function showAlert(type, message) {
+                // Xóa các thông báo cũ
+                $('#alert-container').empty();
+
+                var $alert = $('<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
+                    message + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>');
+                $('#alert-container').prepend($alert);
+                setTimeout(function () { $alert.alert('close'); }, 3000);
+            }
+
             // Hiển thị form chỉnh sửa
             $('.edit-profile-btn').on('click', function () {
                 $('.profile-display').hide();
@@ -568,17 +589,17 @@
                 $('.profile-edit').hide();
 
                 // Đặt lại giá trị ban đầu
-                $('.profile-caption-input').val($('.profile-caption').text().trim());
+                $('.profile-caption-input').val($('.profile-caption').text().trim() === 'Hiện không có nội dung' ? '' : $('.profile-caption').text().trim());
                 $('#avatarFile').val(''); // Xóa file đã chọn
                 updateCharCounter(); // Cập nhật lại số ký tự
             });
 
-            // Lưu thay đổi
+            // Lưu thay đổi hồ sơ
             $('#editProfileForm').on('submit', function (e) {
                 e.preventDefault();
                 var caption = $('.profile-caption-input').val();
                 if (caption.length > 200) {
-                    alert('Giới thiệu không được vượt quá 200 ký tự.');
+                    showAlert('danger', 'Giới thiệu không được vượt quá 200 ký tự.');
                     return;
                 }
 
@@ -598,12 +619,13 @@
                             $('.profile-caption').text(response.caption || 'Hiện không có nội dung');
                             $('.profile-display').show();
                             $('.profile-edit').hide();
+                            showAlert('success', 'Hồ sơ đã được cập nhật thành công!');
                         } else {
-                            alert(response.message);
+                            showAlert('danger', response.message);
                         }
                     },
                     error: function () {
-                        alert('Có lỗi xảy ra khi lưu thay đổi.');
+                        showAlert('danger', 'Có lỗi xảy ra khi lưu thay đổi.');
                     }
                 });
             });
@@ -625,13 +647,13 @@
                                 .addClass('btn-custom unfollow-btn')
                                 .text('Bỏ theo dõi');
                             $('.followers-count').text(response.followersCount);
-                            alert(response.message);
+                            showAlert('success', response.message);
                         } else {
-                            alert(response.message);
+                            showAlert('danger', response.message);
                         }
                     },
                     error: function () {
-                        alert('Có lỗi xảy ra khi theo dõi người dùng.');
+                        showAlert('danger', 'Có lỗi xảy ra khi theo dõi người dùng.');
                     }
                 });
             });
@@ -654,13 +676,13 @@
                                     .addClass('btn-custom follow-btn')
                                     .text('Theo dõi');
                                 $('.followers-count').text(response.followersCount);
-                                alert(response.message);
+                                showAlert('success', response.message);
                             } else {
-                                alert(response.message);
+                                showAlert('danger', response.message);
                             }
                         },
                         error: function () {
-                            alert('Có lỗi xảy ra khi bỏ theo dõi người dùng.');
+                            showAlert('danger', 'Có lỗi xảy ra khi bỏ theo dõi người dùng.');
                         }
                     });
                 }
@@ -678,6 +700,50 @@
             // Lắng nghe sự kiện input trên textarea
             $('#Caption').on('input', function () {
                 updateCharCounter();
+            });
+
+            // Khởi tạo số ký tự
+            updateCharCounter();
+        });
+
+                // Xóa truyện
+        $(document).on('click', '.delete-story-btn', function (e) {
+            e.preventDefault();
+            if (!confirm('Bạn có chắc chắn muốn xóa truyện này?')) return;
+
+            var storyId = $(this).data('story-id');
+            var token = $('input[name="__RequestVerificationToken"]').val();
+
+            $.ajax({
+                url: '/Story/Delete',
+                type: 'POST',
+                data: {
+                    id: storyId,
+                    __RequestVerificationToken: token
+                },
+                success: function (response) {
+                    if (response.success) {
+                        // Xóa card truyện khỏi giao diện
+                        $(`.col [data-story-id="${storyId}"]`).closest('.col').fadeOut(300, function() {
+                            $(this).remove();
+
+                            // Kiểm tra nếu không còn truyện nào thì hiển thị thông báo
+                            if ($('.story-row .col').length === 0) {
+                                $('.story-row').before('<p>Bạn chưa đăng truyện nào.</p>');
+                            }
+                        });
+
+                        showAlert('success', response.message);
+                    } else {
+                        showAlert('danger', response.message);
+                    }
+                },
+                error: function (xhr) {
+                    var errorMessage = xhr.responseJSON && xhr.responseJSON.message
+                        ? xhr.responseJSON.message
+                        : 'Có lỗi xảy ra khi xóa truyện.';
+                    showAlert('danger', errorMessage);
+                }
             });
         });
     </script>

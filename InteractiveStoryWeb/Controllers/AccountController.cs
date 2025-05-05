@@ -166,58 +166,6 @@ namespace InteractiveStoryWeb.Controllers
             }
         }
 
-        [HttpGet]
-        public async Task<IActionResult> EditProfile()
-        {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                return NotFound();
-            }
-            return View(user);
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [Authorize]
-        public async Task<IActionResult> EditProfile(ApplicationUser model, IFormFile avatarFile)
-        {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                return NotFound();
-            }
-
-            if (avatarFile != null && avatarFile.Length > 0)
-            {
-                var uploads = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/uploads/avatars");
-                Directory.CreateDirectory(uploads);
-                var fileName = Guid.NewGuid().ToString() + Path.GetExtension(avatarFile.FileName);
-                var filePath = Path.Combine(uploads, fileName);
-
-                using (var stream = new FileStream(filePath, FileMode.Create))
-                {
-                    await avatarFile.CopyToAsync(stream);
-                }
-
-                user.AvatarUrl = "/uploads/avatars/" + fileName;
-            }
-
-            user.Caption = model.Caption;
-            var result = await _userManager.UpdateAsync(user);
-
-            if (result.Succeeded)
-            {
-                TempData["SuccessMessage"] = "Hồ sơ đã được cập nhật thành công!";
-                return RedirectToAction("MyProfile");
-            }
-            else
-            {
-                TempData["ErrorMessage"] = "Có lỗi xảy ra khi cập nhật hồ sơ.";
-                return View(user);
-            }
-        }
-
         [Authorize]
         public async Task<IActionResult> Following(string userId)
         {
@@ -364,6 +312,6 @@ namespace InteractiveStoryWeb.Controllers
             return Json(new { success = true, message = "Đã bỏ theo dõi!", followersCount = followersCount });
         }
 
-        
+
     }
 }

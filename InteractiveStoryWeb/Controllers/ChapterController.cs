@@ -28,8 +28,7 @@ namespace InteractiveStoryWeb.Controllers
         {
             if (!ModelState.IsValid)
             {
-                TempData["ErrorMessage"] = "Vui lòng kiểm tra lại thông tin.";
-                return View(model);
+                return Json(new { success = false, message = "Vui lòng kiểm tra lại thông tin." });
             }
 
             string imagePath = null;
@@ -68,7 +67,7 @@ namespace InteractiveStoryWeb.Controllers
                 Title = "Đoạn 1",
                 Content = "Đoạn mới được tạo tự động.",
                 ImageUrl = imagePath,
-                ImagePosition = ImagePosition.Bottom, // Mặc định ở cuối trang
+                ImagePosition = ImagePosition.Bottom,
                 CreatedAt = DateTime.Now
             };
             _context.ChapterSegments.Add(firstSegment);
@@ -96,8 +95,47 @@ namespace InteractiveStoryWeb.Controllers
             _context.Choices.Add(choice);
             await _context.SaveChangesAsync();
 
-            TempData["SuccessMessage"] = "Chương đã được tạo thành công!";
-            return RedirectToAction("Manage", "Chapter", new { storyId = chapter.StoryId });
+            return Json(new
+            {
+                success = true,
+                message = "Chương đã được tạo thành công!",
+                chapter = new
+                {
+                    id = chapter.Id,
+                    title = chapter.Title,
+                    storyId = chapter.StoryId,
+                    viewCount = chapter.ViewCount,
+                    isPublic = chapter.IsPublic,
+                    segments = new[]
+                    {
+                new
+                {
+                    id = firstSegment.Id,
+                    title = firstSegment.Title,
+                    content = firstSegment.Content.Length > 80 ? firstSegment.Content.Substring(0, 80) + "..." : firstSegment.Content,
+                    choices = (object)new[] // Khai báo choices là object
+                    {
+                        new
+                        {
+                            id = choice.Id,
+                            choiceText = choice.ChoiceText,
+                            nextSegmentId = choice.NextSegmentId,
+                            nextSegmentTitle = secondSegment.Title,
+                            chapterSegmentId = choice.ChapterSegmentId,
+                            createdAt = choice.CreatedAt.ToString("o")
+                        }
+                    }
+                },
+                new
+                {
+                    id = secondSegment.Id,
+                    title = secondSegment.Title,
+                    content = secondSegment.Content.Length > 80 ? secondSegment.Content.Substring(0, 80) + "..." : secondSegment.Content,
+                    choices = (object)new object[] { } // Khai báo choices là object
+                }
+            }
+                }
+            });
         }
 
         [HttpGet]
@@ -117,19 +155,28 @@ namespace InteractiveStoryWeb.Controllers
             if (!ModelState.IsValid)
             {
                 var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
-                TempData["ErrorMessage"] = "Vui lòng kiểm tra lại thông tin: " + string.Join("; ", errors);
-                return RedirectToAction("Manage", new { storyId = model.StoryId });
+                return Json(new { success = false, message = "Vui lòng kiểm tra lại thông tin: " + string.Join("; ", errors) });
             }
 
-            var chapter = await _context.Chapters.FindAsync(model.Id);
-            if (chapter == null) return NotFound();
+            var chapter = await _context.Chapters
+                .Include(c => c.Segments)
+                .FirstOrDefaultAsync(c => c.Id == model.Id);
+            if (chapter == null)
+            {
+                return Json(new { success = false, message = "Chương không tồn tại." });
+            }
 
             var user = await _userManager.GetUserAsync(User);
             var story = await _context.Stories.FindAsync(chapter.StoryId);
             if (story == null || story.AuthorId != user.Id)
             {
-                TempData["ErrorMessage"] = "Bạn không có quyền chỉnh sửa chương này.";
-                return RedirectToAction("Manage", new { storyId = chapter.StoryId });
+                return Json(new { success = false, message = "Bạn không có quyền chỉnh sửa chương này." });
+            }
+
+            // Kiểm tra nếu chương được set thành công khai
+            if (model.IsPublic && !chapter.Segments.Any())
+            {
+                return Json(new { success = false, message = "Chương cần có ít nhất một đoạn để được công khai." });
             }
 
             // Log giá trị IsPublic để debug
@@ -157,8 +204,7 @@ namespace InteractiveStoryWeb.Controllers
 
             await _context.SaveChangesAsync();
 
-            TempData["SuccessMessage"] = "Chương đã được cập nhật thành công!";
-            return RedirectToAction("Manage", new { storyId = chapter.StoryId });
+            return Json(new { success = true, message = "Chương đã được cập nhật thành công!" });
         }
 
 
@@ -254,15 +300,13 @@ namespace InteractiveStoryWeb.Controllers
 
             if (chapter == null)
             {
-                TempData["ErrorMessage"] = "Chương không tồn tại.";
-                return RedirectToAction("Manage", new { storyId = ViewBag.StoryId });
+                return Json(new { success = false, message = "Chương không tồn tại." });
             }
 
             var user = await _userManager.GetUserAsync(User);
             if (chapter.Story.AuthorId != user.Id)
             {
-                TempData["ErrorMessage"] = "Bạn không có quyền xóa chương này.";
-                return RedirectToAction("Manage", new { storyId = chapter.StoryId });
+                return Json(new { success = false, message = "Bạn không có quyền xóa chương này." });
             }
 
             // Tìm tất cả các ChapterSegment thuộc Chapter
@@ -308,8 +352,7 @@ namespace InteractiveStoryWeb.Controllers
                 }
             }
 
-            TempData["SuccessMessage"] = "Chương đã được xóa thành công!";
-            return RedirectToAction("Manage", new { storyId = chapter.StoryId });
+            return Json(new { success = true, message = "Chương đã được xóa thành công!" });
         }
     }
 }

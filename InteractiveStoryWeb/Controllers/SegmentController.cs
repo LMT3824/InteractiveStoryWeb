@@ -374,15 +374,13 @@ namespace InteractiveStoryWeb.Controllers
 
             if (segment == null)
             {
-                TempData["ErrorMessage"] = "Đoạn không tồn tại.";
-                return RedirectToAction("Manage", "Chapter", new { storyId = ViewBag.StoryId });
+                return Json(new { success = false, message = "Đoạn không tồn tại." });
             }
 
             var user = await _userManager.GetUserAsync(User);
             if (segment.Chapter.Story.AuthorId != user.Id)
             {
-                TempData["ErrorMessage"] = "Bạn không có quyền xóa đoạn này.";
-                return RedirectToAction("Manage", "Chapter", new { storyId = segment.Chapter.StoryId });
+                return Json(new { success = false, message = "Bạn không có quyền xóa đoạn này." });
             }
 
             // Kiểm tra xem đoạn có được liên kết bởi các lựa chọn khác không (NextSegmentId)
@@ -392,8 +390,12 @@ namespace InteractiveStoryWeb.Controllers
 
             if (linkedChoices.Any())
             {
-                TempData["ErrorMessage"] = "Không thể xóa đoạn này vì nó được liên kết bởi các lựa chọn khác.";
-                return RedirectToAction("Manage", "Chapter", new { storyId = segment.Chapter.StoryId });
+                return Json(new
+                {
+                    success = false,
+                    message = "Không thể xóa đoạn này vì nó được liên kết bởi các lựa chọn khác.",
+                    storyId = segment.Chapter.StoryId
+                });
             }
 
             // Đặt ChapterSegmentId trong ReadingProgress thành null trước khi xóa
@@ -417,7 +419,10 @@ namespace InteractiveStoryWeb.Controllers
 
             if (chapter != null && chapter.Segments != null && !chapter.Segments.Any())
             {
-                // Nếu chương không còn đoạn nào, kiểm tra xem Story có còn chương công khai nào có đoạn không
+                // Nếu chương không còn đoạn nào, set chương thành không công khai
+                chapter.IsPublic = false;
+
+                // Kiểm tra xem Story có còn chương công khai nào có đoạn không
                 var story = chapter.Story;
                 var hasValidPublicChapter = await _context.Chapters
                     .Include(c => c.Segments)
@@ -427,12 +432,17 @@ namespace InteractiveStoryWeb.Controllers
                 {
                     // Nếu không còn chương công khai nào có đoạn, đặt Story thành không công khai
                     story.IsPublic = false;
-                    await _context.SaveChangesAsync();
                 }
+
+                await _context.SaveChangesAsync();
             }
 
-            TempData["SuccessMessage"] = "Đoạn đã được xóa thành công!";
-            return RedirectToAction("Manage", "Chapter", new { storyId = segment.Chapter.StoryId });
+            return Json(new
+            {
+                success = true,
+                message = "Đoạn đã được xóa thành công!",
+                chapterId = segment.ChapterId
+            });
         }
 
         [HttpPost]

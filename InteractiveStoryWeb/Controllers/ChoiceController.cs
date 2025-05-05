@@ -2,6 +2,7 @@
 using InteractiveStoryWeb.Models;
 using InteractiveStoryWeb.ViewModels;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,10 +12,14 @@ namespace InteractiveStoryWeb.Controllers
     public class ChoiceController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IWebHostEnvironment _env;
 
-        public ChoiceController(ApplicationDbContext context)
+        public ChoiceController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, IWebHostEnvironment env)
         {
             _context = context;
+            _userManager = userManager;
+            _env = env;
         }
 
         [HttpPost]
@@ -27,37 +32,25 @@ namespace InteractiveStoryWeb.Controllers
 
             if (segment == null)
             {
-                TempData["ErrorMessage"] = "Đoạn không tồn tại.";
-                return RedirectToAction("Index", "Story");
+                return Json(new { success = false, message = "Đoạn không tồn tại." });
             }
 
             if (!ModelState.IsValid)
             {
-                var availableSegments = await _context.ChapterSegments
-                    .Where(s => s.ChapterId == segment.ChapterId)
-                    .ToListAsync();
-
-                ViewBag.Segment = segment;
-                ViewBag.AvailableSegments = availableSegments;
-                ViewBag.StoryId = segment.Chapter.StoryId;
-                TempData["ErrorMessage"] = "Vui lòng kiểm tra lại thông tin.";
-                return View("Manage", model);
+                // Lấy thông báo lỗi chi tiết từ ModelState
+                var errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .ToList();
+                var errorMessage = errors.Any() ? string.Join("; ", errors) : "Vui lòng kiểm tra lại thông tin.";
+                return Json(new { success = false, message = errorMessage });
             }
 
             // Kiểm tra đoạn hiện tại
             var currentSegment = await _context.ChapterSegments.FindAsync(model.ChapterSegmentId);
             if (currentSegment == null)
             {
-                var availableSegments = await _context.ChapterSegments
-                    .Where(s => s.ChapterId == segment.ChapterId)
-                    .ToListAsync();
-
-                ViewBag.Segment = segment;
-                ViewBag.AvailableSegments = availableSegments;
-                ViewBag.StoryId = segment.Chapter.StoryId;
-                ModelState.AddModelError("ChapterSegmentId", "Đoạn hiện tại không tồn tại.");
-                TempData["ErrorMessage"] = "Đoạn hiện tại không tồn tại.";
-                return View("Manage", model);
+                return Json(new { success = false, message = "Đoạn hiện tại không tồn tại." });
             }
 
             // Kiểm tra NextSegmentId
@@ -65,16 +58,7 @@ namespace InteractiveStoryWeb.Controllers
                 .FirstOrDefaultAsync(s => s.Id == model.NextSegmentId && s.ChapterId == currentSegment.ChapterId);
             if (nextSegment == null)
             {
-                var availableSegments = await _context.ChapterSegments
-                    .Where(s => s.ChapterId == segment.ChapterId)
-                    .ToListAsync();
-
-                ViewBag.Segment = segment;
-                ViewBag.AvailableSegments = availableSegments;
-                ViewBag.StoryId = segment.Chapter.StoryId;
-                ModelState.AddModelError("NextSegmentId", "Đoạn tiếp theo không tồn tại hoặc không thuộc cùng chương.");
-                TempData["ErrorMessage"] = "Đoạn tiếp theo không hợp lệ.";
-                return View("Manage", model);
+                return Json(new { success = false, message = "Đoạn tiếp theo không tồn tại hoặc không thuộc cùng chương." });
             }
 
             var choice = new Choice
@@ -88,31 +72,61 @@ namespace InteractiveStoryWeb.Controllers
             _context.Choices.Add(choice);
             await _context.SaveChangesAsync();
 
-            TempData["SuccessMessage"] = "Lựa chọn đã được thêm thành công!";
-            return RedirectToAction("Manage", "Chapter", new { storyId = segment.Chapter.StoryId });
+            var segments = await _context.ChapterSegments
+                .Where(s => s.ChapterId == segment.ChapterId)
+                .Select(s => new { id = s.Id, title = s.Title })
+                .ToListAsync();
+
+            return Json(new
+            {
+                success = true,
+                message = "Lựa chọn đã được thêm thành công!",
+                choice = new
+                {
+                    id = choice.Id,
+                    choiceText = choice.ChoiceText,
+                    nextSegmentId = choice.NextSegmentId,
+                    nextSegmentTitle = nextSegment.Title,
+                    chapterSegmentId = choice.ChapterSegmentId,
+                    createdAt = choice.CreatedAt.ToString("o")
+                },
+                segments
+            });
         }
 
         // Thêm action Delete
-        [HttpGet]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize]
         public async Task<IActionResult> Delete(int id)
         {
             var choice = await _context.Choices
                 .Include(c => c.ChapterSegment)
                     .ThenInclude(cs => cs.Chapter)
+                        .ThenInclude(c => c.Story)
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             if (choice == null)
             {
-                TempData["ErrorMessage"] = "Lựa chọn không tồn tại.";
-                return RedirectToAction("Index", "Story");
+                return Json(new { success = false, message = "Lựa chọn không tồn tại." });
             }
 
-            var storyId = choice.ChapterSegment.Chapter.StoryId;
+            var user = await _userManager.GetUserAsync(User);
+            if (choice.ChapterSegment.Chapter.Story.AuthorId != user.Id)
+            {
+                return Json(new { success = false, message = "Bạn không có quyền xóa lựa chọn này." });
+            }
+
+            var segmentId = choice.ChapterSegmentId;
             _context.Choices.Remove(choice);
             await _context.SaveChangesAsync();
 
-            TempData["SuccessMessage"] = "Lựa chọn đã được xóa thành công!";
-            return RedirectToAction("Manage", "Chapter", new { storyId = storyId });
+            return Json(new
+            {
+                success = true,
+                message = "Lựa chọn đã được xóa thành công!",
+                segmentId
+            });
         }
 
         [HttpGet]

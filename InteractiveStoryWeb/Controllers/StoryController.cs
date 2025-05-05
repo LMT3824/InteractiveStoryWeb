@@ -486,53 +486,66 @@ namespace InteractiveStoryWeb.Controllers
         [Authorize]
         public async Task<IActionResult> Delete(int id)
         {
-            var story = await _context.Stories
-                .Include(s => s.Chapters)
-                    .ThenInclude(c => c.Segments) // Bao gồm Segments để lấy ChapterSegmentId
-                .FirstOrDefaultAsync(s => s.Id == id);
-
-            if (story == null)
+            try
             {
-                TempData["ErrorMessage"] = "Truyện không tồn tại.";
-                return RedirectToAction("Index");
-            }
+                var story = await _context.Stories
+                    .Include(s => s.Chapters)
+                        .ThenInclude(c => c.Segments)
+                    .FirstOrDefaultAsync(s => s.Id == id);
 
-            var user = await _userManager.GetUserAsync(User);
-            if (story.AuthorId != user.Id)
+                if (story == null)
+                {
+                    return Json(new { success = false, message = "Truyện không tồn tại." });
+                }
+
+                var user = await _userManager.GetUserAsync(User);
+                if (story.AuthorId != user.Id)
+                {
+                    return Json(new { success = false, message = "Bạn không có quyền xóa truyện này." });
+                }
+
+                // Tìm tất cả các ChapterSegment thuộc Story
+                var segmentIds = story.Chapters
+                    .SelectMany(c => c.Segments)
+                    .Select(s => s.Id)
+                    .ToList();
+
+                // Tìm tất cả các Choices có NextSegmentId tham chiếu đến các ChapterSegment của Story
+                var choicesReferencingSegments = await _context.Choices
+                    .Where(c => segmentIds.Contains(c.NextSegmentId))
+                    .ToListAsync();
+
+                // Xóa các Choices này để tránh xung đột ràng buộc
+                _context.Choices.RemoveRange(choicesReferencingSegments);
+
+                // Đặt ChapterSegmentId trong ReadingProgress thành null trước khi xóa
+                var relatedProgresses = await _context.ReadingProgresses
+                    .Where(rp => segmentIds.Contains(rp.ChapterSegmentId.Value))
+                    .ToListAsync();
+
+                foreach (var progress in relatedProgresses)
+                {
+                    progress.ChapterSegmentId = null;
+                }
+
+                _context.Stories.Remove(story);
+                await _context.SaveChangesAsync();
+
+                return Json(new
+                {
+                    success = true,
+                    message = "Truyện đã được xóa thành công!",
+                    storyId = id
+                });
+            }
+            catch (Exception ex)
             {
-                TempData["ErrorMessage"] = "Bạn không có quyền xóa truyện này.";
-                return RedirectToAction("Index");
+                return Json(new
+                {
+                    success = false,
+                    message = $"Có lỗi xảy ra khi xóa truyện: {ex.Message}"
+                });
             }
-
-            // Tìm tất cả các ChapterSegment thuộc Story
-            var segmentIds = story.Chapters
-                .SelectMany(c => c.Segments)
-                .Select(s => s.Id)
-                .ToList();
-
-            // Tìm tất cả các Choices có NextSegmentId tham chiếu đến các ChapterSegment của Story
-            var choicesReferencingSegments = await _context.Choices
-                .Where(c => segmentIds.Contains(c.NextSegmentId))
-                .ToListAsync();
-
-            // Xóa các Choices này để tránh xung đột ràng buộc
-            _context.Choices.RemoveRange(choicesReferencingSegments);
-
-            // Đặt ChapterSegmentId trong ReadingProgress thành null trước khi xóa
-            var relatedProgresses = await _context.ReadingProgresses
-                .Where(rp => segmentIds.Contains(rp.ChapterSegmentId.Value))
-                .ToListAsync();
-
-            foreach (var progress in relatedProgresses)
-            {
-                progress.ChapterSegmentId = null;
-            }
-
-            _context.Stories.Remove(story);
-            await _context.SaveChangesAsync();
-
-            TempData["SuccessMessage"] = "Truyện đã được xóa thành công!";
-            return RedirectToAction("MyProfile", "Account");
         }
 
         [AllowAnonymous]
