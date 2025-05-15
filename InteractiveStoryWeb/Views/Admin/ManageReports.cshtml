@@ -1,0 +1,287 @@
+﻿@model List<InteractiveStoryWeb.Models.Report>
+@{
+    ViewData["Title"] = "Quản lý Báo Cáo";
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+<style>
+    .page-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+        .page-header .back-arrow {
+            cursor: pointer;
+            color: #000;
+            text-decoration: none;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            vertical-align: middle;
+        }
+
+            .page-header .back-arrow:hover {
+                background: rgba(122, 75, 22, 0.1);
+                color: #000;
+            }
+
+            .page-header .back-arrow svg {
+                width: 100%;
+                height: 100%;
+            }
+
+        .page-header h2 {
+            font-family: 'STIX Two Text', serif;
+            font-weight: 700;
+            font-size: 32px;
+            margin-top: 26px;
+            margin-bottom: 20px;
+            line-height: 30px;
+        }
+
+    .username-link {
+        text-decoration: none !important;
+        color: black !important;
+    }
+
+        .username-link:hover {
+            text-decoration: underline !important;
+        }
+
+    .alert-container {
+        margin-bottom: 15px;
+    }
+
+    .report-list .list-group-item {
+        margin-bottom: 10px;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+    }
+</style>
+
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text&display=swap" rel="stylesheet">
+
+<div class="page-header">
+        <a href="@Url.Action("Index", "Admin")" class="back-arrow">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+        </a>
+        <h2>QUẢN LÝ BÁO CÁO</h2>
+    </div>
+
+<div class="container">
+    <div class="alert-container">
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                @TempData["SuccessMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @TempData["ErrorMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+    </div>
+
+    <div class="report-list">
+        <div class="list-group">
+            @if (Model != null && Model.Any())
+            {
+                @foreach (var report in Model.OrderByDescending(r => r.ReportedAt))
+                {
+                    <div class="list-group-item" data-report-id="@report.Id">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">
+                                Báo cáo từ: <a href="@Url.Action("MyProfile", "Account", new { userId = report.UserId })" class="username-link">@(report.User?.UserName ?? "Không xác định")</a>
+                            </h5>
+                            <small>@report.ReportedAt.ToString("dd/MM/yyyy HH:mm")</small>
+                        </div>
+                        <p class="mb-1">
+                            <strong>Đối tượng:</strong>
+                            @if (report.StoryId.HasValue && report.CommentId == null)
+                            {
+                                <span>Truyện: <a href="@Url.Action("Details", "Story", new { id = report.StoryId })" class="username-link">@(report.Story?.Title ?? "Truyện đã bị xóa")</a></span>
+                            }
+                            else if (report.CommentId.HasValue)
+                            {
+                                <span>Bình luận: "@(report.Comment?.Content?.Length > 50 ? report.Comment.Content.Substring(0, 50) + "..." : report.Comment?.Content ?? "Bình luận đã bị xóa")"</span>
+                            }
+                            <br />
+                            <strong>Tác giả:</strong> <a href="@Url.Action("MyProfile", "Account", new { userId = report.AuthorId })" class="username-link">@(report.Author?.UserName ?? "Không xác định")</a>
+                            <br />
+                            <strong>Lý do:</strong> @report.Reason
+                        </p>
+                        <div class="action-buttons">
+                            @if (report.StoryId.HasValue && report.CommentId == null && report.Story != null)
+                            {
+                                <button type="button" class="btn btn-danger btn-sm hide-story-btn" data-story-id="@report.StoryId">Ẩn truyện</button>
+                            }
+                            @if (report.CommentId.HasValue && report.Comment != null)
+                            {
+                                <button type="button" class="btn btn-danger btn-sm delete-comment-btn" data-comment-id="@report.CommentId">Xóa bình luận</button>
+                            }
+                            <button type="button" class="btn btn-warning btn-sm ban-user-btn" data-user-id="@report.AuthorId">Chặn người dùng</button>
+                            <button type="button" class="btn btn-secondary btn-sm dismiss-report-btn" data-report-id="@report.Id">Bỏ qua báo cáo</button>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="alert alert-info mt-3">
+                    Chưa có báo cáo nào.
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            // Hàm hiển thị thông báo
+            function showAlert(type, message) {
+                $('.alert-container').empty();
+                var $alert = $('<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
+                    message + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>');
+                $('.alert-container').prepend($alert);
+                setTimeout(function () { $alert.alert('close'); }, 3000);
+            }
+
+            // Ẩn truyện
+            $(document).on('click', '.hide-story-btn', function () {
+                var storyId = $(this).data('story-id');
+                var $row = $(this).closest('.list-group-item');
+                if (confirm('Bạn có chắc chắn muốn ẩn truyện này?')) {
+                    $.ajax({
+                        url: '/Admin/HideStory',
+                        type: 'POST',
+                        data: {
+                            storyId: storyId,
+                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        success: function (response) {
+                            if (response.success) {
+                                $row.fadeOut(200, function () { $(this).remove(); });
+                                if ($('.list-group-item').length === 0) {
+                                    $('.list-group').append('<div class="alert alert-info mt-3">Chưa có báo cáo nào.</div>');
+                                }
+                                showAlert('success', response.message);
+                            } else {
+                                showAlert('danger', response.message);
+                            }
+                        },
+                        error: function () {
+                            showAlert('danger', 'Có lỗi xảy ra khi ẩn truyện.');
+                        }
+                    });
+                }
+            });
+
+            // Xóa bình luận
+            $(document).on('click', '.delete-comment-btn', function () {
+                var commentId = $(this).data('comment-id');
+                var $row = $(this).closest('.list-group-item');
+                if (confirm('Bạn có chắc chắn muốn xóa bình luận này?')) {
+                    $.ajax({
+                        url: '/Admin/DeleteComment',
+                        type: 'POST',
+                        data: {
+                            commentId: commentId,
+                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        success: function (response) {
+                            if (response.success) {
+                                $row.fadeOut(200, function () { $(this).remove(); });
+                                if ($('.list-group-item').length === 0) {
+                                    $('.list-group').append('<div class="alert alert-info mt-3">Chưa có báo cáo nào.</div>');
+                                }
+                                showAlert('success', response.message);
+                            } else {
+                                showAlert('danger', response.message);
+                            }
+                        },
+                        error: function () {
+                            showAlert('danger', 'Có lỗi xảy ra khi xóa bình luận.');
+                        }
+                    });
+                }
+            });
+
+            // Chặn người dùng
+            $(document).on('click', '.ban-user-btn', function () {
+                var userId = $(this).data('user-id');
+                var $row = $(this).closest('.list-group-item');
+                if (confirm('Bạn có chắc chắn muốn chặn người dùng này?')) {
+                    $.ajax({
+                        url: '/Admin/BanUser',
+                        type: 'POST',
+                        data: {
+                            userId: userId,
+                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        success: function (response) {
+                            if (response.success) {
+                                $row.fadeOut(200, function () { $(this).remove(); });
+                                if ($('.list-group-item').length === 0) {
+                                    $('.list-group').append('<div class="alert alert-info mt-3">Chưa có báo cáo nào.</div>');
+                                }
+                                showAlert('success', response.message);
+                            } else {
+                                showAlert('danger', response.message);
+                            }
+                        },
+                        error: function () {
+                            showAlert('danger', 'Có lỗi xảy ra khi chặn người dùng.');
+                        }
+                    });
+                }
+            });
+
+            // Bỏ qua báo cáo
+            $(document).on('click', '.dismiss-report-btn', function () {
+                var reportId = $(this).data('report-id');
+                var $row = $(this).closest('.list-group-item');
+                if (confirm('Bạn có chắc chắn muốn bỏ qua báo cáo này?')) {
+                    $.ajax({
+                        url: '/Admin/DismissReport',
+                        type: 'POST',
+                        data: {
+                            reportId: reportId,
+                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        success: function (response) {
+                            if (response.success) {
+                                $row.fadeOut(200, function () { $(this).remove(); });
+                                if ($('.list-group-item').length === 0) {
+                                    $('.list-group').append('<div class="alert alert-info mt-3">Chưa có báo cáo nào.</div>');
+                                }
+                                showAlert('success', response.message);
+                            } else {
+                                showAlert('danger', response.message);
+                            }
+                        },
+                        error: function () {
+                            showAlert('danger', 'Có lỗi xảy ra khi bỏ qua báo cáo.');
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+}

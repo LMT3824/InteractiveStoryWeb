@@ -4,7 +4,54 @@
     ViewData["Title"] = "Chỉnh sửa đoạn truyện";
 }
 
-<h2 class="mb-4">📝 @ViewData["Title"]</h2>
+<style>
+    .page-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+        .page-header .back-arrow {
+            cursor: pointer;
+            color: #000;
+            text-decoration: none;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            vertical-align: middle;
+        }
+
+            .page-header .back-arrow:hover {
+                background: rgba(122, 75, 22, 0.1);
+                color: #000;
+            }
+
+            .page-header .back-arrow svg {
+                width: 100%;
+                height: 100%;
+            }
+
+        .page-header h2 {
+            font-family: 'STIX Two Text', serif;
+            font-weight: 700;
+            font-size: 32px;
+            margin-top: 26px;
+            margin-bottom: 20px;
+            line-height: 30px;
+        }
+</style>
+
+<div class="page-header">
+    <a href="javascript:history.back()" class="back-arrow">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+    </a>
+    <h2>CHỈNH SỬA ĐOẠN TRUYỆN</h2>
+</div>
 
 @if (TempData["SuccessMessage"] != null)
 {
@@ -38,7 +85,7 @@
 
     <div class="form-group mb-3">
         <label asp-for="Content" class="form-label">Nội dung đoạn</label>
-        <textarea asp-for="Content" rows="6" class="form-control" placeholder="Nhập nội dung đoạn..." id="contentInput"></textarea>
+        <textarea asp-for="Content" rows="40" class="form-control" placeholder="Nhập nội dung đoạn..." id="contentInput"></textarea>
         <span asp-validation-for="Content" class="text-danger"></span>
         <small class="form-text text-muted">
             @if (ViewBag.AllowCustomization == true)
@@ -56,14 +103,20 @@
     </div>
 
     <div class="mb-3">
-        <label for="NewImage" class="form-label">Ảnh minh họa mới (tùy chọn)</label>
+        <label for="NewImage" class="form-label">Ảnh minh họa mới (không bắt buộc)</label>
         <input type="file" name="NewImage" class="form-control" accept="image/*" id="newImageInput" />
-        <small class="form-text text-muted">Chọn ảnh minh họa mới (định dạng: jpg, png, ...)</small>
+        <small class="form-text text-muted">Chọn ảnh minh họa mới (định dạng: jpg, png, ...). Nếu không chọn ảnh mới, ảnh hiện tại (nếu có) sẽ được giữ nguyên.</small>
         @if (!string.IsNullOrEmpty(Model.ImageUrl))
         {
             <div class="mt-2">
                 <p>Ảnh hiện tại:</p>
                 <img src="@Model.ImageUrl" class="img-thumbnail" style="max-height: 200px;" alt="Ảnh minh họa" />
+            </div>
+        }
+        else
+        {
+            <div class="mt-2">
+                <p>Chưa có ảnh minh họa.</p>
             </div>
         }
     </div>
@@ -99,6 +152,18 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         $(document).ready(function () {
+            $('#editSegmentForm').on('submit', function (e) {
+                // Đảm bảo không có client-side validation yêu cầu ImageUrl
+                var newImage = $('#newImageInput')[0].files[0];
+                var imageUrl = $('#ImageUrl').val();
+                console.log("Submitting form. NewImage:", newImage, "ImageUrl:", imageUrl);
+
+                // Nếu không có ảnh mới và không có ảnh hiện tại, vẫn cho phép submit
+                if (!newImage && !imageUrl) {
+                    console.log("No image provided. Submitting form without image.");
+                }
+            });
+
             $('#previewButton').click(function () {
                 var content = $('#contentInput').val();
                 var chapterId = $('#ChapterId').val();
@@ -115,6 +180,8 @@
                     formData.append('image', newImageFile);
                 }
                 formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
+
+                console.log("Sending preview request with NewImage:", newImageFile);
 
                 $.ajax({
                     url: '@Url.Action("Preview", "Segment")',

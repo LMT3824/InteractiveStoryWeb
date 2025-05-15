@@ -1,6 +1,7 @@
 ﻿using InteractiveStoryWeb.Data;
 using InteractiveStoryWeb.Models;
 using InteractiveStoryWeb.ViewModels;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
@@ -9,18 +10,25 @@ using System.Threading.Tasks;
 public class HomeController : Controller
 {
     private readonly ApplicationDbContext _context;
+    private readonly UserManager<ApplicationUser> _userManager;
 
-    public HomeController(ApplicationDbContext context)
+    public HomeController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
     {
         _context = context;
+        _userManager = userManager;
     }
 
     public async Task<IActionResult> Index()
     {
+        var currentUser = await _userManager.GetUserAsync(User);
+        string currentUserId = currentUser?.Id;
         var sixMonthsAgo = DateTime.Now.AddMonths(-6);
 
         var popularStories = await _context.Stories
-            .Where(s => s.IsPublic)
+            .Where(s => s.IsPublic && !s.Author.IsBanned && !s.IsHidden
+                && (currentUserId == null ||
+                    (!_context.Blocks.Any(b => b.UserId == currentUserId && (b.BlockedUserId == s.AuthorId || b.BlockedStoryId == s.Id)) &&
+                     !_context.Blocks.Any(b => b.UserId == s.AuthorId && b.BlockedUserId == currentUserId))))
             .Include(s => s.Author)
             .Include(s => s.Chapters)
             .Where(s => s.UpdatedAt >= sixMonthsAgo || s.Chapters.Any(c => c.CreatedAt >= sixMonthsAgo))
@@ -37,7 +45,10 @@ public class HomeController : Controller
             .ToListAsync();
 
         var topRatedStoriesQuery = _context.Stories
-            .Where(s => s.IsPublic)
+            .Where(s => s.IsPublic && !s.Author.IsBanned && !s.IsHidden
+                && (currentUserId == null ||
+                    (!_context.Blocks.Any(b => b.UserId == currentUserId && (b.BlockedUserId == s.AuthorId || b.BlockedStoryId == s.Id)) &&
+                     !_context.Blocks.Any(b => b.UserId == s.AuthorId && b.BlockedUserId == currentUserId))))
             .Include(s => s.Chapters);
 
         var topRatedStoriesList = await topRatedStoriesQuery.ToListAsync();
@@ -58,13 +69,19 @@ public class HomeController : Controller
         Console.WriteLine($"Index - TopRated - Titles After Sorting: {string.Join(", ", topRatedStories.Select(s => s.Title))}");
 
         var newStories = await _context.Stories
-            .Where(s => s.IsPublic)
+            .Where(s => s.IsPublic && !s.Author.IsBanned && !s.IsHidden
+                && (currentUserId == null ||
+                    (!_context.Blocks.Any(b => b.UserId == currentUserId && (b.BlockedUserId == s.AuthorId || b.BlockedStoryId == s.Id)) &&
+                     !_context.Blocks.Any(b => b.UserId == s.AuthorId && b.BlockedUserId == currentUserId))))
             .Include(s => s.Chapters)
             .OrderByDescending(s => s.CreatedAt)
             .ToListAsync();
 
         var completedStories = await _context.Stories
-            .Where(s => s.IsPublic && s.IsCompleted)
+            .Where(s => s.IsPublic && s.IsCompleted && !s.Author.IsBanned && !s.IsHidden
+                && (currentUserId == null ||
+                    (!_context.Blocks.Any(b => b.UserId == currentUserId && (b.BlockedUserId == s.AuthorId || b.BlockedStoryId == s.Id)) &&
+                     !_context.Blocks.Any(b => b.UserId == s.AuthorId && b.BlockedUserId == currentUserId))))
             .Include(s => s.Chapters)
             .OrderByDescending(s => s.CreatedAt)
             .ToListAsync();
@@ -86,9 +103,14 @@ public class HomeController : Controller
         foreach (var story in allStories)
         {
             viewCounts[story.Id] = story.Chapters?.Sum(ch => ch.ViewCount) ?? 0;
-            var storyRatings = await _context.Ratings.Where(r => r.StoryId == story.Id).ToListAsync();
+            var storyRatings = await _context.Ratings
+                .Where(r => r.StoryId == story.Id && !r.User.IsBanned
+                    && (currentUserId == null ||
+                        (!_context.Blocks.Any(b => b.UserId == currentUserId && b.BlockedUserId == r.UserId) &&
+                         !_context.Blocks.Any(b => b.UserId == r.UserId && b.BlockedUserId == currentUserId))))
+                .ToListAsync();
             ratings[story.Id] = storyRatings.Any() ? storyRatings.Average(r => r.RatingValue) : 0;
-            chapterCounts[story.Id] = story.Chapters?.Count ?? 0;
+            chapterCounts[story.Id] = story.Chapters?.Count(ch => ch.IsPublic) ?? 0;
         }
 
         ViewBag.ViewCounts = viewCounts;
@@ -108,14 +130,18 @@ public class HomeController : Controller
     {
         const int pageSize = 6;
         List<Story> stories;
-
+        var currentUser = await _userManager.GetUserAsync(User);
+        string currentUserId = currentUser?.Id;
         var sixMonthsAgo = DateTime.Now.AddMonths(-6);
 
         switch (category)
         {
             case "Popular":
                 stories = await _context.Stories
-                    .Where(s => s.IsPublic)
+                    .Where(s => s.IsPublic && !s.Author.IsBanned && !s.IsHidden
+                        && (currentUserId == null ||
+                            (!_context.Blocks.Any(b => b.UserId == currentUserId && (b.BlockedUserId == s.AuthorId || b.BlockedStoryId == s.Id)) &&
+                             !_context.Blocks.Any(b => b.UserId == s.AuthorId && b.BlockedUserId == currentUserId))))
                     .Include(s => s.Author)
                     .Include(s => s.Chapters)
                     .Where(s => s.UpdatedAt >= sixMonthsAgo || s.Chapters.Any(c => c.CreatedAt >= sixMonthsAgo))
@@ -136,7 +162,10 @@ public class HomeController : Controller
 
             case "TopRated":
                 var topRatedStoriesQuery = _context.Stories
-                    .Where(s => s.IsPublic)
+                    .Where(s => s.IsPublic && !s.Author.IsBanned && !s.IsHidden
+                        && (currentUserId == null ||
+                            (!_context.Blocks.Any(b => b.UserId == currentUserId && (b.BlockedUserId == s.AuthorId || b.BlockedStoryId == s.Id)) &&
+                             !_context.Blocks.Any(b => b.UserId == s.AuthorId && b.BlockedUserId == currentUserId))))
                     .Include(s => s.Chapters);
 
                 var topRatedStoriesList = await topRatedStoriesQuery.ToListAsync();
@@ -168,7 +197,10 @@ public class HomeController : Controller
 
             case "New":
                 stories = await _context.Stories
-                    .Where(s => s.IsPublic)
+                    .Where(s => s.IsPublic && !s.Author.IsBanned && !s.IsHidden
+                        && (currentUserId == null ||
+                            (!_context.Blocks.Any(b => b.UserId == currentUserId && (b.BlockedUserId == s.AuthorId || b.BlockedStoryId == s.Id)) &&
+                             !_context.Blocks.Any(b => b.UserId == s.AuthorId && b.BlockedUserId == currentUserId))))
                     .Include(s => s.Chapters)
                     .OrderByDescending(s => s.CreatedAt)
                     .Skip(offset)
@@ -178,7 +210,10 @@ public class HomeController : Controller
 
             case "Completed":
                 stories = await _context.Stories
-                    .Where(s => s.IsPublic && s.IsCompleted)
+                    .Where(s => s.IsPublic && s.IsCompleted && !s.Author.IsBanned && !s.IsHidden
+                        && (currentUserId == null ||
+                            (!_context.Blocks.Any(b => b.UserId == currentUserId && (b.BlockedUserId == s.AuthorId || b.BlockedStoryId == s.Id)) &&
+                             !_context.Blocks.Any(b => b.UserId == s.AuthorId && b.BlockedUserId == currentUserId))))
                     .Include(s => s.Chapters)
                     .OrderByDescending(s => s.CreatedAt)
                     .Skip(offset)
@@ -197,9 +232,14 @@ public class HomeController : Controller
         foreach (var story in stories)
         {
             viewCounts[story.Id] = story.Chapters?.Sum(ch => ch.ViewCount) ?? 0;
-            var storyRatings = await _context.Ratings.Where(r => r.StoryId == story.Id).ToListAsync();
+            var storyRatings = await _context.Ratings
+                .Where(r => r.StoryId == story.Id && !r.User.IsBanned
+                    && (currentUserId == null ||
+                        (!_context.Blocks.Any(b => b.UserId == currentUserId && b.BlockedUserId == r.UserId) &&
+                         !_context.Blocks.Any(b => b.UserId == r.UserId && b.BlockedUserId == currentUserId))))
+                .ToListAsync();
             ratings[story.Id] = storyRatings.Any() ? storyRatings.Average(r => r.RatingValue) : 0;
-            chapterCounts[story.Id] = story.Chapters?.Count ?? 0;
+            chapterCounts[story.Id] = story.Chapters?.Count(ch => ch.IsPublic) ?? 0;
         }
 
         ViewBag.ViewCounts = viewCounts;

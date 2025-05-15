@@ -5,129 +5,248 @@
 }
 
 <style>
-    .preview-section {
-        margin-top: 20px;
-        padding: 15px;
-        background-color: #FFFFFF;
-        border-radius: 5px;
-        border: 1px solid #e0e0e0;
+    /* Khung chính căn đều với header trang */
+    .main-container {
+        max-width: 1600px;
+        margin: 0 auto; /* Căn giữa khung */
     }
 
-        .preview-section h6 {
-            margin-bottom: 10px;
-            font-weight: bold;
+    /* Khung form tùy chỉnh */
+    .customize-container {
+        max-width: 1300px; /* Điều chỉnh chiều rộng thành 1400px */
+        margin: 0 auto; /* Căn giữa khung */
+        margin-top: 24px;
+        padding: 24px;
+        background: #FFF7EF; /* Nền màu be nhạt */
+        border: 2px solid #BCAA98; /* Viền màu nâu nhạt */
+        border-radius: 8px; /* Bo góc */
+    }
+
+    /* Header bên trong form */
+    .customize-header {
+        display: flex;
+        justify-content: space-between; /* Tiêu đề trái, nút phải */
+        align-items: center;
+        margin-bottom: 24px;
+    }
+
+    .customize-header-left {
+        display: flex;
+        align-items: center;
+    }
+
+    /* Nút quay lại */
+    .back-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 38px;
+        height: 38px;
+        border-radius: 4px;
+        text-decoration: none; /* Bỏ gạch chân */
+        color: #000000;
+        transition: background .2s;
+        margin-right: 12px;
+    }
+
+        .back-button:hover {
+            background: rgba(122,75,22,0.1);
+            color: #000000;
         }
 
-        .preview-section p {
+        .back-button svg {
+            width: 100%;
+            height: 100%;
+        }
+
+    /* Tiêu đề form */
+    .customize-header h2 {
+        font-family: 'STIX Two Text', serif;
+        font-weight: 700;
+        font-size: 32px;
+        margin-top: 26px;
+        margin-bottom: 20px;
+        line-height: 30px;
+    }
+
+    /* Nút lưu và đọc ở trên cùng */
+    .btn-submit-top {
+        background-color: #5B2A00; /* Màu nâu đậm */
+        color: #FFF;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 4px;
+        font-size: 20px;
+        font-weight: 500;
+    }
+
+        .btn-submit-top:hover {
+            background-color: #4a2300;
+        }
+
+    /* Label và ô input */
+    .form-label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 20px;
+        font-weight: 500;
+        color: #000;
+    }
+
+    .form-group small {
+        display: block;
+        font-size: 18px;
+        color: #7A6A5A;
+        margin-top: 4px;
+    }
+
+    .form-control {
+        width: 100%;
+        border: 1px solid #999999;
+        border-radius: 4px;
+        background: #FFF;
+        font-size: 18px;
+        color: #333;
+    }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #C4A484;
+        }
+
+    /* Preview section */
+    .preview-section h5 {
+        font-family: 'STIX Two Text', serif;
+        display: block;
+        margin-bottom: 6px;
+        font-size: 23px;
+        font-weight: 700;
+        color: #000;
+    }
+
+    .preview-block {
+        margin-bottom: 20px;
+    }
+
+        .preview-block h6 {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 20px;
+            font-weight: 500;
+            color: #000;
+        }
+
+    .preview-content {
+        padding: 10px;
+        border: 1px solid #999999;
+        border-radius: 5px;
+        background-color: #FFFFFF;
+    }
+
+        .preview-content p {
             margin: 5px 0;
-            font-size: 16px;
-            line-height: 1.5;
+            font-size: 18px;
+            line-height: 1.8;
+            color: #000;
         }
 
-        .preview-section .placeholder {
-            color: #ffffff;
-            font-style: italic;
+        .preview-content .placeholder {
+            color: #000;
+            font-family: 'Itim', cursive;
         }
 
-        .preview-section hr {
-            margin: 15px 0;
-            border-top: 1px solid #e0e0e0;
+    /* Kiểu cho link Tìm hiểu thêm */
+    .learn-more-link {
+        font-size: 18px;
+        color: #5B2A00;
+        text-decoration: none;
+        transition: text-decoration 0.2s;
+        display: inline-block;
+        margin-top: 4px;
+    }
+
+        .learn-more-link:hover {
+            text-decoration: underline;
         }
 </style>
 
-<h2 class="mb-4">@ViewData["Title"]</h2>
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Itim&display=swap" rel="stylesheet">
 
-@if (TempData["SuccessMessage"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        @TempData["SuccessMessage"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-}
-
-@if (TempData["ErrorMessage"] != null)
-{
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        @TempData["ErrorMessage"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-}
-
-<form asp-action="Customize" method="post">
-    <input type="hidden" asp-for="StoryId" />
-
-    <div asp-validation-summary="All" class="text-danger mb-3"></div>
-
-    <div class="mb-3">
-        <label asp-for="Name" class="form-label">Tên nhân vật</label>
-        <input asp-for="Name" class="form-control" id="nameInput" placeholder="Nhập tên nhân vật của bạn..." />
-        <small class="form-text text-muted">Tên này sẽ thay thế [Tên] trong truyện.</small>
-        <span asp-validation-for="Name" class="text-danger"></span>
-    </div>
-
-    <div class="mb-3">
-        <label asp-for="FirstPersonPronoun" class="form-label">Xưng hô thứ nhất</label>
-        <input asp-for="FirstPersonPronoun" class="form-control" id="firstPersonInput" placeholder="Ví dụ: tôi, mình, tớ..." />
-        <small class="form-text text-muted">Cách xưng hô của bạn, thay thế [XưngHôThứNhất].</small>
-        <span asp-validation-for="FirstPersonPronoun" class="text-danger"></span>
-    </div>
-
-    <div class="mb-3">
-        <label asp-for="SecondPersonPronoun" class="form-label">Xưng hô thứ hai</label>
-        <input asp-for="SecondPersonPronoun" class="form-control" id="secondPersonInput" placeholder="Ví dụ: bạn, cô, anh, chị..." />
-        <small class="form-text text-muted">Cách gọi bạn trong mô tả, thay thế [XưngHôThứHai].</small>
-        <span asp-validation-for="SecondPersonPronoun" class="text-danger"></span>
-    </div>
-
-    <!-- Đoạn văn bản xem trước -->
-    <div class="preview-section">
-        <h5>Xem trước:</h5>
-
-        <div>
-            <h6>Đoạn 1:</h6>
-            <div id="previewContent1">
-                <p>
-                    “Xin chào, tên của <span class="first-person-pronoun placeholder">[XưngHôThứNhất]</span> là <span class="name placeholder">[Tên]</span>. Rất vui được gặp mặt.”
-                </p>
-                <p>
-                    <span class="second-person-pronoun placeholder">[XưngHôThứHai]</span> đặt tay lên ngực, lịch sự cúi đầu chào đối phương. Đối phương vui vẻ đáp lại lời chào của <span class="second-person-pronoun placeholder">[XưngHôThứHai]</span>.
-                </p>
-                <p>
-                    “Tôi cũng vậy, rất vui khi được quen biết <span class="name placeholder">[Tên]</span>.”
-                </p>
+<div class="main-container">
+    <div class="customize-container">
+        <!-- Header với nút quay lại, tiêu đề và nút lưu -->
+        <div class="customize-header">
+            <div class="customize-header-left">
+                <a href="javascript:history.back()" class="back-button" title="Quay về trang trước">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </a>
+                <div>
+                    <h2>TÙY CHỈNH NHÂN VẬT CHÍNH</h2>
+                </div>
             </div>
+            <button type="submit" form="formCustomize" class="btn-submit-top">LƯU VÀ ĐỌC</button>
         </div>
 
-        <hr />
+        <form id="formCustomize" asp-action="Customize" method="post">
+            <input type="hidden" asp-for="StoryId" />
 
-        <div>
-            <h6>Đoạn 2:</h6>
-            <div id="previewContent2">
-                <p>
-                    "Anh đến rồi à?"
-                </p>
-                <p>
-                    <span class="name placeholder">[Tên]</span> ngẩng đầu lên khi nghe tiếng bước chân quen thuộc. Trong ánh sáng nhạt, khuôn mặt của anh ta hiện ra rõ ràng, vẫn ánh mắt đó – ánh mắt khiến <span class="second-person-pronoun placeholder">[XưngHôThứHai]</span> không thể nào quên.
-                </p>
-                <p>
-                    "<span class="first-person-pronoun placeholder">[XưngHôThứNhất]</span> đang đợi anh đấy. Tưởng anh lạc trôi xó nào rồi, <span class="first-person-pronoun placeholder">[XưngHôThứNhất]</span> còn đang tính bỏ về đây." Giọng của <span class="name placeholder">[Tên]</span> mang ý trách móc nhẹ đối phương.
-                </p>
-                <p>
-                    Anh khẽ cười, chỉ bước lại gần, đưa tay chạm nhẹ vào vai <span class="name placeholder">[Tên]</span>.
-                </p>
-                <p>
-                    "Xin lỗi nhé, may là tôi tới kịp lúc trước khi khiến <span class="second-person-pronoun placeholder">[XưngHôThứHai]</span> đây mất hết sự kiên nhẫn."
-                </p>
-                <p>
-                    <span class="name placeholder">[Tên]</span> hừ nhẹ.
-                </p>
+            <div class="form-group mb-3">
+                <label asp-for="Name" class="form-label">Tùy chỉnh xưng hô nhân vật chỉnh là gì? <a href="@Url.Action("TOS", "Story")" class="learn-more-link">Tìm hiểu thêm</a></label>
             </div>
-        </div>
-    </div>
 
-    <button type="submit" class="btn btn-primary mt-3">💾 Lưu và bắt đầu đọc</button>
-    <a href="javascript:history.back()" class="btn btn-secondary ms-2 mt-3">⬅️ Quay lại</a>
-</form>
+            <div class="form-group mb-3">
+                <label asp-for="Name" class="form-label">Tên nhân vật</label>
+                <input asp-for="Name" class="form-control" id="nameInput" placeholder="Nhập tên nhân vật của bạn..." />
+                <small>Tên này sẽ thay thế [Tên] trong truyện.</small>
+                <span asp-validation-for="Name" class="text -danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                <label asp-for="FirstPersonPronoun" class="form-label">Xưng hô thứ nhất</label>
+                <input asp-for="FirstPersonPronoun" class="form-control" id="firstPersonInput" placeholder="Ví dụ: tôi, mình, tớ..." />
+                <small>Cách xưng hô của bạn, thay thế [XưngHôThứNhất].</small>
+                <span asp-validation-for="FirstPersonPronoun" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                <label asp-for="SecondPersonPronoun" class="form-label">Xưng hô thứ hai</label>
+                <input asp-for="SecondPersonPronoun" class="form-control" id="secondPersonInput" placeholder="Ví dụ: bạn, cô, anh, chị..." />
+                <small>Cách gọi bạn trong mô tả, thay thế [XưngHôThứHai].</small>
+                <span asp-validation-for="SecondPersonPronoun" class="text-danger"></span>
+            </div>
+            <hr />
+            <p></p>
+            <!-- Đoạn văn bản xem trước -->
+            <div class="preview-section">
+                <h5>XEM TRƯỚC:</h5>
+                <p></p>
+                <div class="preview-block">
+                    <h6>Đoạn 1:</h6>
+                    <div id="previewContent1" class="preview-content">
+                        <p>“Xin chào, tên của <span class="first-person-pronoun placeholder">[XưngHôThứNhất]</span> là <span class="name placeholder">[Tên]</span>. Rất vui được gặp mặt.”</p>
+                        <p><span class="second-person-pronoun placeholder">[XưngHôThứHai]</span> đặt tay lên ngực, lịch sự cúi đầu chào đối phương. Đối phương vui vẻ đáp lại lời chào của <span class="second-person-pronoun placeholder">[XưngHôThứHai]</span>.</p>
+                        <p>“Tôi cũng vậy, rất vui khi được quen biết <span class="name placeholder">[Tên]</span>.”</p>
+                    </div>
+                </div>
+
+                <div class="preview-block">
+                    <h6>Đoạn 2:</h6>
+                    <div id="previewContent2" class="preview-content">
+                        <p>"Anh đến rồi à?"</p>
+                        <p><span class="name placeholder">[Tên]</span> ngẩng đầu lên khi nghe tiếng bước chân quen thuộc. Trong ánh sáng nhạt, khuôn mặt của anh ta hiện ra rõ ràng, vẫn ánh mắt đó – ánh mắt khiến <span class="second-person-pronoun placeholder">[XưngHôThứHai]</span> không thể nào quên.</p>
+                        <p>"<span class="first-person-pronoun placeholder">[XưngHôThứNhất]</span> đang đợi anh đấy. Tưởng anh lạc trôi xó nào rồi, <span class="first-person-pronoun placeholder">[XưngHôThứNhất]</span> còn đang tính bỏ về đây." Giọng của <span class="name placeholder">[Tên]</span> mang ý trách móc nhẹ đối phương.</p>
+                        <p>Anh khẽ cười, chỉ bước lại gần, đưa tay chạm nhẹ vào vai <span class="name placeholder">[Tên]</span>.</p>
+                        <p>"Xin lỗi nhé, may là tôi tới kịp lúc trước khi khiến <span class="second-person-pronoun placeholder">[XưngHôThứHai]</span> đây mất hết sự kiên nhẫn."</p>
+                        <p><span class="name placeholder">[Tên]</span> hừ nhẹ.</p>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

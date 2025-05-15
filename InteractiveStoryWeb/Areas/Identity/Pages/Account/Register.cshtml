@@ -20,22 +20,22 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background: linear-gradient(to right, #FFE6CE 50%, #FFFBF8 50%); /* Nửa trái #FFE6CE, nửa phải #FFF3E6 */
-        z-index: -1; /* Đặt background ở phía sau nội dung */
+        background: linear-gradient(to right, #FFE6CE 50%, #FFFBF8 50%);
+        z-index: -1;
     }
 
     .main-content {
         position: relative;
-        min-height: 100vh; /* Đảm bảo chiếm toàn bộ chiều cao viewport */
+        min-height: 100vh;
         display: flex;
         justify-content: center;
         width: 100%;
-        margin-top: 20px; /* Khoảng cách từ header, điều chỉnh nếu cần */
+        margin-top: 20px;
     }
 
     .register-container {
         width: 620px;
-        height: 680px;
+        height: 800px;
         background-color: #ffffff;
         border: 1px solid #e0e0e0;
         display: flex;
@@ -49,7 +49,7 @@
             font-size: 42px;
             color: #000000;
             margin-bottom: 10px;
-            font-family: 'STIX Two Text', serif; /* Áp dụng font STIX Two Text */
+            font-family: 'STIX Two Text', serif;
             font-weight: 700;
         }
 
@@ -68,24 +68,26 @@
                 text-decoration: underline;
             }
 
-    .form-floating {
+    .form-group {
         margin-bottom: 20px;
+        width: 500px;
     }
 
-        .form-floating input {
-            width: 500px;
+        .form-group label {
+            display: block;
+            color: #000000;
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+
+        .form-group input {
+            width: 100%;
             height: 60px;
             border: 2px solid #672B00;
             border-radius: 5px;
             font-size: 18px;
             padding: 10px;
             box-sizing: border-box;
-        }
-
-        .form-floating label {
-            color: #999999;
-            font-size: 18px;
-            padding: 10px;
         }
 
     .btn-primary {
@@ -125,30 +127,30 @@
             <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
 
             <!-- Username -->
-            <div class="form-floating">
+            <div class="form-group">
+                <label asp-for="Input.Username">Tên người dùng</label>
                 <input asp-for="Input.Username" class="form-control" autocomplete="username" aria-required="true" placeholder="Tên người dùng..." />
-                <label asp-for="Input.Username">Tên người dùng...</label>
                 <span asp-validation-for="Input.Username" class="text-danger"></span>
             </div>
 
             <!-- Gmail -->
-            <div class="form-floating">
+            <div class="form-group">
+                <label asp-for="Input.Email">Email</label>
                 <input asp-for="Input.Email" class="form-control" autocomplete="email" aria-required="true" placeholder="Email..." />
-                <label asp-for="Input.Email">Email...</label>
                 <span asp-validation-for="Input.Email" class="text-danger"></span>
             </div>
 
             <!-- Password -->
-            <div class="form-floating">
+            <div class="form-group">
+                <label asp-for="Input.Password">Mật khẩu</label>
                 <input asp-for="Input.Password" class="form-control" autocomplete="off" aria-required="true" placeholder="Mật khẩu..." />
-                <label asp-for="Input.Password">Mật khẩu...</label>
                 <span asp-validation-for="Input.Password" class="text-danger"></span>
             </div>
 
             <!-- Confirm Password -->
-            <div class="form-floating">
+            <div class="form-group">
+                <label asp-for="Input.ConfirmPassword">Xác nhận mật khẩu</label>
                 <input asp-for="Input.ConfirmPassword" class="form-control" autocomplete="off" aria-required="true" placeholder="Xác nhận mật khẩu..." />
-                <label asp-for="Input.ConfirmPassword">Xác nhận mật khẩu...</label>
                 <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
             </div>
 

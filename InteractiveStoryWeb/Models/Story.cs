@@ -15,6 +15,7 @@ namespace InteractiveStoryWeb.Models
         [Required]
         public string? Genre { get; set; }
         public bool IsPublic { get; set; } = true;
+        public bool IsHidden { get; set; } = false;
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime? UpdatedAt { get; set; }
         public bool IsCompleted { get; set; }

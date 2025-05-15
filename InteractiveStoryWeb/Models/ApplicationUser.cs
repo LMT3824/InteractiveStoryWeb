@@ -6,6 +6,7 @@ namespace InteractiveStoryWeb.Models
     {
         public string? AvatarUrl { get; set; }
         public string? Caption { get; set; }
+        public bool IsBanned { get; set; } = false;
 
         // Quan hệ: User có thể có nhiều truyện
         public ICollection<Story>? Stories { get; set; }

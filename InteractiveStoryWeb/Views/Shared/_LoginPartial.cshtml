@@ -1,26 +1,45 @@
 ﻿@using Microsoft.AspNetCore.Identity
+@using InteractiveStoryWeb.Models
+@using Microsoft.EntityFrameworkCore
 @inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
+@inject InteractiveStoryWeb.Data.ApplicationDbContext Context
 
 <ul class="navbar-nav">
-@if (SignInManager.IsSignedIn(User))
-{
-    <li class="nav-item">
+    @if (SignInManager.IsSignedIn(User))
+    {
+        var user = await UserManager.GetUserAsync(User);
+        // Đếm thông báo chưa đọc của người dùng hiện tại
+        var notificationCount = await (from n in Context.Notifications
+                                       join unr in Context.UserNotificationReads
+                                       on n.Id equals unr.NotificationId
+                                       where n.UserId == null && unr.UserId == user.Id && !unr.IsRead
+                                       select n).CountAsync();
+        <li class="nav-item">
+            <a class="nav-link text-dark notification-icon" asp-controller="Account" asp-action="Notifications" title="Thông báo">
+                <i class="bi bi-bell-fill" style="font-size: 1.5rem; color: #000;"></i>
+                @if (notificationCount > 0)
+                {
+                    <span class="badge bg-danger rounded-pill">@notificationCount</span>
+                }
+            </a>
+        </li>
+        <li class="nav-item">
             <a class="nav-link text-dark" asp-controller="Account" asp-action="MyProfile">@User.Identity?.Name</a>
-    </li>
-    <li class="nav-item">
-        <form  class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })">
+        </li>
+        <li class="nav-item">
+            <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })">
                 <button type="submit" class="nav-link text-dark">Đăng xuất</button>
-        </form>
-    </li>
-}
-else
-{
-    <li class="nav-item">
-        <a  class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Register">Đăng ký</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Login">Đăng nhập</a>
-    </li>
-}
+            </form>
+        </li>
+    }
+    else
+    {
+        <li class="nav-item">
+            <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Register">Đăng ký</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Login">Đăng nhập</a>
+        </li>
+    }
 </ul>

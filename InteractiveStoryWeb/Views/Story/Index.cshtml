@@ -14,6 +14,7 @@
         align-items: center;
         gap: 10px;
         margin-bottom: 20px;
+        user-select: none; /* Ngăn chọn */
     }
 
         .page-header .back-arrow {
@@ -27,6 +28,11 @@
             justify-content: center;
             vertical-align: middle;
         }
+
+            .page-header .back-arrow:hover {
+                background: rgba(122,75,22,0.1);
+                color: #000000;
+            }
 
             .page-header .back-arrow svg {
                 width: 100%;
@@ -54,6 +60,7 @@
         text-decoration: none;
         color: inherit;
         margin: 0;
+        user-select: none; /* Ngăn chọn */
     }
 
         .story-card:hover {
@@ -157,6 +164,7 @@
         cursor: pointer;
         text-decoration: none;
         display: inline-block;
+        user-select: none; /* Ngăn chọn */
     }
 
         .load-more-btn:hover {

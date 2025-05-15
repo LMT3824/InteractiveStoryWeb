@@ -1,0 +1,176 @@
+﻿@model InteractiveStoryWeb.ViewModels.BlockedListViewModel
+@{
+    ViewData["Title"] = "Danh sách chặn";
+}
+
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+    .container {
+        max-width: 1600px;
+        padding: 0;
+        margin: 0 auto;
+    }
+
+    #alert-container {
+        width: 100%;
+        margin-bottom: 20px;
+    }
+
+    .alert {
+        margin-bottom: 10px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        text-align: left;
+        width: 100%;
+    }
+
+    h2.mb-4 {
+        font-family: 'STIX Two Text', serif;
+        font-weight: 700;
+        font-size: 30px;
+        margin-bottom: 20px;
+    }
+
+    .blocked-list {
+        margin-bottom: 40px;
+    }
+
+    .blocked-item {
+        display: flex;
+        align-items: center;
+        padding: 15px;
+        background-color: #fff;
+        border: 1px solid #e0e0e0;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+        .blocked-item img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 50%;
+            margin-right: 20px;
+        }
+
+        .blocked-item.story img {
+            border-radius: 5px;
+        }
+
+        .blocked-item .name {
+            flex: 1;
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+    .btn-custom {
+        background: #000;
+        color: #fff;
+        border-radius: 10px;
+        padding: 5px 15px;
+        border: none;
+    }
+
+        .btn-custom:hover {
+            background: #333;
+            color: #fff;
+        }
+</style>
+
+<div class="container">
+    <div id="alert-container"></div>
+
+    <h2 class="mb-4">Người dùng bị chặn</h2>
+    <div class="blocked-list user">
+        @if (!Model.BlockedUsers.Any())
+        {
+            <p>Chưa có người dùng nào bị chặn.</p>
+        }
+        else
+        {
+            @foreach (var item in Model.BlockedUsers)
+            {
+                <div class="blocked-item" data-block-id="@item.Id">
+                    <img src="@item.ImageUrl" alt="@item.Name" />
+                    <div class="name">@item.Name</div>
+                    <button class="btn btn-custom unblock-btn" data-item-id="@item.ItemId" data-type="User">Hủy chặn</button>
+                </div>
+            }
+        }
+    </div>
+
+    <h2 class="mb-4">Truyện bị chặn</h2>
+    <div class="blocked-list story">
+        @if (!Model.BlockedStories.Any())
+        {
+            <p>Chưa có truyện nào bị chặn.</p>
+        }
+        else
+        {
+            @foreach (var item in Model.BlockedStories)
+            {
+                <div class="blocked-item story" data-block-id="@item.Id">
+                    <img src="@item.ImageUrl" alt="@item.Name" />
+                    <div class="name">@item.Name</div>
+                    <button class="btn btn-custom unblock-btn" data-item-id="@item.ItemId" data-type="Story">Hủy chặn</button>
+                </div>
+            }
+        }
+    </div>
+
+    <a asp-action="MyProfile" asp-controller="Account" class="btn btn-custom">Quay lại hồ sơ</a>
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            // Hàm hiển thị thông báo
+            function showAlert(type, message) {
+                $('#alert-container').empty();
+                var $alert = $('<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
+                    message + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>');
+                $('#alert-container').prepend($alert);
+                setTimeout(function () { $alert.alert('close'); }, 3000);
+            }
+
+            // Hủy chặn
+            $('.unblock-btn').on('click', function () {
+                var itemId = $(this).data('item-id');
+                var type = $(this).data('type');
+                var blockId = $(this).closest('.blocked-item').data('block-id');
+                var actionUrl = type === 'User' ? '/Account/UnblockUser' : '/Account/UnblockStory';
+                var dataKey = type === 'User' ? 'blockedUserId' : 'storyId';
+                var data = {
+                    [dataKey]: itemId,
+                    __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                };
+
+                if (confirm('Bạn có chắc chắn muốn hủy chặn ' + (type === 'User' ? 'người dùng' : 'truyện') + ' này?')) {
+                    $.ajax({
+                        url: actionUrl,
+                        type: 'POST',
+                        data: data,
+                        success: function (response) {
+                            if (response.success) {
+                                $(`.blocked-item[data-block-id="${blockId}"]`).fadeOut(300, function () {
+                                    $(this).remove();
+                                    if ($('.blocked-list.' + (type.toLowerCase()) + ' .blocked-item').length === 0) {
+                                        $('.blocked-list.' + (type.toLowerCase())).append('<p>Chưa có ' + (type === 'User' ? 'người dùng' : 'truyện') + ' nào bị chặn.</p>');
+                                    }
+                                });
+                                showAlert('success', response.message);
+                            } else {
+                                showAlert('danger', response.message);
+                            }
+                        },
+                        error: function () {
+                            showAlert('danger', 'Có lỗi xảy ra khi hủy chặn.');
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+}

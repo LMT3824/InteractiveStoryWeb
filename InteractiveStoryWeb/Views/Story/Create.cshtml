@@ -5,145 +5,315 @@
 }
 
 <style>
-    /* Đưa số ký tự vào trong textarea */
-    .textarea-wrapper {
-        position: relative;
-        width: 100%; /* Chiều rộng của textarea */
-        margin: 0 auto;
+    /* Khung chính căn đều với header trang */
+    .main-container {
+        max-width: 1600px;
+        margin: 0 auto; /* Đảm bảo căn giữa */
     }
 
-        .textarea-wrapper textarea {
-            padding-bottom: 30px; /* Tạo khoảng trống cho số ký tự ở dưới */
-        }
+    /* Khung form đăng truyện */
+    .create-story-container {
+        max-width: 1300px; /* Điều chỉnh chiều rộng thành 1400px */
+        margin: 0 auto; /* Căn giữa khung */
+        margin-top: 24px;
+        padding: 24px;
+        background: #FFF7EF; /* Nền màu be nhạt */
+        border: 2px solid #BCAA98; /* Viền màu nâu nhạt */
+        border-radius: 8px; /* Bo góc */
+    }
 
-        .textarea-wrapper .char-counter {
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            color: #666;
-            font-size: 14px;
-            background: rgba(255, 255, 255, 0.8); /* Nền mờ để dễ đọc */
-            padding: 2px 5px;
-            border-radius: 3px;
-        }
+    /* Header bên trong form */
+    .create-story-header {
+        display: flex;
+        justify-content: space-between; /* Tiêu đề trái, nút phải */
+        align-items: center;
+        margin-bottom: 24px;
+    }
 
-    /* Khung ảnh bìa */
-    .cover-image-preview {
-        width: 210px;
-        height: 280px;
-        border: 1px solid #e0e0e0;
-        border-radius: 5px;
-        overflow: hidden;
-        margin-top: 10px;
+    .create-story-header-left {
+        display: flex;
+        align-items: center;
+    }
+
+    /* Nút quay lại */
+    .back-button {
         display: flex;
         align-items: center;
         justify-content: center;
-        background-color: #f8f9fa;
+        width: 38px;
+        height: 38px;
+        border-radius: 4px;
+        text-decoration: none; /* Bỏ gạch chân */
+        color: #000000;
+        transition: background .2s;
+        margin-right: 12px;
+    }
+
+        .back-button:hover {
+            background: rgba(122,75,22,0.1);
+            color: #000000;
+        }
+
+        .back-button svg {
+            width: 100%;
+            height: 100%;
+        }
+
+    /* Tiêu đề form */
+    .create-story-header h2 {
+        font-family: 'STIX Two Text', serif;
+        font-weight: 700;
+        font-size: 32px;
+        margin-top: 26px;
+        margin-bottom: 20px;
+        line-height: 30px;
+    }
+
+    /* Nút đăng truyện ở trên cùng */
+    .btn-submit-top {
+        background-color: #5B2A00; /* Màu nâu đậm */
+        color: #FFF;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 4px;
+        font-size: 20px;
+        font-weight: 500;
+    }
+
+        .btn-submit-top:hover {
+            background-color: #4a2300;
+        }
+
+    /* Label và ô input/select */
+    .form-label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 20px;
+        font-weight: 500;
+        color: #000;
+    }
+
+    .form-group small {
+        display: block;
+        font-size: 18px;
+        color: #7A6A5A;
+        margin-top: 4px;
+    }
+
+    .form-control,
+    .form-select {
+        width: 100%;
+        border: 1px solid #999999;
+        border-radius: 4px;
+        background: #FFF;
+        font-size: 18px;
+        color: #333;
+    }
+
+        .form-control:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: #C4A484;
+        }
+
+    /* Wrapper và bộ đếm ký tự cho textarea */
+    .textarea-wrapper {
+        position: relative;
+        width: 100%;
+    }
+
+        .textarea-wrapper textarea {
+            padding-bottom: 32px;
+            resize: vertical; /* Cho phép kéo dãn chiều cao */
+        }
+
+    .char-counter {
+        position: absolute;
+        bottom: 8px;
+        right: 12px;
+        font-size: 18px;
+        color: #7A6A5A;
+    }
+
+    /* Khung preview ảnh bìa */
+    .cover-image-preview {
+        width: 210px;
+        height: 280px;
+        max-width: 210px;
+        max-height: 280px;
+        border: 1px solid #D6C7B5;
+        border-radius: 4px;
+        background: #F8F4F1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        margin-top: 12px;
+        user-select: none; /* Ngăn chọn */
+        pointer-events: none; /* Ngăn tương tác chuột */
     }
 
         .cover-image-preview img {
-            width: 100%;
+            width: auto;
             height: 100%;
+            max-width: 100%;
             object-fit: cover;
+            user-select: none; /* Ngăn chọn */
+            pointer-events: none; /* Ngăn tương tác chuột */
+        }
+
+    /* Kiểu cho checkbox */
+    .form-check {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 24px;
+    }
+
+    .form-check-input {
+        width: 22px;
+        height: 22px;
+        margin-right: 8px;
+    }
+
+    .form-check-label {
+        font-size: 20px;
+        color: #4B3F35;
+    }
+
+    .form-check small {
+        display: block;
+        font-size: 18px;
+        color: #7A6A5A;
+        margin-top: 4px;
+    }
+
+    /* Kiểu cho link Tìm hiểu thêm */
+    .learn-more-link {
+        font-size: 18px;
+        color: #5B2A00;
+        text-decoration: none;
+        transition: text-decoration 0.2s;
+        display: inline-block;
+        margin-top: 4px;
+    }
+
+        .learn-more-link:hover {
+            text-decoration: underline;
         }
 </style>
 
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text&display=swap" rel="stylesheet">
 
-<h2 class="mb-4">@ViewData["Title"]</h2>
-
-@if (TempData["SuccessMessage"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        @TempData["SuccessMessage"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-}
-
-@if (TempData["ErrorMessage"] != null)
-{
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        @TempData["ErrorMessage"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-}
-
-<form asp-action="Create" enctype="multipart/form-data" method="post">
-    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
-
-    <div class="form-group mb-3">
-        <label asp-for="Title" class="form-label">Tiêu đề truyện</label>
-        <input asp-for="Title" class="form-control" placeholder="Nhập tiêu đề truyện..." />
-        <span asp-validation-for="Title" class="text-danger"></span>
-    </div>
-
-    <div class="form-group mb-3">
-        <label asp-for="Genre" class="form-label">Thể loại</label>
-        <select asp-for="Genre" class="form-select" asp-items="@(new SelectList(ViewBag.Genres, "Name", "Name"))">
-            <option value="">-- Chọn thể loại --</option>
-        </select>
-        <span asp-validation-for="Genre" class="text-danger"></span>
-    </div>
-
-    <div class="form-group mb-3">
-        <label asp-for="Description" class="form-label">Mô tả truyện</label>
-        <div class="textarea-wrapper">
-            <textarea asp-for="Description" class="form-control" id="DescriptionCreate" rows="5" placeholder="Nhập mô tả truyện..." maxlength="1000"></textarea>
-            <span class="char-counter" id="charCounterCreate">0/1000</span>
+<div class="main-container">
+    <div class="create-story-container">
+        <!-- Header với nút quay lại, tiêu đề và nút đăng -->
+        <div class="create-story-header">
+            <div class="create-story-header-left">
+                <a href="javascript:history.back()" class="back-button" title="Quay về trang trước">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </a>
+                <h2>ĐĂNG TRUYỆN MỚI</h2>
+            </div>
+            <button type="submit" form="formCreate" class="btn-submit-top">ĐĂNG TRUYỆN</button>
         </div>
-        <span asp-validation-for="Description" class="text-danger"></span>
+
+        <form id="formCreate" asp-action="Create" enctype="multipart/form-data" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <div class="form-group mb-3">
+                <label asp-for="Title" class="form-label">Tiêu đề truyện</label>
+                <input asp-for="Title" class="form-control" placeholder="Nhập tiêu đề truyện..." />
+                <span asp-validation-for="Title" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                <label asp-for="Genre" class="form-label">Thể loại</label>
+                <select asp-for="Genre" class="form-select" asp-items="@(new SelectList(ViewBag.Genres, "Name", "Name"))">
+                    <option value="">-- Chọn thể loại --</option>
+                </select>
+                <span asp-validation-for="Genre" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                <label asp-for="Description" class="form-label">Mô tả truyện</label>
+                <div class="textarea-wrapper">
+                    <textarea asp-for="Description" class="form-control" id="DescriptionCreate" rows="12" maxlength="1500" placeholder="Nhập mô tả truyện..."></textarea>
+                    <span class="char-counter" id="charCounterCreate">0/1500</span>
+                </div>
+                <span asp-validation-for="Description" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                <label asp-for="CoverImage" class="form-label">Ảnh bìa</label>
+                <input asp-for="CoverImage" type="file" class="form-control" id="coverImageInput" accept="image/*" />
+                <small>Lưu ý: hãy để định dạng ảnh là 210x280 để có chất lượng ảnh tốt nhất.</small>
+                <div class="cover-image-preview" tabindex="-1">
+                    <img src="/images/ImageNotFound.png" id="coverImagePreview" alt="Ảnh bìa truyện" tabindex="-1" />
+                </div>
+            </div>
+
+            <div class="form-check mb-3">
+                <input asp-for="AllowCustomization" class="form-check-input" />
+                <div>
+                    <label asp-for="AllowCustomization" class="form-check-label">Cho phép người đọc tùy chỉnh tên và xưng hô</label>
+                    <small>Bật tính năng để cho phép người đọc tự nhập tên nhân vật chính và cách xưng hô trong truyện. Dùng [Tên], [XưngHôThứNhất], [XưngHôThứHai] trong nội dung để hệ thống tự động thay thế.</small>
+                    <a href="@Url.Action("TOS", "Story")" class="learn-more-link">Tìm hiểu thêm</a>
+                </div>
+            </div>
+
+            <!-- Các nút khác nếu cần -->
+        </form>
     </div>
-
-    <div class="form-group mb-3">
-        <label asp-for="CoverImage" class="form-label">Ảnh bìa</label>
-        <input asp-for="CoverImage" type="file" class="form-control" id="coverImageInput" accept="image/*" />
-        <small class="form-text text-muted">Chọn ảnh bìa (định dạng: jpg, png, ...)</small>
-        <small class="form-text text-muted">Lưu ý: hãy dùng ảnh có định dạng 210x280 để có được chất lượng tốt nhất.</small>
-        <div class="cover-image-preview">
-            <img src="/images/ImageNotFound.png" id="coverImagePreview" alt="Ảnh bìa truyện" />
-        </div>
-    </div>
-
-
-    <div class="form-check mb-3">
-        <input asp-for="AllowCustomization" class="form-check-input" />
-        <label asp-for="AllowCustomization" class="form-check-label">Cho phép người đọc tùy chỉnh tên và xưng hô</label>
-    </div>
-
-    <button type="submit" class="btn btn-primary">📖 Đăng truyện</button>
-    <a asp-action="Index" class="btn btn-secondary ms-2">⬅️ Quay lại</a>
-</form>
+</div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
         $(document).ready(function () {
-            // Cập nhật số ký tự trong textarea
-            function updateCharCounter() {
-                var descriptionLength = $('#DescriptionCreate').val().length;
-                $('#charCounterCreate').text(descriptionLength + '/1000');
-            }
+             /* Chuẩn hóa ký tự xuống dòng và cập nhật bộ đếm ký tự */
+             function updateCharCounter() {
+                 var text = $('#DescriptionCreate').val();
+                 // Chuẩn hóa ký tự xuống dòng trước khi đếm
+                 var normalizedText = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+                 var len = normalizedText.length;
+                 $('#charCounterCreate').text(len + '/1500');
 
-            // Lắng nghe sự kiện input trên textarea
-            $('#DescriptionCreate').on('input', function () {
-                updateCharCounter();
-            });
+                 // Cảnh báo nếu vượt quá giới hạn
+                 if (len > 1500) {
+                     $('#charCounterCreate').css('color', '#ff0000');
+                 } else {
+                     $('#charCounterCreate').css('color', '#7A6A5A');
+                 }
+             }
 
-            // Cập nhật số ký tự ngay khi tải trang
-            updateCharCounter();
+             // Cập nhật bộ đếm khi nhập liệu
+             $('#DescriptionCreate').on('input', updateCharCounter);
 
-            // Hiển thị ảnh bìa ngay khi chọn file
-            $('#coverImageInput').on('change', function (e) {
-                var file = e.target.files[0];
-                if (file && file.type.startsWith('image/')) {
-                    var reader = new FileReader();
-                    reader.onload = function (e) {
-                        $('#coverImagePreview').attr('src', e.target.result);
-                    };
-                    reader.readAsDataURL(file);
-                } else {
-                    $('#coverImagePreview').attr('src', '/images/ImageNotFound.png');
-                }
-            });
-        });
+             // Khởi tạo bộ đếm khi trang load
+             updateCharCounter();
+
+             /* Chuẩn hóa dữ liệu trước khi gửi form */
+             $('#formCreate').on('submit', function() {
+                 var text = $('#DescriptionCreate').val();
+                 // Chuẩn hóa ký tự xuống dòng trước khi gửi
+                 $('#DescriptionCreate').val(text.replace(/\r\n/g, '\n').replace(/\r/g, '\n'));
+             });
+
+             /* Hiển thị preview ảnh bìa khi chọn file */
+             $('#coverImageInput').on('change', function (e) {
+                 var file = e.target.files[0];
+                 if (file && file.type.startsWith('image/')) {
+                     var reader = new FileReader();
+                     reader.onload = function (ev) {
+                         $('#coverImagePreview').attr('src', ev.target.result);
+                     };
+                     reader.readAsDataURL(file);
+                 } else {
+                     $('#coverImagePreview').attr('src', '/images/ImageNotFound.png');
+                 }
+             });
+         });
     </script>
 }

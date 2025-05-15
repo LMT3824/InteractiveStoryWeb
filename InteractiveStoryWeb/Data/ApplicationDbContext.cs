@@ -20,9 +20,11 @@ namespace InteractiveStoryWeb.Data
         public DbSet<Library> Libraries { get; set; }
         public DbSet<Rating> Ratings { get; set; }
         public DbSet<Notification> Notifications { get; set; }
+        public DbSet<UserNotificationRead> UserNotificationReads { get; set; } 
         public DbSet<Follow> Follows { get; set; }
         public DbSet<Block> Blocks { get; set; }
         public DbSet<SupportTicket> SupportTickets { get; set; }
+        public DbSet<SupportTicketResponse> SupportTicketResponses { get; set; }
         public DbSet<Report> Reports { get; set; }
         public DbSet<ReaderStoryCustomization> ReaderStoryCustomizations { get; set; }
         public DbSet<ReadingProgress> ReadingProgresses { get; set; }
@@ -89,11 +91,6 @@ namespace InteractiveStoryWeb.Data
                  .WithMany()
                  .HasForeignKey(c => c.StoryId)
                  .OnDelete(DeleteBehavior.Cascade);
-            builder.Entity<Comment>()
-                .HasOne(c => c.Chapter)
-                .WithMany()
-                .HasForeignKey(c => c.ChapterId)
-                .OnDelete(DeleteBehavior.Restrict);
             builder.Entity<Comment>()
                 .HasOne(c => c.User)
                 .WithMany()
@@ -165,6 +162,22 @@ namespace InteractiveStoryWeb.Data
                 .HasForeignKey(n => n.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // Cấu hình khóa chính cho UserNotificationRead
+            builder.Entity<UserNotificationRead>()
+            .HasKey(unr => new { unr.UserId, unr.NotificationId });
+
+            // Quan hệ giữa UserNotificationRead và Notification
+            builder.Entity<UserNotificationRead>()
+                .HasOne(unr => unr.Notification)
+                .WithMany()
+                .HasForeignKey(unr => unr.NotificationId);
+
+            // Quan hệ giữa UserNotificationRead và ApplicationUser
+            builder.Entity<UserNotificationRead>()
+                .HasOne(unr => unr.User)
+                .WithMany()
+                .HasForeignKey(unr => unr.UserId);
+
             // Cấu hình ReaderStoryCustomization
             builder.Entity<ReaderStoryCustomization>()
                 .HasOne(rsc => rsc.User)
@@ -210,6 +223,19 @@ namespace InteractiveStoryWeb.Data
             builder.Entity<ChapterSegment>()
                 .Property(s => s.ImagePosition)
                 .HasConversion<int>();
+
+            // 🔸 SUPPORT TICKET RESPONSE → SUPPORT TICKET + ADMIN
+            builder.Entity<SupportTicketResponse>()
+                .HasOne(str => str.SupportTicket)
+                .WithMany(st => st.SupportTicketResponses)
+                .HasForeignKey(str => str.SupportTicketId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<SupportTicketResponse>()
+                .HasOne(str => str.Admin)
+                .WithMany()
+                .HasForeignKey(str => str.AdminId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

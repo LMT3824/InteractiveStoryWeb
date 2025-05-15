@@ -1,0 +1,290 @@
+﻿@model IEnumerable<InteractiveStoryWeb.Models.ApplicationUser>
+
+@{
+    ViewData["Title"] = "Quản lý người dùng và truyện";
+    var hiddenStories = ViewBag.HiddenStories as List<InteractiveStoryWeb.Models.Story>;
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text&display=swap" rel="stylesheet">
+
+<style>
+    .container {
+        max-width: 1600px;
+    }
+
+    .page-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+        .page-header .back-arrow {
+            cursor: pointer;
+            color: #000;
+            text-decoration: none;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            vertical-align: middle;
+        }
+
+            .page-header .back-arrow:hover {
+                background: rgba(122,75,22,0.1);
+                color: #000000;
+            }
+
+            .page-header .back-arrow svg {
+                width: 100%;
+                height: 100%;
+            }
+
+        .page-header h1 {
+            font-family: 'STIX Two Text', serif;
+            font-weight: 700;
+            font-size: 32px;
+            margin-top: 26px;
+            margin-bottom: 20px;
+            line-height: 30px;
+        }
+
+    .alert-container {
+        margin-bottom: 15px;
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+    }
+
+        .table th, .table td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        .table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .table tbody tr:hover {
+            background-color: #f1f1f1;
+        }
+
+    .btn {
+        padding: 5px 15px;
+        border-radius: 5px;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    .btn-success {
+        background-color: #28a745;
+        color: white;
+        border: none;
+    }
+
+        .btn-success:hover {
+            background-color: #218838;
+        }
+
+    .btn-danger {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+    }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+
+    .btn-secondary {
+        background-color: #6c757d;
+        color: white;
+        border: none;
+    }
+
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+
+    .alert {
+        padding: 10px;
+        margin-bottom: 15px;
+        border-radius: 5px;
+    }
+
+    .alert-success {
+        background-color: #d4edda;
+        color: #155724;
+    }
+
+    .alert-danger {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+</style>
+
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text&display=swap" rel="stylesheet">
+
+<div class="page-header">
+    <a href="javascript:history.back()" class="back-arrow">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+    </a>
+    <h1>QUẢN LÝ DANH SÁCH CHẶN VÀ ẨN</h1>
+</div>
+
+<div class="container">
+    @Html.AntiForgeryToken()
+    <div class="alert-container">
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                @TempData["SuccessMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @TempData["ErrorMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+    </div>
+
+    <h2>Danh sách người dùng bị chặn</h2>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Tên người dùng</th>
+                <th>Email</th>
+                <th>Trạng thái</th>
+                <th>Hành động</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in Model)
+            {
+                <tr>
+                    <td>@user.UserName</td>
+                    <td>@user.Email</td>
+                    <td>@(user.IsBanned ? "Bị chặn" : "Hoạt động")</td>
+                    <td>
+                        @if (user.IsBanned)
+                        {
+                            <form asp-action="UnbanUser" method="post" style="display:inline;">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="userId" value="@user.Id" />
+                                <button type="submit" class="btn btn-success btn-sm">Mở chặn</button>
+                            </form>
+                        }
+                        else
+                        {
+                            <form asp-action="BanUser" method="post" style="display:inline;">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="userId" value="@user.Id" />
+                                <button type="submit" class="btn btn-danger btn-sm">Chặn</button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <h2>Danh sách truyện bị ẩn</h2>
+
+    @if (hiddenStories == null || !hiddenStories.Any())
+    {
+        <div class="alert alert-info">
+            Hiện không có truyện nào bị ẩn.
+        </div>
+    }
+    else
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Tên truyện</th>
+                    <th>Tác giả</th>
+                    <th>Hành động</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var story in hiddenStories)
+                {
+                    <tr data-story-id="@story.Id">
+                        <td>@story.Title</td>
+                        <td>@(story.Author?.UserName ?? "Không xác định")</td>
+                        <td>
+                            <button type="button" class="btn btn-success btn-sm unhide-story-btn" data-story-id="@story.Id">Hủy ẩn</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <a asp-action="Index" class="btn btn-secondary">Quay lại</a>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            // Hàm hiển thị thông báo
+            function showAlert(type, message) {
+                $('.alert-container').empty();
+                var $alert = $('<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
+                    message + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>');
+                $('.alert-container').prepend($alert);
+                setTimeout(function () { $alert.alert('close'); }, 3000);
+            }
+
+            // Hủy ẩn truyện
+            $(document).on('click', '.unhide-story-btn', function () {
+                var storyId = $(this).data('story-id');
+                var $row = $(this).closest('tr');
+                if (confirm('Bạn có chắc chắn muốn hủy ẩn truyện này?')) {
+                    $.ajax({
+                        url: '/Admin/UnhideStory',
+                        type: 'POST',
+                        data: {
+                            storyId: storyId,
+                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        success: function (response) {
+                            if (response.success) {
+                                $row.fadeOut(200, function () {
+                                    $(this).remove();
+                                    if ($('.table').eq(1).find('tbody tr').length === 0) {
+                                        $('.table').eq(1).replaceWith('<div class="alert alert-info">Hiện không có truyện nào bị ẩn.</div>');
+                                    }
+                                });
+                                showAlert('success', response.message);
+                            } else {
+                                showAlert('danger', response.message);
+                            }
+                        },
+                        error: function (xhr) {
+                            var errorMessage = xhr.responseJSON && xhr.responseJSON.message
+                                ? xhr.responseJSON.message
+                                : 'Có lỗi xảy ra khi hủy ẩn truyện.';
+                            showAlert('danger', errorMessage);
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+}

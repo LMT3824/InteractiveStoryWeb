@@ -16,7 +16,7 @@ namespace InteractiveStoryWeb.ViewModels
         [Required(ErrorMessage = "Nội dung đoạn không được để trống.")]
         public string Content { get; set; }
 
-        public string ImageUrl { get; set; }
+        public string? ImageUrl { get; set; }
 
         public IFormFile? NewImage { get; set; }
 

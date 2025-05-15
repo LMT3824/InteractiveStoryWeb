@@ -7,78 +7,464 @@
     var userRating = ratings?.FirstOrDefault(r => r.UserId == user?.Id);
 }
 
-<h2>Đánh giá - Truyện: @Model.Title</h2>
-<a asp-controller="Story" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary mb-3">⬅️ Quay lại chi tiết truyện</a>
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
-<div class="mb-3">
-    <p><strong>Điểm trung bình:</strong> <span class="average-rating">@(averageRating != null ? averageRating.ToString("F1") : "Chưa có đánh giá")</span> / 5 ⭐</p>
+<style>
+    .page-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+        .page-header .back-arrow {
+            cursor: pointer;
+            color: #000;
+            text-decoration: none;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            vertical-align: middle;
+        }
+
+            .page-header .back-arrow:hover {
+                background: rgba(122, 75, 22, 0.1);
+                color: #000;
+            }
+
+            .page-header .back-arrow svg {
+                width: 100%;
+                height: 100%;
+            }
+
+        .page-header h2 {
+            font-family: 'STIX Two Text', serif;
+            font-weight: 700;
+            font-size: 32px;
+            margin-top: 26px;
+            margin-bottom: 20px;
+            line-height: 30px;
+        }
+
+    .alert-container {
+        margin-bottom: 15px;
+    }
+
+    .container {
+        max-width: 100%;
+        padding: 0 15px;
+    }
+
+    .rating-list-container {
+        width: 100%;
+    }
+
+    .rating-container {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        margin-bottom: 15px;
+        padding: 15px;
+        position: relative;
+    }
+
+    .rating-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    .rating-user-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .rating-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .rating-username {
+        font-weight: bold;
+        color: #333;
+    }
+
+    .rating-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .rating-time {
+        color: #666;
+        font-size: 0.8em;
+        margin-bottom: 8px;
+        padding: 0.25rem 0.5rem;
+    }
+
+    .rating-content {
+        background-color: #f5f5f5;
+        padding: 10px;
+        border-radius: 4px;
+        margin-top: 5px;
+    }
+
+    .star-rating-display {
+        font-size: 20px;
+    }
+
+        .star-rating-display .star {
+            width: 20px;
+            height: 20px;
+            display: inline-block;
+        }
+
+            .star-rating-display .star polygon {
+                stroke: #000;
+                stroke-width: 2;
+                fill: none;
+            }
+
+            .star-rating-display .star.filled polygon {
+                fill: #FFD700;
+            }
+
+    .rating-edit {
+        margin-top: 10px;
+    }
+
+    .btn-rating {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.85rem;
+        border-radius: 4px;
+    }
+
+    .star-rating {
+        display: inline-flex;
+        font-size: 20px;
+        cursor: pointer;
+        align-items: center;
+    }
+
+        .star-rating .star-wrapper {
+            position: relative;
+            margin-right: 8px;
+            width: 20px;
+            height: 20px;
+            line-height: 20px;
+            display: inline-block;
+        }
+
+        .star-rating .star {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+            .star-rating .star polygon {
+                stroke: #000;
+                stroke-width: 2;
+                fill: none;
+            }
+
+            .star-rating .star.filled polygon {
+                fill: #FFD700;
+            }
+
+    .btn-submit-top {
+        background-color: #5B2A00;
+        color: #FFF;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 4px;
+        font-size: 18px;
+        font-weight: 500;
+    }
+
+        .btn-submit-top:hover {
+            background-color: #4a2300;
+        }
+</style>
+
+<div class="page-header">
+    <a href="javascript:history.back()" class="back-arrow">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+    </a>
+    <h2>ĐÁNH GIÁ | Truyện: @Model.Title</h2>
 </div>
 
-<div class="alert alert-danger error-message mt-2" style="display: none;"></div>
-
-@if (User.Identity.IsAuthenticated)
-{
-    <!-- Form thêm đánh giá -->
-    <form id="addRatingForm" class="mb-3" style="@(userRating != null ? "display: none;" : "")">
-        <input type="hidden" name="storyId" value="@Model.Id" />
-        <div class="d-flex align-items-center">
-            <select class="form-select me-2" name="ratingValue" style="width: 150px;" required>
-                <option value="">Chọn số sao</option>
-                <option value="1">1 ⭐</option>
-                <option value="2">2 ⭐</option>
-                <option value="3">3 ⭐</option>
-                <option value="4">4 ⭐</option>
-                <option value="5">5 ⭐</option>
-            </select>
-            <button type="submit" class="btn btn-primary">Gửi đánh giá</button>
-        </div>
-    </form>
-}
-else
-{
-    <p class="text-muted">Vui lòng đăng nhập để đánh giá truyện.</p>
-}
-
-<div class="rating-list-container">
-    <div class="list-group rating-list">
-        @if (ratings != null && ratings.Any())
+<div class="container">
+    <div class="alert-container">
+        @if (TempData["ErrorMessage"] != null)
         {
-            @foreach (var rating in ratings.OrderByDescending(r => r.CreatedAt))
-            {
-                <div class="list-group-item mb-2" data-rating-id="@rating.Id" data-rating-value="@rating.RatingValue">
-                    <div class="d-flex align-items-center">
-                        <img src="@(string.IsNullOrEmpty(rating.User.AvatarUrl)
-                            ? Url.Content("~/images/AvatarNull.jpg")
-                            : rating.User.AvatarUrl)"
-                             class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;" alt="Avatar người dùng" />
-                        <p data-created-at="@rating.CreatedAt.ToString("dd/MM/yyyy HH:mm")">
-                            <strong>@rating.User.UserName:</strong> @rating.RatingValue ⭐
-                            <small>(@rating.CreatedAt.ToString("dd/MM/yyyy HH:mm")@(!rating.UpdatedAt.HasValue ? "" : $" - Cập nhật: {rating.UpdatedAt.Value.ToString("dd/MM/yyyy HH:mm")}"))</small>
-                            @if (User.Identity.IsAuthenticated && rating.UserId == user?.Id)
-                            {
-                                <button type="button" class="btn btn-warning btn-sm edit-rating-btn ms-2">✏️ Sửa</button>
-                                <button type="button" class="btn btn-danger btn-sm delete-rating-btn ms-2">🗑️ Xóa</button>
-                            }
-                        </p>
-                    </div>
-                </div>
-            }
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @TempData["ErrorMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
         }
     </div>
-    <div class="alert alert-info mt-3 rating-no-data" style="@(ratings != null && ratings.Any() ? "display: none;" : "")">
-        Truyện chưa có đánh giá nào.
+
+    <div class="alert alert-danger error-message mt-2" style="display: none;"></div>
+
+    <div class="mb-3">
+        <p><strong>Điểm trung bình:</strong> <span class="average-rating">@(averageRating != null ? averageRating.ToString("F1") : "Chưa có đánh giá")</span> / 5 ⭐</p>
+    </div>
+
+    <!-- Đánh giá của bạn -->
+    <h3 class="mt-4">Đánh giá của bạn</h3>
+    <div class="rating-list-container">
+        <div class="rating-list-your-rating">
+            @if (User.Identity.IsAuthenticated)
+            {
+                @if (userRating != null)
+                {
+                    <div class="rating-container list-group-item" data-rating-id="@userRating.Id" data-rating-value="@userRating.RatingValue">
+                        <div class="rating-display">
+                            <div class="rating-header">
+                                <div class="rating-user-info">
+                                    <img src="@(string.IsNullOrEmpty(userRating.User.AvatarUrl) ? Url.Content("~/images/AvatarNull.jpg") : userRating.User.AvatarUrl)"
+                                         class="rating-avatar" alt="Avatar người dùng" />
+                                    <span class="rating-username">@userRating.User.UserName</span>
+                                </div>
+                                <div class="rating-actions">
+                                    <button type="button" class="btn btn-rating btn-outline-secondary edit-rating-btn"> Sửa</button>
+                                    <button type="button" class="btn btn-rating btn-outline-secondary delete-rating-btn"> Xóa</button>
+                                </div>
+                            </div>
+                            <div class="rating-time">
+                                Đăng: @userRating.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                                @if (userRating.UpdatedAt.HasValue)
+                                {
+                                    <text> - Cập nhật: @userRating.UpdatedAt.Value.ToString("dd/MM/yyyy HH:mm")</text>
+                                }
+                            </div>
+                            <div class="rating-content">
+                                <div class="star-rating-display">
+                                    @for (int i = 1; i <= 5; i++)
+                                    {
+                                        <svg class="star @(i <= userRating.RatingValue ? "filled" : "")" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                                        </svg>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <form id="addRatingForm" class="mb-3">
+                        <input type="hidden" name="storyId" value="@Model.Id" />
+                        <input type="hidden" name="ratingValue" id="ratingValue" value="0" />
+                        <div class="d-flex align-items-center">
+                            <div class="star-rating me-2" id="main-star-rating">
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    <span class="star-wrapper" data-value="@i">
+                                        <svg class="star" data-value="@i" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                                        </svg>
+                                    </span>
+                                }
+                            </div>
+                            <button type="submit" class="btn btn-submit-top">Gửi đánh giá</button>
+                        </div>
+                    </form>
+                }
+            }
+            else
+            {
+                <div class="alert alert-info mt-3">
+                    Vui lòng đăng nhập để đánh giá truyện.
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Đánh giá khác -->
+    <h3 class="mt-4">Đánh giá khác</h3>
+    <div class="rating-list-container">
+        <div class="rating-list-other-ratings list-group rating-list">
+            @if (ratings != null && ratings.Any(r => r.UserId != user?.Id))
+            {
+                @foreach (var rating in ratings.Where(r => r.UserId != user?.Id).OrderByDescending(r => r.CreatedAt))
+                {
+                    <div class="rating-container list-group-item mb-2" data-rating-id="@rating.Id" data-rating-value="@rating.RatingValue">
+                        <div class="rating-display">
+                            <div class="rating-header">
+                                <div class="rating-user-info">
+                                    <img src="@(string.IsNullOrEmpty(rating.User.AvatarUrl) ? Url.Content("~/images/AvatarNull.jpg") : rating.User.AvatarUrl)"
+                                         class="rating-avatar" alt="Avatar người dùng" />
+                                    <span class="rating-username">@rating.User.UserName</span>
+                                </div>
+                            </div>
+                            <div class="rating-time">
+                                Đăng: @rating.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                                @if (rating.UpdatedAt.HasValue)
+                                {
+                                    <text> - Cập nhật: @rating.UpdatedAt.Value.ToString("dd/MM/yyyy HH:mm")</text>
+                                }
+                            </div>
+                            <div class="rating-content">
+                                <div class="star-rating-display">
+                                    @for (int i = 1; i <= 5; i++)
+                                    {
+                                        <svg class="star @(i <= rating.RatingValue ? "filled" : "")" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                                        </svg>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="alert alert-info mt-3 rating-no-data">
+                    Chưa có đánh giá nào từ người dùng khác.
+                </div>
+            }
+        </div>
     </div>
 </div>
+
+<!-- Hidden form để lấy CSRF token -->
+<form id="antiForgeryForm">
+    @Html.AntiForgeryToken()
+</form>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         $(document).ready(function () {
+            // Hàm hiển thị thông báo
+            function showAlert(type, message) {
+                var $alert = $('<div class="alert alert-' + type + ' alert-dismissible fade show mt-2" role="alert">' +
+                    message + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>');
+                $('.error-message').before($alert);
+                setTimeout(function () { $alert.alert('close'); }, 3000);
+            }
+
+            // Biến lưu giá trị rating
+            let selectedRating = 0;
+
+            // Xử lý đánh giá sao
+            function initializeStars(container, isEditMode) {
+                var currentRating = isEditMode ? parseInt(container.siblings('.rating-value-input').val()) || 0 : selectedRating;
+                container.find('.star').each(function () {
+                    var starValue = $(this).data('value');
+                    if (starValue <= currentRating) {
+                        $(this).find('polygon').css('fill', '#FFD700');
+                    } else {
+                        $(this).find('polygon').css('fill', 'none');
+                    }
+                });
+            }
+
+            initializeStars($('#main-star-rating'), false);
+
+            $('#main-star-rating').on('click', '.star', function (e) {
+                e.preventDefault();
+                selectedRating = $(this).data('value');
+                var $container = $(this).closest('.star-rating');
+                var $input = $container.siblings('#ratingValue');
+                if ($input.length > 0) {
+                    $input.val(selectedRating);
+                }
+                $container.find('.star').each(function () {
+                    if ($(this).data('value') <= selectedRating) {
+                        $(this).find('polygon').css('fill', '#FFD700');
+                    } else {
+                        $(this).find('polygon').css('fill', 'none');
+                    }
+                });
+            });
+
+            $('#main-star-rating').on('mouseover', '.star', function () {
+                var value = $(this).data('value');
+                $(this).closest('.star-rating').find('.star').each(function () {
+                    if ($(this).data('value') <= value) {
+                        $(this).find('polygon').css('fill', '#FFD700');
+                    } else {
+                        $(this).find('polygon').css('fill', 'none');
+                    }
+                });
+            });
+
+            $('#main-star-rating').on('mouseout', '.star', function () {
+                var $stars = $(this).closest('.star-rating').find('.star');
+                $stars.each(function () {
+                    if ($(this).data('value') <= selectedRating) {
+                        $(this).find('polygon').css('fill', '#FFD700');
+                    } else {
+                        $(this).find('polygon').css('fill', 'none');
+                    }
+                });
+            });
+
+            $(document).on('click', '.rating-edit .star', function (e) {
+                e.preventDefault();
+                selectedRating = $(this).data('value');
+                var $container = $(this).closest('.star-rating');
+                var $input = $container.siblings('.rating-value-input');
+                if ($input.length > 0) {
+                    $input.val(selectedRating);
+                }
+                $container.find('.star').each(function () {
+                    if ($(this).data('value') <= selectedRating) {
+                        $(this).find('polygon').css('fill', '#FFD700');
+                    } else {
+                        $(this).find('polygon').css('fill', 'none');
+                    }
+                });
+            });
+
+            $(document).on('mouseover', '.rating-edit .star', function () {
+                var value = $(this).data('value');
+                $(this).closest('.star-rating').find('.star').each(function () {
+                    if ($(this).data('value') <= value) {
+                        $(this).find('polygon').css('fill', '#FFD700');
+                    } else {
+                        $(this).find('polygon').css('fill', 'none');
+                    }
+                });
+            });
+
+            $(document).on('mouseout', '.rating-edit .star', function () {
+                var $stars = $(this).closest('.star-rating').find('.star');
+                var currentRating = $(this).closest('.star-rating').siblings('.rating-value-input').val() || 0;
+                $stars.each(function () {
+                    if ($(this).data('value') <= currentRating) {
+                        $(this).find('polygon').css('fill', '#FFD700');
+                    } else {
+                        $(this).find('polygon').css('fill', 'none');
+                    }
+                });
+            });
+
             // Thêm đánh giá
             $(document).on('submit', '#addRatingForm', function (e) {
                 e.preventDefault();
+                var ratingValue = $('#ratingValue').val();
+                if (selectedRating == 0) {
+                    $('.error-message').text('Vui lòng chọn số sao trước khi gửi đánh giá.').show();
+                    showAlert('danger', 'Vui lòng chọn số sao trước khi gửi đánh giá.');
+                    return;
+                }
+
+                $('#ratingValue').val(selectedRating);
                 var formData = $(this).serialize();
+                formData += '&__RequestVerificationToken=' + encodeURIComponent($('#antiForgeryForm input[name="__RequestVerificationToken"]').val());
 
                 $.ajax({
                     url: '/Story/AddRating',
@@ -87,68 +473,95 @@ else
                     success: function (response) {
                         if (response.success) {
                             var ratingHtml = `
-                                <div class="list-group-item mb-2" data-rating-id="${response.ratingId}" data-rating-value="${response.ratingValue}">
-                                    <div class="d-flex align-items-center">
-                                        <img src="${response.avatarUrl || '/images/AvatarNull.jpg'}"
-                                             class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;" alt="Avatar người dùng" />
-                                        <p data-created-at="${response.createdAt}">
-                                            <strong>${response.userName}:</strong> ${response.ratingValue} ⭐
-                                            <small>(${response.createdAt})</small>
-                                            <button type="button" class="btn btn-warning btn-sm edit-rating-btn ms-2">✏️ Sửa</button>
-                                            <button type="button" class="btn btn-danger btn-sm delete-rating-btn ms-2">🗑️ Xóa</button>
-                                        </p>
+                                <div class="rating-container list-group-item mb-2" data-rating-id="${response.ratingId}" data-rating-value="${response.ratingValue}">
+                                    <div class="rating-display">
+                                        <div class="rating-header">
+                                            <div class="rating-user-info">
+                                                <img src="${response.avatarUrl || '/images/AvatarNull.jpg'}"
+                                                     class="rating-avatar" alt="Avatar người dùng" />
+                                                <span class="rating-username">${response.userName}</span>
+                                            </div>
+                                            <div class="rating-actions">
+                                                <button type="button" class="btn btn-rating btn-outline-secondary edit-rating-btn">✏️ Sửa</button>
+                                                <button type="button" class="btn btn-rating btn-outline-secondary delete-rating-btn">🗑️ Xóa</button>
+                                            </div>
+                                        </div>
+                                        <div class="rating-time">
+                                            Đăng: ${response.createdAt}
+                                        </div>
+                                        <div class="rating-content">
+                                            <div class="star-rating-display">
+                                                ${Array.from({length: 5}, (_, i) => `
+                                                    <svg class="star ${i + 1 <= response.ratingValue ? 'filled' : ''}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                                                    </svg>
+                                                `).join('')}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>`;
-                            $('.rating-list').prepend(ratingHtml);
-                            $(this).hide();
+                            $('.rating-list-your-rating').prepend(ratingHtml);
                             $('.rating-list').show();
                             $('.rating-no-data').hide();
                             $('.average-rating').html(`${response.averageRating.toFixed(1)}`);
                             $('.error-message').hide();
+                            $('#addRatingForm').hide();
+                            $('#ratingValue').val(0);
+                            selectedRating = 0;
+                            $('#main-star-rating .star').find('polygon').css('fill', 'none');
+                            showAlert('success', 'Đánh giá đã được gửi thành công!');
                         } else {
                             $('.error-message').text(response.message).show();
+                            showAlert('danger', response.message);
                         }
                     },
                     error: function () {
                         $('.error-message').text('Có lỗi xảy ra khi gửi đánh giá.').show();
+                        showAlert('danger', 'Có lỗi xảy ra khi gửi đánh giá.');
                     }
                 });
             });
 
             // Chỉnh sửa đánh giá
             $(document).on('click', '.edit-rating-btn', function () {
-                var $row = $(this).closest('.list-group-item');
+                var $row = $(this).closest('.rating-container');
                 var ratingId = $row.data('rating-id');
                 var ratingValue = $row.data('rating-value');
 
                 var editHtml = `
                     <div class="rating-edit">
-                        <select class="form-select rating-value-input me-2" style="width: 150px;" required>
-                            <option value="1" ${ratingValue == 1 ? 'selected' : ''}>1 ⭐</option>
-                            <option value="2" ${ratingValue == 2 ? 'selected' : ''}>2 ⭐</option>
-                            <option value="3" ${ratingValue == 3 ? 'selected' : ''}>3 ⭐</option>
-                            <option value="4" ${ratingValue == 4 ? 'selected' : ''}>4 ⭐</option>
-                            <option value="5" ${ratingValue == 5 ? 'selected' : ''}>5 ⭐</option>
-                        </select>
-                        <button type="button" class="btn btn-success save-rating-btn">💾 Lưu</button>
-                        <button type="button" class="btn btn-secondary cancel-rating-btn ms-2">Hủy</button>
+                        <div class="star-rating me-2">
+                            ${Array.from({length: 5}, (_, i) => `
+                                <span class="star-wrapper" data-value="${i + 1}">
+                                    <svg class="star ${i + 1 <= ratingValue ? 'filled' : ''}" data-value="${i + 1}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                                    </svg>
+                                </span>
+                            `).join('')}
+                        </div>
+                        <input type="hidden" class="rating-value-input" value="${ratingValue}" />
+                        <button type="button" class="btn btn-outline-secondary  save-rating-btn">Lưu</button>
+                        <button type="button" class="btn btn-outline-secondary cancel-rating-btn ms-2">Hủy</button>
                     </div>`;
                 $row.append(editHtml);
-                $row.find('p').hide();
+                $row.find('.rating-display').hide();
+                initializeStars($row.find('.star-rating'), true);
             });
 
             $(document).on('click', '.cancel-rating-btn', function () {
-                var $row = $(this).closest('.list-group-item');
+                var $row = $(this).closest('.rating-container');
                 $row.find('.rating-edit').remove();
-                $row.find('p').show();
+                $row.find('.rating-display').show();
+                selectedRating = 0;
             });
 
             $(document).on('click', '.save-rating-btn', function () {
-                var $row = $(this).closest('.list-group-item');
+                var $row = $(this).closest('.rating-container');
                 var ratingId = $row.data('rating-id');
                 var ratingValue = $row.find('.rating-value-input').val();
-                var createdAt = $row.find('p').data('created-at') || $row.find('small').text().replace(/[()]/g, '').split(' - ')[0];
-                var avatarUrl = $row.find('img').attr('src'); // Lấy avatar URL từ HTML hiện tại
+                var createdAt = $row.find('.rating-time').text().split(' - ')[0].replace('Đăng: ', '');
+                var avatarUrl = $row.find('.rating-avatar').attr('src');
+                var userName = $row.find('.rating-username').text();
 
                 $.ajax({
                     url: '/Story/EditRating',
@@ -156,37 +569,56 @@ else
                     data: {
                         id: ratingId,
                         ratingValue: ratingValue,
-                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                        __RequestVerificationToken: $('#antiForgeryForm input[name="__RequestVerificationToken"]').val()
                     },
                     success: function (response) {
                         if (response.success) {
                             $row.html(`
-                                <div class="d-flex align-items-center">
-                                    <img src="${avatarUrl}"
-                                         class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;" alt="Avatar người dùng" />
-                                    <p data-created-at="${createdAt}">
-                                        <strong>${$row.find('strong').text().split(':')[0]}:</strong> ${response.ratingValue} ⭐
-                                        <small>(${createdAt}${response.updatedAt ? " - Cập nhật: " + response.updatedAt : ""})</small>
-                                        <button type="button" class="btn btn-warning btn-sm edit-rating-btn ms-2">✏️ Sửa</button>
-                                        <button type="button" class="btn btn-danger btn-sm delete-rating-btn ms-2">🗑️ Xóa</button>
-                                    </p>
+                                <div class="rating-display">
+                                    <div class="rating-header">
+                                        <div class="rating-user-info">
+                                            <img src="${avatarUrl}"
+                                                 class="rating-avatar" alt="Avatar người dùng" />
+                                            <span class="rating-username">${userName}</span>
+                                        </div>
+                                        <div class="rating-actions">
+                                            <button type="button" class="btn btn-rating btn-outline-secondary edit-rating-btn"> Sửa</button>
+                                            <button type="button" class="btn btn-rating btn-outline-secondary delete-rating-btn"> Xóa</button>
+                                        </div>
+                                    </div>
+                                    <div class="rating-time">
+                                        Đăng: ${createdAt}${response.updatedAt ? " - Cập nhật: " + response.updatedAt : ""}
+                                    </div>
+                                    <div class="rating-content">
+                                        <div class="star-rating-display">
+                                            ${Array.from({length: 5}, (_, i) => `
+                                                <svg class="star ${i + 1 <= response.ratingValue ? 'filled' : ''}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                                                </svg>
+                                            `).join('')}
+                                        </div>
+                                    </div>
                                 </div>`);
                             $row.data('rating-value', response.ratingValue);
                             $('.average-rating').html(`${response.averageRating.toFixed(1)}`);
                             $('.error-message').hide();
+                            selectedRating = 0;
+                            showAlert('success', 'Đánh giá đã được chỉnh sửa thành công!');
                         } else {
                             $('.error-message').text(response.message).show();
+                            showAlert('danger', response.message);
                         }
                     },
                     error: function () {
                         $('.error-message').text('Có lỗi xảy ra khi chỉnh sửa đánh giá.').show();
+                        showAlert('danger', 'Có lỗi xảy ra khi chỉnh sửa đánh giá.');
                     }
                 });
             });
 
             // Xóa đánh giá
             $(document).on('click', '.delete-rating-btn', function () {
-                var $row = $(this).closest('.list-group-item');
+                var $row = $(this).closest('.rating-container');
                 var ratingId = $row.data('rating-id');
 
                 if (confirm('Bạn có chắc chắn muốn xóa đánh giá này?')) {
@@ -195,24 +627,30 @@ else
                         type: 'POST',
                         data: {
                             id: ratingId,
-                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                            __RequestVerificationToken: $('#antiForgeryForm input[name="__RequestVerificationToken"]').val()
                         },
                         success: function (response) {
                             if (response.success) {
                                 $row.remove();
                                 $('#addRatingForm').show();
                                 $('.average-rating').html(`${response.averageRating.toFixed(1)}`);
-                                if ($('.rating-list-container .rating-list').children().length === 0) {
-                                    $('.rating-list').hide();
+                                if ($('.rating-list-other-ratings').children().length === 0) {
+                                    $('.rating-list-other-ratings').hide();
                                     $('.rating-no-data').show();
                                 }
                                 $('.error-message').hide();
+                                $('#ratingValue').val(0);
+                                selectedRating = 0;
+                                $('#main-star-rating .star').find('polygon').css('fill', 'none');
+                                showAlert('success', 'Đánh giá đã được xóa thành công!');
                             } else {
                                 $('.error-message').text(response.message).show();
+                                showAlert('danger', response.message);
                             }
                         },
                         error: function () {
                             $('.error-message').text('Có lỗi xảy ra khi xóa đánh giá.').show();
+                            showAlert('danger', 'Có lỗi xảy ra khi xóa đánh giá.');
                         }
                     });
                 }

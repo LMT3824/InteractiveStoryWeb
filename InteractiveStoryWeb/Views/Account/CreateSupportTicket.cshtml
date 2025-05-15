@@ -1,0 +1,100 @@
+﻿@model InteractiveStoryWeb.Models.SupportTicket
+@{
+    ViewData["Title"] = "Gửi Yêu Cầu Hỗ Trợ";
+}
+
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+    .page-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .page-header .back-arrow {
+        cursor: pointer;
+        color: #000;
+        text-decoration: none;
+        width: 38px;
+        height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        vertical-align: middle;
+    }
+
+        .page-header .back-arrow:hover {
+            background: rgba(122,75,22,0.1);
+            color: #000000;
+        }
+
+        .page-header .back-arrow svg {
+            width: 100%;
+            height: 100%;
+        }
+
+    .page-header h2 {
+        font-family: 'STIX Two Text', serif;
+        font-weight: 700;
+        font-size: 32px;
+        margin-top: 26px;
+        margin-bottom: 20px;
+        line-height: 30px;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 10px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+    }
+
+    .alert {
+        margin-bottom: 10px;
+    }
+</style>
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text&display=swap" rel="stylesheet">
+
+<div class="page-header">
+    <a href="javascript:history.back()" class="back-arrow">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+    </a>
+    <h2>GỬI YÊU CẦU HỖ TRỢ</h2>
+</div>
+
+<div class="container">
+    <form asp-action="CreateSupportTicket" method="post">
+        @Html.AntiForgeryToken()
+        <div class="form-group">
+            <label for="content" class="form-label">Nội dung yêu cầu</label>
+            <textarea class="form-control" id="content" name="content" rows="5" maxlength="1000" required></textarea>
+            <small class="text-muted">Tối đa 1000 ký tự</small>
+        </div>
+        <div class="form-group">
+            <button type="submit" class="btn btn-outline-dark">Gửi yêu cầu</button>
+            <a asp-action="MyProfile" class="btn btn-outline-dark">Hủy</a>
+            <a asp-action="MySupportTickets" asp-controller="Account" class="btn btn-outline-dark">Yêu cầu hỗ trợ của tôi</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

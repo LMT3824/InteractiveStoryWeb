@@ -5,6 +5,9 @@
     var user = ViewBag.CurrentUser as InteractiveStoryWeb.Models.ApplicationUser;
 }
 
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
 <style>
     .page-header {
         display: flex;
@@ -25,6 +28,11 @@
             vertical-align: middle;
         }
 
+            .page-header .back-arrow:hover {
+                background: rgba(122, 75, 22, 0.1);
+                color: #000;
+            }
+
             .page-header .back-arrow svg {
                 width: 100%;
                 height: 100%;
@@ -39,9 +47,151 @@
             line-height: 30px;
         }
 
-</style>
+    .username-link {
+        text-decoration: none !important;
+        color: black !important;
+    }
 
-<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text&display=swap" rel="stylesheet">
+        .username-link:hover {
+            text-decoration: underline !important;
+        }
+
+    .alert-container {
+        margin-bottom: 15px;
+    }
+
+    .report-modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+    }
+
+    .report-modal-content {
+        background-color: #fff;
+        margin: 15% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%;
+        max-width: 500px;
+        border-radius: 10px;
+    }
+
+    .report-modal .close {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+    }
+
+        .report-modal .close:hover,
+        .report-modal .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+    /* Tăng chiều rộng và cố định chiều cao khung thêm bình luận */
+    #addCommentForm textarea.form-control {
+        max-width: 1600px; /* Chiều rộng cố định */
+        margin: 0 auto; /* Căn giữa */
+        display: block; /* Đảm bảo margin auto hoạt động */
+        height: 100px; /* Chiều cao cố định */
+        resize: none; /* Ngăn người dùng thay đổi kích thước */
+    }
+
+    /* Đảm bảo container cha không giới hạn chiều rộng quá mức */
+    .container {
+        max-width: 100%; /* Cho phép container mở rộng để chứa khung bình luận */
+        padding: 0 15px; /* Giữ padding mặc định */
+    }
+
+    .comment-list-container {
+        width: 100%; /* Đảm bảo container của danh sách bình luận mở rộng đầy đủ */
+    }
+
+    .comment-container {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        margin-bottom: 15px;
+        padding: 15px;
+        position: relative;
+    }
+
+    .comment-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    .comment-user-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .comment-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .comment-username {
+        font-weight: bold;
+        color: #333;
+    }
+
+    .comment-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .comment-time {
+        color: #666;
+        font-size: 0.8em;
+        margin-bottom: 8px;
+        padding: 0.25rem 0.5rem;
+    }
+
+    .comment-content {
+        background-color: #f5f5f5;
+        padding: 10px;
+        border-radius: 4px;
+        margin-top: 5px;
+    }
+
+    .comment-edit {
+        margin-top: 10px;
+    }
+
+    .btn-comment {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.85rem;
+        border-radius: 4px;
+    }
+
+    .btn-submit-top {
+        background-color: #5B2A00; /* Màu nâu đậm */
+        color: #FFF;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 4px;
+        font-size: 18px;
+        font-weight: 500;
+        gap: 8px
+    }
+
+        .btn-submit-top:hover {
+            background-color: #4a2300;
+        }
+</style>
 
 <div class="page-header">
     <a href="javascript:history.back()" class="back-arrow">
@@ -52,56 +202,111 @@
     <h2>BÌNH LUẬN | Truyện: @Model.Title</h2>
 </div>
 
-<div class="alert alert-danger error-message mt-2" style="display: none;"></div>
-
-@if (User.Identity.IsAuthenticated)
-{
-    <!-- Form thêm bình luận -->
-    <form id="addCommentForm" class="mb-3">
-        <input type="hidden" name="storyId" value="@Model.Id" />
-        <div class="mb-3">
-            <textarea class="form-control" name="content" rows="3" placeholder="Viết bình luận của bạn..." required></textarea>
-        </div>
-        <button type="submit" class="btn btn-primary">Gửi bình luận</button>
-    </form>
-}
-
-<!-- Hiển thị danh sách bình luận -->
-<div class="comment-list-container">
-    <div class="list-group comment-list" style="@(comments != null && comments.Any() ? "" : "display: none;")">
-        @if (comments != null && comments.Any())
+<div class="container">
+    <div class="alert-container">
+        @if (TempData["ErrorMessage"] != null)
         {
-            @foreach (var comment in comments.OrderByDescending(c => c.CreatedAt))
-            {
-                <div class="list-group-item mb-2 comment-item" data-comment-id="@comment.Id">
-                    <div class="comment-display">
-                        <div class="d-flex align-items-center">
-                            <img src="@(string.IsNullOrEmpty(comment.User.AvatarUrl)
-                                ? Url.Content("~/images/AvatarNull.jpg")
-                                : comment.User.AvatarUrl)"
-                                 class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;" alt="Avatar người dùng" />
-                            <p class="mb-0">
-                                <strong>@comment.User.UserName:</strong> <span class="comment-content">@comment.Content</span>
-                                <small>(@comment.CreatedAt.ToString("dd/MM/yyyy HH:mm"))</small>
-                                @if (User.Identity.IsAuthenticated && comment.UserId == user?.Id)
-                                {
-                                    <button type="button" class="btn btn-warning btn-sm edit-comment-btn ms-2">✏️ Sửa</button>
-                                    <button type="button" class="btn btn-danger btn-sm delete-comment-btn ms-2">🗑️ Xóa</button>
-                                }
-                            </p>
-                        </div>
-                    </div>
-                    <div class="comment-edit" style="display: none;">
-                        <textarea class="form-control comment-content-input mb-2" rows="3" required>@comment.Content</textarea>
-                        <button type="button" class="btn btn-success save-comment-btn">💾 Lưu</button>
-                        <button type="button" class="btn btn-secondary cancel-comment-btn ms-2">Hủy</button>
-                    </div>
-                </div>
-            }
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @TempData["ErrorMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
         }
     </div>
-    <div class="alert alert-info mt-3 comment-no-data" style="@(comments != null && comments.Any() ? "display: none;" : "")">
-        Truyện chưa có bình luận nào.
+
+    <div class="alert alert-danger error-message mt-2" style="display: none;"></div>
+
+    @if (User.Identity.IsAuthenticated)
+    {
+        <!-- Form thêm bình luận -->
+        <form id="addCommentForm" class="mb-3">
+            <input type="hidden" name="storyId" value="@Model.Id" />
+            <div class="mb-3">
+                <textarea class="form-control" name="content" rows="3" placeholder="Viết bình luận của bạn..." required></textarea>
+            </div>
+            <button type="submit" class="btn-submit-top">Gửi bình luận</button>
+        </form>
+    }
+    else
+    {
+        <p class="text-muted">Vui lòng đăng nhập để bình luận.</p>
+    }
+
+    <!-- Hiển thị danh sách bình luận -->
+    <div class="comment-list-container">
+        <div class="comment-list" style="@(comments != null && comments.Any() ? "" : "display: none;")">
+            @if (comments != null && comments.Any())
+            {
+                @foreach (var comment in comments.OrderByDescending(c => c.CreatedAt))
+                {
+                    <div class="comment-container" data-comment-id="@comment.Id">
+                        <div class="comment-display">
+                            <div class="comment-header">
+                                <div class="comment-user-info">
+                                    <img src="@(string.IsNullOrEmpty(comment.User.AvatarUrl)
+                                    ? Url.Content("~/images/AvatarNull.jpg")
+                                    : comment.User.AvatarUrl)"
+                                         class="comment-avatar" alt="Avatar" />
+                                    <span class="comment-username">@comment.User.UserName</span>
+                                </div>
+                                @if (User.Identity.IsAuthenticated)
+                                {
+                                    <div class="comment-actions">
+                                        @if (comment.UserId == user?.Id)
+                                        {
+                                            <button type="button" class="btn btn-comment btn-outline-secondary edit-comment-btn">Sửa</button>
+                                            <button type="button" class="btn btn-comment btn-outline-secondary delete-comment-btn">Xóa</button>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" class="btn btn-comment btn-outline-secondary report-comment-btn" data-comment-id="@comment.Id">Báo cáo</button>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                            <div class="comment-time">
+                                Đăng: @comment.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                                @if (comment.UpdatedAt.HasValue)
+                                {
+                                    <text>- Cập nhật: @comment.UpdatedAt.Value.ToString("dd/MM/yyyy HH:mm")</text>
+                                }
+                            </div>
+                            <div class="comment-content">@comment.Content</div>
+                        </div>
+                        <div class="comment-edit" style="display: none;">
+                            <textarea class="form-control comment-content-input mb-2" rows="3" required>@comment.Content</textarea>
+                            <div class="text-end">
+                                <button type="button" class="btn btn-outline-secondary btn-sm save-comment-btn">Lưu</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm cancel-comment-btn ms-2">Hủy</button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+        <div class="alert alert-info mt-3 comment-no-data" style="@(comments != null && comments.Any() ? "display: none;" : "")">
+            Truyện chưa có bình luận nào.
+        </div>
+    </div>
+</div>
+
+<!-- Hidden form để lấy CSRF token -->
+<form id="antiForgeryForm">
+    @Html.AntiForgeryToken()
+</form>
+
+<!-- Modal báo cáo bình luận -->
+<div id="reportCommentModal" class="report-modal">
+    <div class="report-modal-content">
+        <span class="close">×</span>
+        <h3>Báo cáo bình luận</h3>
+        <form id="reportCommentForm">
+            <input type="hidden" name="commentId" id="reportCommentId" />
+            <div class="mb-3">
+                <label for="reportCommentReason" class="form-label">Lý do báo cáo</label>
+                <textarea class="form-control" id="reportCommentReason" name="reason" rows="4" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Gửi báo cáo</button>
+        </form>
     </div>
 </div>
 
@@ -110,15 +315,26 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         $(document).ready(function () {
+            // Hàm hiển thị thông báo
+            function showAlert(type, message) {
+                $('.alert-container').empty();
+                var $alert = $('<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
+                    message + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>');
+                $('.alert-container').prepend($alert);
+                setTimeout(function () { $alert.alert('close'); }, 3000);
+            }
+
             // Thêm bình luận
             $(document).on('submit', '#addCommentForm', function (e) {
                 e.preventDefault();
                 var content = $(this).find('textarea[name="content"]').val().trim();
                 if (!content) {
                     $('.error-message').text('Nội dung bình luận không được để trống.').show();
+                    showAlert('danger', 'Nội dung bình luận không được để trống.');
                     return;
                 }
                 var formData = $(this).serialize();
+                formData += '&__RequestVerificationToken=' + encodeURIComponent($('#antiForgeryForm input[name="__RequestVerificationToken"]').val());
 
                 $.ajax({
                     url: '/Story/AddComment',
@@ -127,23 +343,30 @@
                     success: function (response) {
                         if (response.success) {
                             var commentHtml = `
-                                <div class="list-group-item mb-2 comment-item" data-comment-id="${response.commentId}">
+                                <div class="comment-container" data-comment-id="${response.commentId}">
                                     <div class="comment-display">
-                                        <div class="d-flex align-items-center">
-                                            <img src="${response.avatarUrl}"
-                                                 class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;" alt="Avatar người dùng" />
-                                            <p class="mb-0">
-                                                <strong>${response.userName}:</strong> <span class="comment-content">${response.content}</span>
-                                                <small>(${response.createdAt})</small>
-                                                <button type="button" class="btn btn-warning btn-sm edit-comment-btn ms-2">✏️ Sửa</button>
-                                                <button type="button" class="btn btn-danger btn-sm delete-comment-btn ms-2">🗑️ Xóa</button>
-                                            </p>
+                                        <div class="comment-header">
+                                            <div class="comment-user-info">
+                                                <img src="${response.avatarUrl}"
+                                                     class="comment-avatar" alt="Avatar" />
+                                                <span class="comment-username">${response.userName}</span>
+                                            </div>
+                                            <div class="comment-actions">
+                                                <button type="button" class="btn btn-comment btn-outline-secondary edit-comment-btn">Sửa</button>
+                                                <button type="button" class="btn btn-comment btn-outline-secondary delete-comment-btn">Xóa</button>
+                                            </div>
                                         </div>
+                                        <div class="comment-time">
+                                            Đăng: ${response.createdAt}${response.updatedAt ? " - Sửa: " + response.updatedAt : ""}
+                                        </div>
+                                        <div class="comment-content">${response.content}</div>
                                     </div>
                                     <div class="comment-edit" style="display: none;">
                                         <textarea class="form-control comment-content-input mb-2" rows="3" required>${response.content}</textarea>
-                                        <button type="button" class="btn btn-success save-comment-btn">💾 Lưu</button>
-                                        <button type="button" class="btn btn-secondary cancel-comment-btn ms-2">Hủy</button>
+                                        <div class="text-end">
+                                            <button type="button" class="btn btn-outline-secondary btn-sm save-comment-btn">Lưu</button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm cancel-comment-btn ms-2">Hủy</button>
+                                        </div>
                                     </div>
                                 </div>`;
                             $('.comment-list').prepend(commentHtml);
@@ -151,37 +374,41 @@
                             $('.comment-no-data').hide();
                             $('#addCommentForm')[0].reset();
                             $('.error-message').hide();
+                            showAlert('success', 'Bình luận đã được gửi thành công!');
                         } else {
                             $('.error-message').text(response.message).show();
+                            showAlert('danger', response.message);
                         }
                     },
                     error: function () {
                         $('.error-message').text('Có lỗi xảy ra khi gửi bình luận.').show();
+                        showAlert('danger', 'Có lỗi xảy ra khi gửi bình luận.');
                     }
                 });
             });
 
             // Chỉnh sửa bình luận
             $(document).on('click', '.edit-comment-btn', function () {
-                var $row = $(this).closest('.comment-item');
-                $row.find('.comment-display').hide();
-                $row.find('.comment-edit').show();
+                var $container = $(this).closest('.comment-container');
+                $container.find('.comment-display').hide();
+                $container.find('.comment-edit').show();
             });
 
             $(document).on('click', '.cancel-comment-btn', function () {
-                var $row = $(this).closest('.comment-item');
-                $row.find('.comment-display').show();
-                $row.find('.comment-edit').hide();
-                $row.find('.comment-content-input').val($row.find('.comment-content').text().trim());
+                var $container = $(this).closest('.comment-container');
+                $container.find('.comment-display').show();
+                $container.find('.comment-edit').hide();
+                $container.find('.comment-content-input').val($container.find('.comment-content').text().trim());
             });
 
             $(document).on('click', '.save-comment-btn', function () {
-                var $row = $(this).closest('.comment-item');
-                var commentId = $row.data('comment-id');
-                var content = $row.find('.comment-content-input').val().trim();
+                var $container = $(this).closest('.comment-container');
+                var commentId = $container.data('comment-id');
+                var content = $container.find('.comment-content-input').val().trim();
 
                 if (!content) {
                     $('.error-message').text('Nội dung bình luận không được để trống.').show();
+                    showAlert('danger', 'Nội dung bình luận không được để trống.');
                     return;
                 }
 
@@ -191,28 +418,32 @@
                     data: {
                         id: commentId,
                         content: content,
-                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                        __RequestVerificationToken: $('#antiForgeryForm input[name="__RequestVerificationToken"]').val()
                     },
                     success: function (response) {
                         if (response.success) {
-                            $row.find('.comment-content').text(response.content);
-                            $row.find('.comment-display').show();
-                            $row.find('.comment-edit').hide();
+                            $container.find('.comment-content').text(response.content);
+                            $container.find('.comment-time').html(`Đăng: ${response.createdAt}${response.updatedAt ? " - Sửa: " + response.updatedAt : ""}`);
+                            $container.find('.comment-display').show();
+                            $container.find('.comment-edit').hide();
                             $('.error-message').hide();
+                            showAlert('success', 'Bình luận đã được chỉnh sửa thành công!');
                         } else {
                             $('.error-message').text(response.message).show();
+                            showAlert('danger', response.message);
                         }
                     },
                     error: function () {
                         $('.error-message').text('Có lỗi xảy ra khi chỉnh sửa bình luận.').show();
+                        showAlert('danger', 'Có lỗi xảy ra khi chỉnh sửa bình luận.');
                     }
                 });
             });
 
             // Xóa bình luận
             $(document).on('click', '.delete-comment-btn', function () {
-                var $row = $(this).closest('.comment-item');
-                var commentId = $row.data('comment-id');
+                var $container = $(this).closest('.comment-container');
+                var commentId = $container.data('comment-id');
 
                 if (confirm('Bạn có chắc chắn muốn xóa bình luận này?')) {
                     $.ajax({
@@ -220,25 +451,82 @@
                         type: 'POST',
                         data: {
                             id: commentId,
-                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                            __RequestVerificationToken: $('#antiForgeryForm input[name="__RequestVerificationToken"]').val()
                         },
                         success: function (response) {
                             if (response.success) {
-                                $row.remove();
-                                if ($('.comment-item').length === 0) {
+                                $container.remove();
+                                if ($('.comment-container').length === 0) {
                                     $('.comment-list').hide();
                                     $('.comment-no-data').show();
                                 }
                                 $('.error-message').hide();
+                                showAlert('success', 'Bình luận đã được xóa thành công!');
                             } else {
                                 $('.error-message').text(response.message).show();
+                                showAlert('danger', response.message);
                             }
                         },
                         error: function () {
                             $('.error-message').text('Có lỗi xảy ra khi xóa bình luận.').show();
+                            showAlert('danger', 'Có lỗi xảy ra khi xóa bình luận.');
                         }
                     });
                 }
+            });
+
+            // Xử lý báo cáo bình luận
+            $(document).on('click', '.report-comment-btn', function () {
+                var commentId = $(this).data('comment-id');
+                $('#reportCommentForm input[name="commentId"]').val(commentId);
+                $('#reportCommentModal').show();
+            });
+
+            // Đóng modal
+            $('.report-modal .close').on('click', function () {
+                $(this).closest('.report-modal').hide();
+                $(this).closest('.report-modal').find('textarea').val('');
+            });
+
+            // Đóng modal khi click bên ngoài
+            $(window).on('click', function (event) {
+                if ($(event.target).hasClass('report-modal')) {
+                    $('.report-modal').hide();
+                    $('.report-modal').find('textarea').val('');
+                }
+            });
+
+            // Gửi báo cáo bình luận
+            $(document).on('submit', '#reportCommentForm', function (e) {
+                e.preventDefault();
+                var $form = $(this);
+                var reason = $form.find('textarea[name="reason"]').val().trim();
+                if (!reason) {
+                    showAlert('danger', 'Lý do báo cáo không được để trống.');
+                    return;
+                }
+
+                var formData = $form.serialize();
+                formData += '&__RequestVerificationToken=' + encodeURIComponent($('#antiForgeryForm input[name="__RequestVerificationToken"]').val());
+
+                $.ajax({
+                    url: '/Story/ReportComment',
+                    type: 'POST',
+                    data: formData,
+                    success: function (response) {
+                        if (response.success) {
+                            $('#reportCommentModal').hide();
+                            $form[0].reset();
+                            showAlert('success', response.message);
+                        } else {
+                            showAlert('danger', response.message);
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        var errorMessage = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Có lỗi xảy ra khi gửi báo cáo.';
+                        showAlert('danger', errorMessage);
+                    }
+                });
             });
         });
     </script>

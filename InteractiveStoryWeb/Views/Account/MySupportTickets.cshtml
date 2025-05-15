@@ -1,0 +1,115 @@
+﻿@model List<InteractiveStoryWeb.Models.SupportTicket>
+@{
+    ViewData["Title"] = "Yêu Cầu Hỗ Trợ Của Tôi";
+}
+
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+    .page-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+        .page-header .back-arrow {
+            cursor: pointer;
+            color: #000;
+            text-decoration: none;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            vertical-align: middle;
+        }
+
+            .page-header .back-arrow:hover {
+                background: rgba(122,75,22,0.1);
+                color: #000000;
+            }
+
+            .page-header .back-arrow svg {
+                width: 100%;
+                height: 100%;
+            }
+
+        .page-header h2 {
+            font-family: 'STIX Two Text', serif;
+            font-weight: 700;
+            font-size: 32px;
+            margin-top: 26px;
+            margin-bottom: 20px;
+            line-height: 30px;
+        }
+
+    .ticket-card {
+        border: 1px solid #e0e0e0;
+        border-radius: 5px;
+        padding: 15px;
+        margin-bottom: 15px;
+        background-color: #fff;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+        .ticket-card .status {
+            font-weight: bold;
+            color: #28a745;
+        }
+
+            .ticket-card .status.resolved {
+                color: #6c757d;
+            }
+
+        .ticket-card .response {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-left: 3px solid #007bff;
+        }
+</style>
+
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text&display=swap" rel="stylesheet">
+
+<div class="page-header">
+    <a href="javascript:history.back()" class="back-arrow">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+    </a>
+    <h2>YÊU CẦU HỖ TRỢ CỦA TÔI</h2>
+</div>
+
+<div class="container">
+    @if (!Model.Any())
+    {
+        <p>Bạn chưa gửi yêu cầu hỗ trợ nào.</p>
+    }
+    else
+    {
+        @foreach (var ticket in Model)
+        {
+            <div class="ticket-card">
+                <p><strong>Nội dung:</strong> @ticket.Content</p>
+                <p><strong>Thời gian gửi:</strong> @ticket.CreatedAt.ToString("dd/MM/yyyy HH:mm")</p>
+                <p><strong>Trạng thái:</strong> <span class="status @(ticket.IsResolved ? "resolved" : "")">@(ticket.IsResolved ? "Đã giải quyết" : "Đang chờ")</span></p>
+                @if (ticket.SupportTicketResponses != null && ticket.SupportTicketResponses.Any())
+                {
+                    <div class="responses">
+                        <h5>Phản hồi từ Admin:</h5>
+                        @foreach (var response in ticket.SupportTicketResponses)
+                        {
+                            <div class="response">
+                                <p><strong>@response.Admin.UserName</strong> (@response.CreatedAt.ToString("dd/MM/yyyy HH:mm")):</p>
+                                <p>@response.Content</p>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    }
+    <a asp-action="CreateSupportTicket" class="btn btn-outline-dark">Gửi yêu cầu mới</a>
+    <a asp-action="MyProfile" class="btn btn-outline-dark">Quay lại hồ sơ</a>
+</div>

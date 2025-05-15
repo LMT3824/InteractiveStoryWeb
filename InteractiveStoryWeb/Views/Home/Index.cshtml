@@ -26,12 +26,14 @@
             font-size: 40px;
             color: #000000;
             margin-bottom: 20px;
+            user-select: none; /* Ngăn chọn */
         }
 
         .hero-content p {
             font-size: 21px;
             color: #000000;
             margin-bottom: 30px;
+            user-select: none; /* Ngăn chọn */
         }
 
         .hero-content .btn-read-now {
@@ -44,6 +46,7 @@
             text-transform: uppercase;
             cursor: pointer;
             text-decoration: none;
+            user-select: none; /* Ngăn chọn */
         }
 
             .hero-content .btn-read-now:hover {
@@ -54,6 +57,7 @@
         width: 390px;
         height: 300px;
         overflow: hidden;
+        user-select: none; /* Ngăn chọn */
     }
 
         .hero-image img {
@@ -98,6 +102,22 @@
     .search-results {
         padding: 20px;
         background-color: #FFF3E6;
+        transition: all 0.3s ease;
+        max-height: 0;
+        overflow: hidden;
+        opacity: 0;
+    }
+
+        .search-results.active {
+            max-height: 1000px; /* Giá trị đủ lớn để chứa nội dung */
+            opacity: 1;
+            margin-bottom: 20px; /* Tạo khoảng cách với phần dưới */
+        }
+
+    .search-loading {
+        text-align: center;
+        padding: 20px;
+        color: #666;
     }
 
     h2.mb-4 {
@@ -105,6 +125,7 @@
         font-weight: 700;
         font-size: 30px;
         margin-bottom: 20px;
+        user-select: none; /* Ngăn chọn */
     }
 
     .story-card {
@@ -119,6 +140,7 @@
         text-decoration: none;
         color: inherit;
         margin: 0;
+        user-select: none; /* Ngăn chọn */
     }
 
         .story-card:hover {
@@ -222,6 +244,7 @@
         cursor: pointer;
         text-decoration: none;
         display: inline-block;
+        user-select: none; /* Ngăn chọn */
     }
 
         .load-more-btn:hover {
@@ -301,56 +324,138 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         $(document).ready(function () {
-            $('#searchForm').on('submit', function (e) {
-                e.preventDefault();
+            var searchTimer;
+            var lastQuery = '';
+            var $searchResults = $('#searchResults');
+            var $searchInput = $('#searchForm input[name="query"]');
 
-                var query = $(this).find('input[name="query"]').val();
-                if (!query.trim()) {
-                    $('#searchResults').html('<p>Vui lòng nhập từ khóa tìm kiếm.</p>');
+            // Xử lý tìm kiếm khi nhập
+            $searchInput.on('input', function () {
+                var query = $(this).val().trim();
+
+                clearTimeout(searchTimer);
+
+                if (!query) {
+                    hideSearchResults();
                     return;
                 }
+
+                if (query === lastQuery) {
+                    return;
+                }
+
+                searchTimer = setTimeout(function() {
+                    lastQuery = query;
+                    performSearch(query);
+                }, 500);
+            });
+
+            function showLoading() {
+                $searchResults.html('<div class="search-loading">Đang tìm kiếm...</div>')
+                              .addClass('active');
+            }
+
+            function showResults(data) {
+                $searchResults.html(data).addClass('active');
+            }
+
+            function hideSearchResults() {
+                $searchResults.removeClass('active');
+                // Xóa nội dung sau khi animation kết thúc
+                setTimeout(function() {
+                    $searchResults.html('');
+                }, 300);
+            }
+
+            function showError() {
+                $searchResults.html('<div class="search-loading">Có lỗi xảy ra khi tìm kiếm. Vui lòng thử lại.</div>')
+                              .addClass('active');
+            }
+
+            function performSearch(query) {
+                showLoading();
 
                 $.ajax({
                     url: '@Url.Action("Search", "Story")',
                     type: 'GET',
                     data: { query: query },
                     success: function (data) {
-                        $('#searchResults').html(data);
+                        if (query === $searchInput.val().trim()) {
+                            showResults(data);
+                        }
                     },
                     error: function () {
-                        $('#searchResults').html('<p>Có lỗi xảy ra khi tìm kiếm. Vui lòng thử lại.</p>');
+                        if (query === $searchInput.val().trim()) {
+                            showError();
+                        }
                     }
                 });
-            });
+            }
 
-            $('#searchForm input[name="query"]').on('keypress', function (e) {
-                if (e.which === 13) {
-                    $('#searchForm').submit();
+            // Xử lý khi click ra ngoài kết quả tìm kiếm
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('.search-container, .search-results').length) {
+                    hideSearchResults();
                 }
             });
 
+            // Vẫn giữ lại xử lý submit form nếu cần
+            $('#searchForm').on('submit', function (e) {
+                e.preventDefault();
+                var query = $(this).find('input[name="query"]').val().trim();
+                if (query) {
+                    performSearch(query);
+                }
+            });
+
+            // Xử lý sự kiện click cho nút "Xem thêm"
             $('.load-more-btn').on('click', function () {
-                var button = $(this);
-                var category = button.data('category');
-                var offset = parseInt(button.data('offset'));
-                var total = parseInt(button.data('total'));
-                var container = $('#' + category.toLowerCase() + '-stories');
+                var $button = $(this);
+                var category = $button.data('category');
+                var offset = parseInt($button.data('offset'));
+                var total = parseInt($button.data('total'));
+                var $storyRow;
+
+                // Xác định container để thêm truyện
+                if (category === 'Popular') {
+                    $storyRow = $('#popular-stories');
+                } else if (category === 'New') {
+                    $storyRow = $('#new-stories');
+                } else if (category === 'Completed') {
+                    $storyRow = $('#completed-stories');
+                } else {
+                    console.error('Danh mục không hợp lệ: ' + category);
+                    return;
+                }
+
+                // Hiển thị loading
+                $button.text('Đang tải...').prop('disabled', true);
 
                 $.ajax({
                     url: '@Url.Action("LoadMoreStories", "Home")',
                     type: 'GET',
-                    data: { category: category, offset: offset },
+                    data: {
+                        category: category,
+                        offset: offset
+                    },
                     success: function (data) {
-                        container.append(data);
-                        var newOffset = offset + 6;
-                        button.data('offset', newOffset);
+                        // Thêm dữ liệu mới vào container
+                        $storyRow.append(data);
 
+                        // Cập nhật offset
+                        var newOffset = offset + 6; // Mỗi lần load thêm 6 truyện
+                        $button.data('offset', newOffset);
+
+                        // Kiểm tra xem còn truyện để load không
                         if (newOffset >= total) {
-                            button.hide();
+                            $button.hide(); // Ẩn nút nếu không còn truyện
+                        } else {
+                            $button.text('Xem thêm').prop('disabled', false);
                         }
                     },
                     error: function () {
-                        container.append('<p>Có lỗi xảy ra khi tải thêm truyện. Vui lòng thử lại.</p>');
+                        alert('Có lỗi xảy ra khi tải thêm truyện. Vui lòng thử lại.');
+                        $button.text('Xem thêm').prop('disabled', false);
                     }
                 });
             });

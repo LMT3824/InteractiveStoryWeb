@@ -1,0 +1,94 @@
+﻿@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<style> 
+.page-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+        .page-header .back-arrow {
+            cursor: pointer;
+            color: #000;
+            text-decoration: none;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            vertical-align: middle;
+        }
+
+            .page-header .back-arrow:hover {
+                background: rgba(122,75,22,0.1);
+                color: #000000;
+            }
+
+            .page-header .back-arrow svg {
+                width: 100%;
+                height: 100%;
+            }
+
+        .page-header h2 {
+            font-family: 'STIX Two Text', serif;
+            font-weight: 700;
+            font-size: 32px;
+            margin-top: 26px;
+            margin-bottom: 20px;
+            line-height: 30px;
+        }
+
+</style>
+
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text&display=swap" rel="stylesheet">
+
+<div class="page-header">
+    <a href="javascript:history.back()" class="back-arrow">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+    </a>
+    <h2>ADMIN DASHBOARD</h2>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Gửi Thông Báo</h5>
+                <p class="card-text">Gửi thông báo toàn server tới tất cả người dùng.</p>
+                <a href="@Url.Action("SendNotification", "Admin")" class="btn btn-primary">Gửi</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Quản lý danh sách chặn và ẩn</h5>
+                <p class="card-text">Chặn hoặc mở chặn tài khoản người dùng và truyện.</p>
+                <a href="@Url.Action("ManageAccountStory", "Admin")" class="btn btn-primary">Quản lý</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Quản lý Báo Cáo</h5>
+                <p class="card-text">Xem và xử lý các báo cáo từ người dùng.</p>
+                <a href="@Url.Action("ManageReports", "Admin")" class="btn btn-primary">Quản lý</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Quản lý Yêu Cầu Hỗ Trợ</h5>
+                <p class="card-text">Xem và trả lời các yêu cầu hỗ trợ từ người dùng.</p>
+                <a href="@Url.Action("ManageSupportTickets", "Admin")" class="btn btn-primary">Quản lý</a>
+            </div>
+        </div>
+    </div>
+</div>

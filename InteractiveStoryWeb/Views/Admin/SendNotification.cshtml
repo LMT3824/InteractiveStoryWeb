@@ -1,0 +1,136 @@
+﻿@{
+    ViewData["Title"] = "Gửi Thông Báo";
+}
+
+<style>
+    .container {
+        max-width: 1600px;
+        margin: 0 auto;
+    }
+
+    .page-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+        .page-header .back-arrow {
+            cursor: pointer;
+            color: #000;
+            text-decoration: none;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            vertical-align: middle;
+        }
+
+            .page-header .back-arrow:hover {
+                background: rgba(122,75,22,0.1);
+                color: #000000;
+            }
+
+            .page-header .back-arrow svg {
+                width: 100%;
+                height: 100%;
+            }
+
+        .page-header h2 {
+            font-family: 'STIX Two Text', serif;
+            font-weight: 700;
+            font-size: 32px;
+            margin-top: 26px;
+            margin-bottom: 20px;
+            line-height: 30px;
+        }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-control {
+        font-family: 'Itim', cursive;
+        font-size: 18px;
+        border-radius: 5px;
+        border: 1px solid #e0e0e0;
+        padding: 10px;
+        width: 100%;
+    }
+
+    .form-group label {
+            display: block;
+            color: #000000;
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+
+    .btn-primary {
+        font-family: 'Itim', cursive;
+        font-size: 18px;
+        background-color: #000;
+        border: none;
+        border-radius: 5px;
+        padding: 10px 20px;
+    }
+
+        .btn-primary:hover {
+            background-color: #333;
+        }
+
+    .alert {
+        font-family: 'Itim', cursive;
+        font-size: 16px;
+        margin-bottom: 20px;
+    }
+
+    .text-danger {
+        font-family: 'Itim', cursive;
+        font-size: 14px;
+    }
+</style>
+
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text&display=swap" rel="stylesheet">
+
+<div class="page-header">
+    <a href="javascript:history.back()" class="back-arrow">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+    </a>
+    <h2>GỬI THÔNG BÁO TOÀN SERVER</h2>
+</div>
+
+<div class="container">
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (ViewData.ModelState[""]?.Errors.Any() ?? false)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @Html.ValidationMessage("")
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <form asp-action="SendNotification" method="post">
+        <div class="form-group">
+            <label for="title">Tiêu đề thông báo:</label>
+            <input type="text" class="form-control" id="title" name="title" required />
+            <span class="text-danger">@Html.ValidationMessage("title")</span>
+        </div>
+        <div class="form-group">
+            <label for="content">Nội dung thông báo:</label>
+            <textarea class="form-control" id="content" name="content" rows="5" required></textarea>
+            <span class="text-danger">@Html.ValidationMessage("content")</span>
+        </div>
+        <button type="submit" class="btn btn-primary">Gửi</button>
+    </form>
+</div>

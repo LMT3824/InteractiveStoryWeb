@@ -36,6 +36,12 @@ namespace InteractiveStoryWeb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(StoryCreateViewModel model)
         {
+            // Chuẩn hóa ký tự xuống dòng trước khi validation
+            if (!string.IsNullOrEmpty(model.Description))
+            {
+                model.NormalizedDescription = model.Description;
+            }
+
             if (!ModelState.IsValid)
             {
                 ViewBag.Genres = await _context.Genres.ToListAsync();
@@ -86,6 +92,7 @@ namespace InteractiveStoryWeb.Controllers
         [Authorize]
         public async Task<IActionResult> Edit(int id)
         {
+            
             var story = await _context.Stories.FindAsync(id);
             if (story == null) return NotFound();
 
@@ -106,8 +113,14 @@ namespace InteractiveStoryWeb.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(StoryCreateViewModel model, IFormFile? NewCoverImage)
+        public async Task<IActionResult> Edit(StoryCreateViewModel model)
         {
+            // Chuẩn hóa ký tự xuống dòng trước khi validation
+            if (!string.IsNullOrEmpty(model.Description))
+            {
+                model.NormalizedDescription = model.Description;
+            }
+
             if (!ModelState.IsValid)
             {
                 ViewBag.Genres = await _context.Genres.ToListAsync();
@@ -147,20 +160,30 @@ namespace InteractiveStoryWeb.Controllers
             story.IsCompleted = model.IsCompleted;
             story.UpdatedAt = DateTime.Now;
 
-            if (NewCoverImage != null && NewCoverImage.Length > 0)
+            if (model.CoverImage != null && model.CoverImage.Length > 0)
             {
                 var uploads = Path.Combine(_environment.WebRootPath, "uploads/stories");
                 Directory.CreateDirectory(uploads);
 
-                var fileName = Guid.NewGuid().ToString() + Path.GetExtension(NewCoverImage.FileName);
+                var fileName = Guid.NewGuid().ToString() + Path.GetExtension(model.CoverImage.FileName);
                 var filePath = Path.Combine(uploads, fileName);
 
                 using (var stream = new FileStream(filePath, FileMode.Create))
                 {
-                    await NewCoverImage.CopyToAsync(stream);
+                    await model.CoverImage.CopyToAsync(stream);
                 }
 
-                story.CoverImageUrl = "/Uploads/stories/" + fileName;
+                // Xóa ảnh bìa cũ nếu tồn tại
+                if (!string.IsNullOrEmpty(story.CoverImageUrl))
+                {
+                    var oldImagePath = Path.Combine(_environment.WebRootPath, story.CoverImageUrl.TrimStart('/'));
+                    if (System.IO.File.Exists(oldImagePath))
+                    {
+                        System.IO.File.Delete(oldImagePath);
+                    }
+                }
+
+                story.CoverImageUrl = "/uploads/stories/" + fileName;
             }
 
             await _context.SaveChangesAsync();
@@ -173,10 +196,10 @@ namespace InteractiveStoryWeb.Controllers
         public async Task<IActionResult> Read(int id)
         {
             var story = await _context.Stories
-                .FirstOrDefaultAsync(s => s.Id == id && s.IsPublic);
+                .FirstOrDefaultAsync(s => s.Id == id && s.IsPublic && !s.Author.IsBanned && !s.IsHidden);
 
             if (story == null)
-                return NotFound("Truyện không tồn tại hoặc chưa được công khai.");
+                return NotFound("Truyện không tồn tại, chưa được công khai hoặc đã bị ẩn.");
 
             // Kiểm tra nếu tính năng cá nhân hóa được bật
             if (story.AllowCustomization)
@@ -226,10 +249,15 @@ namespace InteractiveStoryWeb.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Index(string genre)
         {
+            var currentUser = await _userManager.GetUserAsync(User);
+            string currentUserId = currentUser?.Id;
+
             var query = _context.Stories
-                .Where(s => s.IsPublic && (string.IsNullOrEmpty(genre) || (s.Genre != null && s.Genre.ToLower() == genre.ToLower())))
+                .Where(s => s.IsPublic && !s.Author.IsBanned && !s.IsHidden
+                    && (string.IsNullOrEmpty(genre) || (s.Genre != null && s.Genre.ToLower() == genre.ToLower()))
+                    && (currentUserId == null || !_context.Blocks.Any(b => b.UserId == currentUserId && (b.BlockedUserId == s.AuthorId || b.BlockedStoryId == s.Id))))
                 .Include(s => s.Chapters)
-                .OrderBy(s => s.CreatedAt); // Sắp xếp từ cũ nhất đến mới nhất
+                .OrderBy(s => s.CreatedAt);
 
             var stories = await query.ToListAsync();
 
@@ -240,7 +268,10 @@ namespace InteractiveStoryWeb.Controllers
             foreach (var story in stories)
             {
                 viewCounts[story.Id] = story.Chapters?.Sum(ch => ch.ViewCount) ?? 0;
-                var storyRatings = await _context.Ratings.Where(r => r.StoryId == story.Id).ToListAsync();
+                var storyRatings = await _context.Ratings
+                    .Where(r => r.StoryId == story.Id && !r.User.IsBanned
+                        && (currentUserId == null || !_context.Blocks.Any(b => b.UserId == currentUserId && b.BlockedUserId == r.UserId)))
+                    .ToListAsync();
                 ratings[story.Id] = storyRatings.Any() ? storyRatings.Average(r => r.RatingValue) : 0;
                 chapterCounts[story.Id] = story.Chapters?.Count ?? 0;
             }
@@ -255,14 +286,56 @@ namespace InteractiveStoryWeb.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Details(int id, string errorMessage = null)
         {
+            var currentUser = await _userManager.GetUserAsync(User);
+            string currentUserId = currentUser?.Id;
+
+            // Kiểm tra trạng thái chặn trước
+            bool isStoryBlocked = false;
+            bool isAuthorBlocked = false;
+            if (currentUserId != null)
+            {
+                isStoryBlocked = await _context.Blocks
+                    .AnyAsync(b => b.UserId == currentUserId && b.BlockedStoryId == id);
+                isAuthorBlocked = await _context.Stories
+                    .Where(s => s.Id == id)
+                    .AnyAsync(s => _context.Blocks.Any(b => b.UserId == currentUserId && b.BlockedUserId == s.AuthorId));
+            }
+
+            // Nếu truyện hoặc tác giả bị chặn, trả về view với thông báo
+            if (isStoryBlocked || isAuthorBlocked)
+            {
+                ViewBag.IsStoryBlocked = isStoryBlocked;
+                ViewBag.IsAuthorBlocked = isAuthorBlocked;
+                ViewBag.CurrentUser = currentUser;
+                if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    TempData["ErrorMessage"] = errorMessage;
+                }
+                return View(new Story { Id = id }); // Model giả để render view
+            }
+
+            // Lấy truyện nếu không bị chặn
             var story = await _context.Stories
                 .Include(s => s.Author)
                 .Include(s => s.Chapters)
                     .ThenInclude(ch => ch.Segments)
-                .FirstOrDefaultAsync(s => s.Id == id);
+                .FirstOrDefaultAsync(s => s.Id == id && !s.Author.IsBanned && !s.IsHidden
+                    && (currentUserId == null ||
+                        (!_context.Blocks.Any(b => b.UserId == currentUserId && (b.BlockedUserId == s.AuthorId || b.BlockedStoryId == s.Id)) &&
+                         !_context.Blocks.Any(b => b.UserId == s.AuthorId && b.BlockedUserId == currentUserId))));
 
             if (story == null)
-                return NotFound();
+            {
+                // Kiểm tra xem truyện có bị ẩn không
+                var isHidden = await _context.Stories.AnyAsync(s => s.Id == id && s.IsHidden);
+                if (isHidden)
+                {
+                    ViewBag.IsHidden = true;
+                    ViewBag.CurrentUser = currentUser;
+                    return View(new Story { Id = id }); // Model giả để render view
+                }
+                return NotFound("Truyện không tồn tại.");
+            }
 
             var firstSegment = story.Chapters
                 .Where(ch => ch.IsPublic && ch.Segments != null && ch.Segments.Any())
@@ -274,22 +347,26 @@ namespace InteractiveStoryWeb.Controllers
             var totalViewCount = story.Chapters?.Sum(ch => ch.ViewCount) ?? 0;
 
             var comments = await _context.Comments
-                .Where(c => c.StoryId == id)
+                .Where(c => c.StoryId == id && !c.User.IsBanned
+                    && (currentUserId == null ||
+                        (!_context.Blocks.Any(b => b.UserId == currentUserId && b.BlockedUserId == c.UserId) &&
+                         !_context.Blocks.Any(b => b.UserId == c.UserId && b.BlockedUserId == currentUserId))))
                 .Include(c => c.User)
                 .OrderByDescending(c => c.CreatedAt)
                 .ToListAsync();
 
             var ratings = await _context.Ratings
-                .Where(r => r.StoryId == id)
+                .Where(r => r.StoryId == id && !r.User.IsBanned
+                    && (currentUserId == null ||
+                        (!_context.Blocks.Any(b => b.UserId == currentUserId && b.BlockedUserId == r.UserId) &&
+                         !_context.Blocks.Any(b => b.UserId == r.UserId && b.BlockedUserId == currentUserId))))
                 .Include(r => r.User)
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
 
-            ApplicationUser currentUser = null;
             bool isInLibrary = false;
-            if (User.Identity.IsAuthenticated)
+            if (currentUser != null)
             {
-                currentUser = await _userManager.GetUserAsync(User);
                 isInLibrary = await _context.Libraries
                     .AnyAsync(l => l.UserId == currentUser.Id && l.StoryId == id);
             }
@@ -300,11 +377,14 @@ namespace InteractiveStoryWeb.Controllers
             ViewBag.Ratings = ratings;
             ViewBag.AverageRating = ratings.Any() ? ratings.Average(r => r.RatingValue) : 0;
             ViewBag.CurrentUser = currentUser;
-            ViewBag.IsInLibrary = isInLibrary; // Truyền trạng thái vào ViewBag
+            ViewBag.IsInLibrary = isInLibrary;
+            ViewBag.IsStoryBlocked = isStoryBlocked;
+
             if (!string.IsNullOrEmpty(errorMessage))
             {
                 TempData["ErrorMessage"] = errorMessage;
             }
+
             return View(story);
         }
 
@@ -317,9 +397,9 @@ namespace InteractiveStoryWeb.Controllers
             }
 
             var stories = await _context.Stories
-                .Where(s => s.IsPublic &&
+                .Where(s => s.IsPublic && !s.IsHidden &&
                            (s.Title.Contains(query) ||
-                            s.Author.UserName.Contains(query)))
+                            s.Author != null && s.Author.UserName.Contains(query) && !s.Author.IsBanned))
                 .Include(s => s.Author)
                 .Include(s => s.Chapters)
                 .OrderByDescending(s => s.CreatedAt)
@@ -339,6 +419,8 @@ namespace InteractiveStoryWeb.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Customize(int storyId)
         {
+            Console.WriteLine($"Customize GET called with storyId: {storyId}");
+
             var user = await _userManager.GetUserAsync(User);
             string userId = user?.Id ?? "anonymous";
 
@@ -365,6 +447,11 @@ namespace InteractiveStoryWeb.Controllers
                     model.Name = existingCustomization.Name;
                     model.FirstPersonPronoun = existingCustomization.FirstPersonPronoun;
                     model.SecondPersonPronoun = existingCustomization.SecondPersonPronoun;
+                    Console.WriteLine($"Retrieved customization from Session for storyId {storyId}: {sessionData}");
+                }
+                else
+                {
+                    Console.WriteLine($"No customization found in Session for storyId {storyId}");
                 }
             }
 
@@ -376,6 +463,8 @@ namespace InteractiveStoryWeb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Customize(StoryCustomizationViewModel model)
         {
+            Console.WriteLine($"Customize POST called with storyId: {model.StoryId}");
+
             if (!ModelState.IsValid)
             {
                 TempData["ErrorMessage"] = "Vui lòng kiểm tra lại thông tin.";
@@ -397,7 +486,7 @@ namespace InteractiveStoryWeb.Controllers
                     existingCustomization.FirstPersonPronoun = model.FirstPersonPronoun;
                     existingCustomization.SecondPersonPronoun = model.SecondPersonPronoun;
                     existingCustomization.CreatedAt = existingCustomization.CreatedAt; // Giữ nguyên thời gian tạo
-                    _context.ReaderStoryCustomizations.Update(existingCustomization); // Đảm bảo gọi Update
+                    _context.ReaderStoryCustomizations.Update(existingCustomization);
                 }
                 else // Nếu chưa tồn tại, tạo mới
                 {
@@ -437,11 +526,36 @@ namespace InteractiveStoryWeb.Controllers
 
                 // Lưu vào session dưới dạng JSON
                 var sessionKey = $"Customization_{model.StoryId}";
-                HttpContext.Session.SetString(sessionKey, JsonSerializer.Serialize(customization));
+                var sessionData = JsonSerializer.Serialize(customization);
+                HttpContext.Session.SetString(sessionKey, sessionData);
+                Console.WriteLine($"Saved customization to Session for storyId {model.StoryId}: {sessionData}");
+            }
+
+            // Lấy đoạn đầu tiên của truyện để chuyển hướng
+            var firstChapter = await _context.Chapters
+                .Where(c => c.StoryId == model.StoryId && c.IsPublic)
+                .OrderBy(c => c.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (firstChapter == null)
+            {
+                TempData["ErrorMessage"] = "Không tìm thấy chương nào trong truyện.";
+                return RedirectToAction("Details", "Story", new { id = model.StoryId });
+            }
+
+            var firstSegment = await _context.ChapterSegments
+                .Where(s => s.ChapterId == firstChapter.Id && s.Chapter.IsPublic)
+                .OrderBy(s => s.Id)
+                .FirstOrDefaultAsync();
+
+            if (firstSegment == null)
+            {
+                TempData["ErrorMessage"] = "Không tìm thấy đoạn nào trong chương đầu tiên.";
+                return RedirectToAction("Details", "Story", new { id = model.StoryId });
             }
 
             TempData["SuccessMessage"] = "Thông tin tùy chỉnh đã được lưu!";
-            return RedirectToAction("Read", new { id = model.StoryId });
+            return RedirectToAction("InteractiveRead", "Segment", new { id = firstSegment.Id }); // Chuyển hướng với segmentId
         }
 
         // Action mới để định dạng đoạn văn bản xem trước
@@ -467,18 +581,23 @@ namespace InteractiveStoryWeb.Controllers
             // Thay thế các placeholder bằng TextFormatter cho đoạn 1
             previewText1 = TextFormatter.ReplaceWithContextualCapitalization(previewText1, "[Tên]", name ?? "[Tên]");
             previewText1 = TextFormatter.ReplaceWithContextualCapitalization(previewText1, "[XưngHôThứNhất]", firstPersonPronoun ?? "[XưngHôThứNhất]");
-            previewText1 = TextFormatter.ReplaceWithContextualCapitalization(previewText1, "[XưngHôThứHai]", secondPersonPronoun ?? "[Xưng Hô Thứ Hai]");
+            previewText1 = TextFormatter.ReplaceWithContextualCapitalization(previewText1, "[XưngHôThứHai]", secondPersonPronoun ?? "[XưngHôThứHai]");
 
             // Thay thế các placeholder bằng TextFormatter cho đoạn 2
             previewText2 = TextFormatter.ReplaceWithContextualCapitalization(previewText2, "[Tên]", name ?? "[Tên]");
             previewText2 = TextFormatter.ReplaceWithContextualCapitalization(previewText2, "[XưngHôThứNhất]", firstPersonPronoun ?? "[XưngHôThứNhất]");
-            previewText2 = TextFormatter.ReplaceWithContextualCapitalization(previewText2, "[XưngHôThứHai]", secondPersonPronoun ?? "[Xưng Hô Thứ Hai]");
+            previewText2 = TextFormatter.ReplaceWithContextualCapitalization(previewText2, "[XưngHôThứHai]", secondPersonPronoun ?? "[XưngHôThứHai]");
 
             // Tách các đoạn để trả về dưới dạng danh sách
             var paragraphs1 = previewText1.Split('\n');
             var paragraphs2 = previewText2.Split('\n');
 
             return Json(new { success = true, paragraphs1 = paragraphs1, paragraphs2 = paragraphs2 });
+        }
+
+        public IActionResult TOS()
+        {
+            return View();
         }
 
         [HttpPost]
@@ -551,24 +670,26 @@ namespace InteractiveStoryWeb.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Comments(int storyId)
         {
+            var currentUser = await _userManager.GetUserAsync(User);
+            string currentUserId = currentUser?.Id;
+
             var story = await _context.Stories
                 .Include(s => s.Author)
-                .FirstOrDefaultAsync(s => s.Id == storyId);
+                .FirstOrDefaultAsync(s => s.Id == storyId && !s.Author.IsBanned && !s.IsHidden
+                    && (currentUserId == null || !_context.Blocks.Any(b => b.UserId == currentUserId && (b.BlockedUserId == s.AuthorId || b.BlockedStoryId == s.Id))));
 
             if (story == null)
-                return NotFound("Truyện không tồn tại.");
+            {
+                return NotFound("Truyện không tồn tại, tác giả đã bị chặn, bạn đã chặn truyện này, hoặc truyện đã bị ẩn.");
+            }
 
             var comments = await _context.Comments
-                .Where(c => c.StoryId == storyId)
+                .Where(c => c.StoryId == storyId && !c.User.IsBanned
+                    && (currentUserId == null || !_context.Blocks.Any(b => b.UserId == currentUserId && b.BlockedUserId == c.UserId)
+                    && !_context.Blocks.Any(b => b.UserId == c.UserId && b.BlockedUserId == currentUserId)))
                 .Include(c => c.User)
                 .OrderByDescending(c => c.CreatedAt)
                 .ToListAsync();
-
-            ApplicationUser currentUser = null;
-            if (User.Identity.IsAuthenticated)
-            {
-                currentUser = await _userManager.GetUserAsync(User);
-            }
 
             ViewBag.Comments = comments;
             ViewBag.CurrentUser = currentUser;
@@ -651,6 +772,7 @@ namespace InteractiveStoryWeb.Controllers
             {
                 success = true,
                 content = comment.Content,
+                createdAt = comment.CreatedAt.ToString("dd/MM/yyyy HH:mm"),
                 updatedAt = comment.UpdatedAt?.ToString("dd/MM/yyyy HH:mm") // Thêm UpdatedAt vào phản hồi
             });
         }
@@ -689,24 +811,26 @@ namespace InteractiveStoryWeb.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Ratings(int storyId)
         {
+            var currentUser = await _userManager.GetUserAsync(User);
+            string currentUserId = currentUser?.Id;
+
             var story = await _context.Stories
                 .Include(s => s.Author)
-                .FirstOrDefaultAsync(s => s.Id == storyId);
+                .FirstOrDefaultAsync(s => s.Id == storyId && !s.Author.IsBanned && !s.IsHidden
+                    && (currentUserId == null || !_context.Blocks.Any(b => b.UserId == currentUserId && (b.BlockedUserId == s.AuthorId || b.BlockedStoryId == s.Id))));
 
             if (story == null)
-                return NotFound("Truyện không tồn tại.");
+            {
+                return NotFound("Truyện không tồn tại, tác giả đã bị chặn, bạn đã chặn truyện này, hoặc truyện đã bị ẩn.");
+            }
 
             var ratings = await _context.Ratings
-                .Where(r => r.StoryId == storyId)
+                .Where(r => r.StoryId == storyId && !r.User.IsBanned
+                    && (currentUserId == null || !_context.Blocks.Any(b => b.UserId == currentUserId && b.BlockedUserId == r.UserId)
+                    && !_context.Blocks.Any(b => b.UserId == r.UserId && b.BlockedUserId == currentUserId)))
                 .Include(r => r.User)
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
-
-            ApplicationUser currentUser = null;
-            if (User.Identity.IsAuthenticated)
-            {
-                currentUser = await _userManager.GetUserAsync(User);
-            }
 
             ViewBag.Ratings = ratings;
             ViewBag.AverageRating = ratings.Any() ? ratings.Average(r => r.RatingValue) : 0;
@@ -810,6 +934,7 @@ namespace InteractiveStoryWeb.Controllers
                 userId = user.Id, // Thêm userId
                 ratingValue = rating.RatingValue,
                 averageRating = averageRating,
+                createdAt = rating.CreatedAt.ToString("dd/MM/yyyy HH:mm"),
                 updatedAt = rating.UpdatedAt?.ToString("dd/MM/yyyy HH:mm")
             });
         }
@@ -921,6 +1046,8 @@ namespace InteractiveStoryWeb.Controllers
                 .Include(l => l.Story)
                     .ThenInclude(s => s.Chapters)
                         .ThenInclude(c => c.Segments)
+                .Where(l => !l.Story.IsHidden
+                    && !_context.Blocks.Any(b => b.UserId == user.Id && b.BlockedStoryId == l.StoryId)) // Loại bỏ truyện bị chặn
                 .ToListAsync();
 
             var readingProgresses = await _context.ReadingProgresses
@@ -943,8 +1070,8 @@ namespace InteractiveStoryWeb.Controllers
                 ratings[story.Id] = _context.Ratings.Where(r => r.StoryId == story.Id).Any()
                     ? _context.Ratings.Where(r => r.StoryId == story.Id).Average(r => r.RatingValue)
                     : 0;
-                // Tính số chương
-                chapterCounts[story.Id] = story.Chapters?.Count ?? 0;
+                // Tính số chương công khai
+                chapterCounts[story.Id] = story.Chapters?.Count(ch => ch.IsPublic) ?? 0;
             }
 
             ViewBag.ReadingProgresses = readingProgresses;
@@ -953,6 +1080,273 @@ namespace InteractiveStoryWeb.Controllers
             ViewBag.ChapterCounts = chapterCounts;
 
             return View(libraryEntries);
+        }
+
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> BlockStory(int storyId)
+        {
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null)
+            {
+                return Json(new { success = false, message = "Người dùng không tồn tại." });
+            }
+
+            var story = await _context.Stories.FindAsync(storyId);
+            if (story == null)
+            {
+                return Json(new { success = false, message = "Truyện không tồn tại." });
+            }
+
+            // Kiểm tra xem đã chặn truyện chưa
+            var existingBlock = await _context.Blocks
+                .FirstOrDefaultAsync(b => b.UserId == currentUser.Id && b.BlockedStoryId == storyId);
+
+            if (existingBlock != null)
+            {
+                return Json(new { success = false, message = "Bạn đã chặn truyện này." });
+            }
+
+            var block = new Block
+            {
+                UserId = currentUser.Id,
+                BlockedStoryId = storyId
+            };
+
+            _context.Blocks.Add(block);
+
+            // Xóa truyện khỏi thư viện nếu đã lưu
+            var libraryEntry = await _context.Libraries
+                .FirstOrDefaultAsync(l => l.UserId == currentUser.Id && l.StoryId == storyId);
+            bool removedFromLibrary = false;
+            if (libraryEntry != null)
+            {
+                _context.Libraries.Remove(libraryEntry);
+                removedFromLibrary = true;
+            }
+
+            await _context.SaveChangesAsync();
+
+            var message = removedFromLibrary
+                ? "Đã chặn truyện và xóa khỏi thư viện!"
+                : "Đã chặn truyện!";
+
+            return Json(new { success = true, message = message });
+        }
+
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UnblockStory(int storyId)
+        {
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null)
+            {
+                return Json(new { success = false, message = "Người dùng không tồn tại." });
+            }
+
+            var block = await _context.Blocks
+                .FirstOrDefaultAsync(b => b.UserId == currentUser.Id && b.BlockedStoryId == storyId);
+
+            if (block == null)
+            {
+                return Json(new { success = false, message = "Bạn chưa chặn truyện này." });
+            }
+
+            _context.Blocks.Remove(block);
+            await _context.SaveChangesAsync();
+
+            // Lấy lại thông tin truyện sau khi bỏ chặn
+            var story = await _context.Stories
+                .Include(s => s.Author)
+                .Include(s => s.Chapters)
+                    .ThenInclude(ch => ch.Segments)
+                .FirstOrDefaultAsync(s => s.Id == storyId && !s.Author.IsBanned);
+
+            if (story == null)
+            {
+                return Json(new { success = false, message = "Truyện không tồn tại hoặc đã bị xóa." });
+            }
+
+            // Lấy lại các thông tin cần thiết
+            var comments = await _context.Comments
+                .Where(c => c.StoryId == storyId && !c.User.IsBanned)
+                .Include(c => c.User)
+                .OrderByDescending(c => c.CreatedAt)
+                .Take(5)
+                .ToListAsync();
+
+            var ratings = await _context.Ratings
+                .Where(r => r.StoryId == storyId && !r.User.IsBanned)
+                .Include(r => r.User)
+                .OrderByDescending(r => r.CreatedAt)
+                .Take(5)
+                .ToListAsync();
+
+            var averageRating = ratings.Any() ? ratings.Average(r => r.RatingValue) : 0;
+            var totalViewCount = story.Chapters?.Sum(ch => ch.ViewCount) ?? 0;
+            var firstSegment = story.Chapters?
+                .Where(ch => ch.IsPublic && ch.Segments != null && ch.Segments.Any())
+                .OrderBy(ch => ch.CreatedAt)
+                .SelectMany(ch => ch.Segments)
+                .OrderBy(s => s.Id)
+                .FirstOrDefault();
+
+            return Json(new
+            {
+                success = true,
+                message = "Đã bỏ chặn truyện!",
+                story = new
+                {
+                    id = story.Id,
+                    title = story.Title,
+                    description = story.Description,
+                    genre = story.Genre,
+                    coverImageUrl = story.CoverImageUrl,
+                    isPublic = story.IsPublic,
+                    allowCustomization = story.AllowCustomization,
+                    createdAt = story.CreatedAt.ToString("dd/MM/yyyy"),
+                    author = new
+                    {
+                        id = story.Author.Id,
+                        userName = story.Author.UserName
+                    },
+                    chapters = story.Chapters?.Select(ch => new
+                    {
+                        id = ch.Id,
+                        title = ch.Title,
+                        createdAt = ch.CreatedAt.ToString("dd/MM/yyyy"),
+                        viewCount = ch.ViewCount,
+                        isPublic = ch.IsPublic,
+                        segments = ch.Segments?.Select(s => new
+                        {
+                            id = s.Id,
+                            title = s.Title
+                        }).ToList()
+                    }).ToList()
+                },
+                comments = comments.Select(c => new
+                {
+                    id = c.Id,
+                    content = c.Content,
+                    createdAt = c.CreatedAt.ToString("dd/MM/yyyy HH:mm"),
+                    updatedAt = c.UpdatedAt?.ToString("dd/MM/yyyy HH:mm"),
+                    user = new
+                    {
+                        id = c.User.Id,
+                        userName = c.User.UserName,
+                        avatarUrl = string.IsNullOrEmpty(c.User.AvatarUrl) ? "/images/AvatarNull.jpg" : c.User.AvatarUrl
+                    }
+                }),
+                ratings = ratings.Select(r => new
+                {
+                    id = r.Id,
+                    ratingValue = r.RatingValue,
+                    createdAt = r.CreatedAt.ToString("dd/MM/yyyy HH:mm"),
+                    updatedAt = r.UpdatedAt?.ToString("dd/MM/yyyy HH:mm"),
+                    user = new
+                    {
+                        id = r.User.Id,
+                        userName = r.User.UserName,
+                        avatarUrl = string.IsNullOrEmpty(r.User.AvatarUrl) ? "/images/AvatarNull.jpg" : r.User.AvatarUrl
+                    }
+                }),
+                averageRating = averageRating,
+                totalViewCount = totalViewCount,
+                firstSegmentId = firstSegment?.Id
+            });
+        }
+
+        // Báo cáo truyện
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ReportStory(int storyId, string reason)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Json(new { success = false, message = "Người dùng không tồn tại." });
+            }
+
+            var story = await _context.Stories.FindAsync(storyId);
+            if (story == null)
+            {
+                return Json(new { success = false, message = "Truyện không tồn tại." });
+            }
+
+            if (string.IsNullOrWhiteSpace(reason))
+            {
+                return Json(new { success = false, message = "Lý do báo cáo không được để trống." });
+            }
+
+            var existingReport = await _context.Reports
+                .FirstOrDefaultAsync(r => r.UserId == user.Id && r.StoryId == storyId && r.CommentId == null);
+            if (existingReport != null)
+            {
+                return Json(new { success = false, message = "Bạn đã báo cáo truyện này rồi." });
+            }
+
+            var report = new Report
+            {
+                UserId = user.Id,
+                StoryId = storyId,
+                AuthorId = story.AuthorId,
+                Reason = reason,
+                ReportedAt = DateTime.Now
+            };
+
+            _context.Reports.Add(report);
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, message = "Báo cáo truyện đã được gửi!" });
+        }
+
+        // Báo cáo bình luận
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ReportComment(int commentId, string reason)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Json(new { success = false, message = "Người dùng không tồn tại." });
+            }
+
+            var comment = await _context.Comments.FindAsync(commentId);
+            if (comment == null)
+            {
+                return Json(new { success = false, message = "Bình luận không tồn tại." });
+            }
+
+            if (string.IsNullOrWhiteSpace(reason))
+            {
+                return Json(new { success = false, message = "Lý do báo cáo không được để trống." });
+            }
+
+            var existingReport = await _context.Reports
+                .FirstOrDefaultAsync(r => r.UserId == user.Id && r.CommentId == commentId);
+            if (existingReport != null)
+            {
+                return Json(new { success = false, message = "Bạn đã báo cáo bình luận này rồi." });
+            }
+
+            var report = new Report
+            {
+                UserId = user.Id,
+                CommentId = commentId,
+                StoryId = comment.StoryId,
+                AuthorId = comment.UserId,
+                Reason = reason,
+                ReportedAt = DateTime.Now
+            };
+
+            _context.Reports.Add(report);
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, message = "Báo cáo bình luận đã được gửi!" });
         }
     }
 }

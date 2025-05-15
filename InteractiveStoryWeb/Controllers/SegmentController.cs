@@ -99,105 +99,212 @@ namespace InteractiveStoryWeb.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> InteractiveRead(int id)
         {
-            var segment = await _context.ChapterSegments
-                .Include(s => s.Chapter)
-                    .ThenInclude(c => c.Story)
-                .Include(s => s.Choices)
-                    .ThenInclude(c => c.NextSegment)
-                        .ThenInclude(ns => ns.Chapter)
-                .FirstOrDefaultAsync(s => s.Id == id);
-
-            if (segment == null)
-                return NotFound("Đoạn không tồn tại.");
-
-            var chapter = segment.Chapter;
-            var story = chapter.Story;
-
-            if (chapter == null || !chapter.IsPublic || story == null || !story.IsPublic)
-                return NotFound("Nội dung chưa được công khai.");
-
-            // Tăng lượt xem chapter chỉ khi vào đoạn đầu tiên
-            var firstSegment = await _context.ChapterSegments
-                .Where(s => s.ChapterId == chapter.Id && s.Chapter.IsPublic)
-                .OrderBy(s => s.Id)
-                .FirstOrDefaultAsync();
-            if (segment.Id == firstSegment?.Id)
+            try
             {
-                chapter.ViewCount++;
-                await _context.SaveChangesAsync();
-            }
+                Console.WriteLine($"InteractiveRead called with segmentId: {id}");
 
-            // Lưu tiến trình đọc nếu người dùng đã đăng nhập
-            var user = await _userManager.GetUserAsync(User);
-            if (user != null)
-            {
-                var progress = await _context.ReadingProgresses
-                    .FirstOrDefaultAsync(rp => rp.UserId == user.Id && rp.StoryId == story.Id);
-
-                if (progress == null)
+                // Kiểm tra id hợp lệ
+                if (id <= 0)
                 {
-                    progress = new ReadingProgress
+                    Console.WriteLine($"Invalid segmentId: {id}");
+                    return RedirectToAction("Index", "Home");
+                }
+
+                var segment = await _context.ChapterSegments
+                    .Include(s => s.Chapter)
+                        .ThenInclude(c => c.Story)
+                            .ThenInclude(s => s.Author)
+                    .Include(s => s.Choices)
+                        .ThenInclude(c => c.NextSegment)
+                            .ThenInclude(ns => ns.Chapter)
+                    .FirstOrDefaultAsync(s => s.Id == id);
+
+                if (segment == null)
+                {
+                    Console.WriteLine($"Segment not found for ID: {id}");
+                    return NotFound("Đoạn không tồn tại.");
+                }
+
+                Console.WriteLine($"Segment loaded: ID = {segment.Id}, ChapterId = {segment.ChapterId}");
+
+                var chapter = segment.Chapter;
+                var story = chapter.Story;
+
+                if (chapter == null || !chapter.IsPublic || story == null || !story.IsPublic)
+                {
+                    Console.WriteLine($"Content not public for segmentId: {id}, chapterId: {chapter?.Id}, storyId: {story?.Id}");
+                    return NotFound("Nội dung chưa được công khai.");
+                }
+
+                Console.WriteLine($"Chapter loaded: ID = {chapter.Id}, StoryId = {story.Id}, IsPublic = {chapter.IsPublic}");
+
+                // Log số lượng Choices trước khi lọc
+                Console.WriteLine($"Raw Choices count for segment {segment.Id}: {segment.Choices?.Count ?? 0}");
+                if (segment.Choices != null)
+                {
+                    foreach (var choice in segment.Choices)
                     {
-                        UserId = user.Id,
-                        StoryId = story.Id,
-                        ChapterSegmentId = segment.Id,
-                        LastReadAt = DateTime.Now
-                    };
-                    _context.ReadingProgresses.Add(progress);
-                }
-                else
-                {
-                    progress.ChapterSegmentId = segment.Id;
-                    progress.LastReadAt = DateTime.Now;
-                }
-                await _context.SaveChangesAsync();
-            }
-
-            // Thay thế từ khóa và định dạng Markdown
-            ReaderStoryCustomization customization = null;
-            if (story.AllowCustomization)
-            {
-                string userId = user?.Id ?? "anonymous";
-
-                if (user != null)
-                {
-                    customization = await _context.ReaderStoryCustomizations
-                        .FirstOrDefaultAsync(rsc => rsc.StoryId == story.Id && rsc.UserId == userId);
-                }
-                else
-                {
-                    var sessionKey = $"Customization_{story.Id}";
-                    var sessionData = HttpContext.Session.GetString(sessionKey);
-                    if (!string.IsNullOrEmpty(sessionData))
-                    {
-                        customization = JsonSerializer.Deserialize<ReaderStoryCustomization>(sessionData);
+                        Console.WriteLine($"Raw Choice ID: {choice.Id}, NextSegmentId: {choice.NextSegmentId}, NextSegment: {(choice.NextSegment != null ? $"ID = {choice.NextSegment.Id}" : "null")}");
                     }
                 }
+
+                // Lọc các lựa chọn
+                segment.Choices = segment.Choices
+                    .Where(c => c.NextSegment != null &&
+                                c.NextSegment.Chapter.StoryId == story.Id &&
+                                c.NextSegment.Chapter.IsPublic)
+                    .ToList();
+                Console.WriteLine($"Choices for segment {segment.Id} after filtering: {segment.Choices.Count}");
+                foreach (var choice in segment.Choices)
+                {
+                    Console.WriteLine($"Filtered Choice ID: {choice.Id}, NextSegmentId: {choice.NextSegmentId}, NextSegment ChapterId: {choice.NextSegment.ChapterId}, NextSegment Chapter IsPublic: {choice.NextSegment.Chapter.IsPublic}");
+                }
+
+                // Tăng lượt xem chapter chỉ khi vào đoạn đầu tiên
+                var firstSegment = await _context.ChapterSegments
+                    .Where(s => s.ChapterId == chapter.Id && s.Chapter.IsPublic)
+                    .OrderBy(s => s.Id)
+                    .FirstOrDefaultAsync();
+                if (segment.Id == firstSegment?.Id)
+                {
+                    chapter.ViewCount++;
+                    await _context.SaveChangesAsync();
+                }
+
+                // Lưu tiến trình đọc nếu người dùng đã đăng nhập
+                var user = await _userManager.GetUserAsync(User);
+                if (user != null)
+                {
+                    var progress = await _context.ReadingProgresses
+                        .FirstOrDefaultAsync(rp => rp.UserId == user.Id && rp.StoryId == story.Id);
+
+                    if (progress == null)
+                    {
+                        progress = new ReadingProgress
+                        {
+                            UserId = user.Id,
+                            StoryId = story.Id,
+                            ChapterSegmentId = segment.Id,
+                            LastReadAt = DateTime.Now
+                        };
+                        _context.ReadingProgresses.Add(progress);
+                    }
+                    else
+                    {
+                        progress.ChapterSegmentId = segment.Id;
+                        progress.LastReadAt = DateTime.Now;
+                    }
+                    await _context.SaveChangesAsync();
+                }
+
+                // Kiểm tra xem truyện đã có trong thư viện chưa
+                bool isInLibrary = user != null && await _context.Libraries.AnyAsync(l => l.UserId == user.Id && l.StoryId == story.Id);
+                ViewBag.IsInLibrary = isInLibrary;
+
+                // Thêm trạng thái đăng nhập vào ViewBag
+                ViewBag.IsAuthenticated = user != null;
+
+                // Kiểm tra tùy chỉnh nếu truyện có AllowCustomization = true
+                ReaderStoryCustomization customization = null;
+                if (story.AllowCustomization)
+                {
+                    string userId = user?.Id ?? "anonymous";
+                    if (user != null)
+                    {
+                        customization = await _context.ReaderStoryCustomizations
+                            .FirstOrDefaultAsync(rsc => rsc.StoryId == story.Id && rsc.UserId == userId);
+                    }
+                    else
+                    {
+                        var sessionKey = $"Customization_{story.Id}";
+                        var sessionData = HttpContext.Session.GetString(sessionKey);
+                        if (!string.IsNullOrEmpty(sessionData))
+                        {
+                            customization = JsonSerializer.Deserialize<ReaderStoryCustomization>(sessionData);
+                            Console.WriteLine($"Retrieved customization from Session for storyId {story.Id}: {sessionData}");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"No customization found in Session for storyId {story.Id}");
+                        }
+                    }
+                }
+
+                // Chuyển đổi nội dung thành HTML với Markdown và tùy chỉnh
+                segment.Content = MarkdownFormatter.FormatContent(segment.Content ?? string.Empty, customization);
+
+                ViewBag.StoryId = story.Id;
+                ViewBag.CurrentChapterId = chapter.Id;
+                ViewBag.Customization = customization;
+
+                var hasNextChapter = await _context.Chapters
+                    .AnyAsync(c => c.StoryId == story.Id && c.IsPublic && c.CreatedAt > chapter.CreatedAt);
+
+                var chapters = await _context.Chapters
+                    .Where(c => c.StoryId == story.Id && c.IsPublic)
+                    .OrderBy(c => c.CreatedAt)
+                    .ToListAsync();
+
+                var currentIndex = chapters.FindIndex(c => c.Id == chapter.Id);
+                ViewBag.HasPreviousChapter = currentIndex > 0;
+                ViewBag.HasNextChapter = currentIndex < chapters.Count - 1;
+
+                return View(segment);
             }
-
-            // Chuyển đổi nội dung thành HTML với Markdown và tùy chỉnh
-            segment.Content = MarkdownFormatter.FormatContent(segment.Content, customization);
-
-            // Lọc các lựa chọn
-            segment.Choices = segment.Choices
-                .Where(c => c.NextSegment != null &&
-                            c.NextSegment.ChapterId == segment.ChapterId &&
-                            c.NextSegment.Chapter.StoryId == story.Id &&
-                            c.NextSegment.Chapter.IsPublic)
-                .ToList();
-
-            ViewBag.StoryId = story.Id;
-            ViewBag.CurrentChapterId = chapter.Id;
-            ViewBag.Customization = customization;
-
-            var hasNextChapter = await _context.Chapters
-                .AnyAsync(c => c.StoryId == story.Id && c.IsPublic && c.CreatedAt > chapter.CreatedAt);
-
-            ViewBag.HasNextChapter = hasNextChapter;
-
-            return View(segment);
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in InteractiveRead: {ex.Message}\n{ex.StackTrace}");
+                return StatusCode(500, "Có lỗi xảy ra khi tải đoạn truyện.");
+            }
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [AllowAnonymous]
+        public async Task<IActionResult> PrevChapter(int currentSegmentId)
+        {
+            var currentSegment = await _context.ChapterSegments
+                .Include(s => s.Chapter)
+                    .ThenInclude(c => c.Story)
+                        .ThenInclude(s => s.Chapters)
+                .FirstOrDefaultAsync(s => s.Id == currentSegmentId);
+
+            if (currentSegment == null || currentSegment.Chapter == null || currentSegment.Chapter.Story == null)
+                return NotFound();
+
+            var story = currentSegment.Chapter.Story;
+            var currentChapter = currentSegment.Chapter;
+
+            // Sắp xếp các chương theo CreatedAt và lọc chương công khai
+            var chapters = await _context.Chapters
+                .Where(c => c.StoryId == story.Id && c.IsPublic)
+                .OrderBy(c => c.CreatedAt)
+                .ToListAsync();
+
+            var currentIndex = chapters.FindIndex(c => c.Id == currentChapter.Id);
+
+            if (currentIndex <= 0) // Không có chương trước
+            {
+                TempData["ErrorMessage"] = "Không có chương trước để chuyển.";
+                return RedirectToAction("InteractiveRead", new { id = currentSegmentId });
+            }
+
+            var prevChapter = chapters[currentIndex - 1];
+
+            // Tìm segment đầu tiên của chương trước
+            var firstSegment = await _context.ChapterSegments
+                .Where(s => s.ChapterId == prevChapter.Id)
+                .OrderBy(s => s.Id)
+                .FirstOrDefaultAsync();
+
+            if (firstSegment == null)
+            {
+                TempData["ErrorMessage"] = "Chương trước chưa có nội dung.";
+                return RedirectToAction("InteractiveRead", new { id = currentSegmentId });
+            }
+
+            return RedirectToAction("InteractiveRead", new { id = firstSegment.Id });
+        }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -220,24 +327,25 @@ namespace InteractiveStoryWeb.Controllers
                 .OrderBy(c => c.CreatedAt)
                 .FirstOrDefaultAsync();
 
-            if (nextChapter != null)
+            if (nextChapter == null)
             {
-                var firstSegment = await _context.ChapterSegments
-                    .Where(s => s.ChapterId == nextChapter.Id)
-                    .OrderBy(s => s.Id)
-                    .FirstOrDefaultAsync();
-
-                if (firstSegment != null)
-                {
-                    return RedirectToAction("InteractiveRead", new { id = firstSegment.Id });
-                }
+                TempData["Message"] = "Không có chương tiếp theo.";
+                return RedirectToAction("InteractiveRead", new { id = currentSegmentId });
             }
 
-            TempData["Message"] = "Không có chương tiếp theo.";
-            return RedirectToAction("InteractiveRead", new { id = currentSegmentId });
+            var firstSegment = await _context.ChapterSegments
+                .Where(s => s.ChapterId == nextChapter.Id)
+                .OrderBy(s => s.Id)
+                .FirstOrDefaultAsync();
+
+            if (firstSegment == null)
+            {
+                TempData["Message"] = "Chương tiếp theo chưa có nội dung.";
+                return RedirectToAction("InteractiveRead", new { id = currentSegmentId });
+            }
+
+            return RedirectToAction("InteractiveRead", new { id = firstSegment.Id });
         }
-
-
 
         [HttpGet]
         public async Task<IActionResult> GetSegmentJson(int id)
@@ -259,6 +367,346 @@ namespace InteractiveStoryWeb.Controllers
                     text = c.ChoiceText,
                     nextId = c.NextSegmentId
                 })
+            });
+        }
+
+        [HttpGet]
+        [AllowAnonymous]
+        public async Task<IActionResult> PrevChapterJson(int currentChapterId)
+        {
+            Console.WriteLine($"PrevChapterJson called with currentChapterId: {currentChapterId}");
+
+            var currentChapter = await _context.Chapters
+                .Include(c => c.Story)
+                    .ThenInclude(s => s.Author)
+                .FirstOrDefaultAsync(c => c.Id == currentChapterId);
+
+            if (currentChapter == null || currentChapter.Story == null)
+            {
+                Console.WriteLine($"Current chapter not found for ID: {currentChapterId}");
+                return Json(new { success = false, message = "Chương không tồn tại." });
+            }
+
+            var storyId = currentChapter.StoryId;
+
+            var prevChapter = await _context.Chapters
+                .Where(c => c.StoryId == storyId && c.IsPublic && c.CreatedAt < currentChapter.CreatedAt)
+                .OrderByDescending(c => c.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (prevChapter == null)
+            {
+                return Json(new { success = false, message = "Không có chương trước để chuyển." });
+            }
+
+            var firstSegment = await _context.ChapterSegments
+                .Include(s => s.Choices)
+                    .ThenInclude(c => c.NextSegment)
+                        .ThenInclude(ns => ns.Chapter)
+                            .ThenInclude(c => c.Story)
+                                .ThenInclude(s => s.Author)
+                .Where(s => s.ChapterId == prevChapter.Id)
+                .OrderBy(s => s.Id)
+                .FirstOrDefaultAsync();
+
+            if (firstSegment == null)
+            {
+                return Json(new { success = false, message = "Chương trước chưa có nội dung." });
+            }
+
+            // Tăng ViewCount nếu đây là đoạn đầu tiên của chương
+            var firstSegmentOfChapter = await _context.ChapterSegments
+                .Where(s => s.ChapterId == prevChapter.Id && s.Chapter.IsPublic)
+                .OrderBy(s => s.Id)
+                .FirstOrDefaultAsync();
+            if (firstSegment.Id == firstSegmentOfChapter?.Id)
+            {
+                prevChapter.ViewCount++;
+                await _context.SaveChangesAsync();
+            }
+
+            // Lấy thông tin người dùng một lần duy nhất
+            var user = await _userManager.GetUserAsync(User);
+
+            // Lấy thông tin tùy chỉnh nếu có
+            ReaderStoryCustomization customization = null;
+            if (currentChapter.Story.AllowCustomization)
+            {
+                string userId = user?.Id ?? "anonymous";
+
+                if (user != null)
+                {
+                    customization = await _context.ReaderStoryCustomizations
+                        .FirstOrDefaultAsync(rsc => rsc.StoryId == storyId && rsc.UserId == userId);
+                }
+                else
+                {
+                    var sessionKey = $"Customization_{storyId}";
+                    var sessionData = HttpContext.Session.GetString(sessionKey);
+                    if (!string.IsNullOrEmpty(sessionData))
+                    {
+                        customization = JsonSerializer.Deserialize<ReaderStoryCustomization>(sessionData);
+                        Console.WriteLine($"Retrieved customization from Session for storyId {storyId}: {sessionData}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"No customization found in Session for storyId {storyId}");
+                    }
+                }
+            }
+
+            // Định dạng nội dung với Markdown và tùy chỉnh
+            var content = MarkdownFormatter.FormatContent(firstSegment.Content ?? string.Empty, customization);
+
+            // Xác định chương trước và chương sau
+            var chapters = await _context.Chapters
+                .Where(c => c.StoryId == storyId && c.IsPublic)
+                .OrderBy(c => c.CreatedAt)
+                .ToListAsync();
+            var currentIndex = chapters.FindIndex(c => c.Id == prevChapter.Id);
+            var hasPreviousChapter = currentIndex > 0;
+            var previousChapter = hasPreviousChapter ? chapters[currentIndex - 1] : null;
+            var hasNextChapter = currentIndex >= 0 && currentIndex < chapters.Count - 1;
+            var nextChapter = hasNextChapter ? chapters[currentIndex + 1] : null;
+
+            // Lấy segment đầu tiên của chương trước và chương sau
+            int? previousSegmentId = null;
+            if (previousChapter != null)
+            {
+                var firstSegmentOfPrevious = await _context.ChapterSegments
+                    .Where(s => s.ChapterId == previousChapter.Id)
+                    .OrderBy(s => s.Id)
+                    .FirstOrDefaultAsync();
+                previousSegmentId = firstSegmentOfPrevious?.Id;
+            }
+
+            int? nextSegmentId = null;
+            if (nextChapter != null)
+            {
+                var firstSegmentOfNext = await _context.ChapterSegments
+                    .Where(s => s.ChapterId == nextChapter.Id)
+                    .OrderBy(s => s.Id)
+                    .FirstOrDefaultAsync();
+                nextSegmentId = firstSegmentOfNext?.Id;
+            }
+
+            // Lấy danh sách các lựa chọn
+            var choices = firstSegment.Choices
+                .Where(c => c.NextSegment != null &&
+                            c.NextSegment.Chapter.StoryId == storyId &&
+                            c.NextSegment.Chapter.IsPublic)
+                .Select(c => new
+                {
+                    id = c.Id,
+                    choiceText = c.ChoiceText
+                }).ToList();
+
+            // Kiểm tra xem truyện đã có trong thư viện chưa
+            var isInLibrary = user != null && await _context.Libraries.AnyAsync(l => l.UserId == user.Id && l.StoryId == storyId);
+
+            // Lấy thông tin tác giả
+            var author = currentChapter.Story.Author;
+            var authorAvatarUrl = string.IsNullOrEmpty(author?.AvatarUrl) ? "/images/AvatarNull.jpg" : author.AvatarUrl;
+
+            // Trả về dữ liệu JSON
+            return Json(new
+            {
+                success = true,
+                data = new
+                {
+                    segmentId = firstSegment.Id,
+                    chapterId = prevChapter.Id,
+                    storyId = storyId,
+                    storyTitle = currentChapter.Story.Title,
+                    chapterTitle = prevChapter.Title,
+                    segmentTitle = firstSegment.Title,
+                    content = content,
+                    imageUrl = firstSegment.ImageUrl,
+                    imagePosition = firstSegment.ImagePosition.ToString(),
+                    allowCustomization = currentChapter.Story.AllowCustomization,
+                    choices = choices,
+                    hasNextChapter = hasNextChapter,
+                    hasPreviousChapter = hasPreviousChapter,
+                    previousSegmentId = previousSegmentId,
+                    nextSegmentId = nextSegmentId,
+                    createdAt = prevChapter.CreatedAt.ToString("dd/MM/yyyy HH:mm"),
+                    updatedAt = prevChapter.UpdatedAt?.ToString("dd/MM/yyyy HH:mm"),
+                    authorId = author?.Id,
+                    authorUserName = author?.UserName,
+                    authorAvatarUrl = authorAvatarUrl,
+                    isInLibrary = isInLibrary,
+                    isAuthenticated = user != null
+                }
+            });
+        }
+
+        [HttpGet]
+        [AllowAnonymous]
+        public async Task<IActionResult> NextChapterJson(int currentChapterId)
+        {
+            Console.WriteLine($"NextChapterJson called with currentChapterId: {currentChapterId}");
+
+            var currentChapter = await _context.Chapters
+                .Include(c => c.Story)
+                    .ThenInclude(s => s.Author)
+                .FirstOrDefaultAsync(c => c.Id == currentChapterId);
+
+            if (currentChapter == null || currentChapter.Story == null)
+            {
+                Console.WriteLine($"Current chapter not found for ID: {currentChapterId}");
+                return Json(new { success = false, message = "Chương không tồn tại." });
+            }
+
+            var storyId = currentChapter.StoryId;
+
+            var nextChapter = await _context.Chapters
+                .Where(c => c.StoryId == storyId && c.IsPublic && c.CreatedAt > currentChapter.CreatedAt)
+                .OrderBy(c => c.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (nextChapter == null)
+            {
+                return Json(new { success = false, message = "Không có chương sau để chuyển." });
+            }
+
+            var firstSegment = await _context.ChapterSegments
+                .Include(s => s.Choices)
+                    .ThenInclude(c => c.NextSegment)
+                        .ThenInclude(ns => ns.Chapter)
+                            .ThenInclude(c => c.Story)
+                                .ThenInclude(s => s.Author) // Thêm Include cho Author
+                .Where(s => s.ChapterId == nextChapter.Id)
+                .OrderBy(s => s.Id)
+                .FirstOrDefaultAsync();
+
+            if (firstSegment == null)
+            {
+                return Json(new { success = false, message = "Chương tiếp theo chưa có nội dung." });
+            }
+
+            // Tăng ViewCount nếu đây là đoạn đầu tiên của chương
+            var firstSegmentOfChapter = await _context.ChapterSegments
+                .Where(s => s.ChapterId == nextChapter.Id && s.Chapter.IsPublic)
+                .OrderBy(s => s.Id)
+                .FirstOrDefaultAsync();
+            if (firstSegment.Id == firstSegmentOfChapter?.Id)
+            {
+                nextChapter.ViewCount++;
+                await _context.SaveChangesAsync();
+            }
+
+            // Lấy thông tin người dùng một lần duy nhất
+            var user = await _userManager.GetUserAsync(User);
+
+            // Lấy thông tin tùy chỉnh nếu có
+            ReaderStoryCustomization customization = null;
+            if (currentChapter.Story.AllowCustomization)
+            {
+                string userId = user?.Id ?? "anonymous";
+
+                if (user != null)
+                {
+                    customization = await _context.ReaderStoryCustomizations
+                        .FirstOrDefaultAsync(rsc => rsc.StoryId == storyId && rsc.UserId == userId);
+                }
+                else
+                {
+                    var sessionKey = $"Customization_{storyId}";
+                    var sessionData = HttpContext.Session.GetString(sessionKey);
+                    if (!string.IsNullOrEmpty(sessionData))
+                    {
+                        customization = JsonSerializer.Deserialize<ReaderStoryCustomization>(sessionData);
+                        Console.WriteLine($"Retrieved customization from Session for storyId {storyId}: {sessionData}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"No customization found in Session for storyId {storyId}");
+                    }
+                }
+            }
+
+            // Định dạng nội dung với Markdown và tùy chỉnh
+            var content = MarkdownFormatter.FormatContent(firstSegment.Content ?? string.Empty, customization);
+
+            // Xác định chương trước và chương sau
+            var chapters = await _context.Chapters
+                .Where(c => c.StoryId == storyId && c.IsPublic)
+                .OrderBy(c => c.CreatedAt)
+                .ToListAsync();
+            var currentIndex = chapters.FindIndex(c => c.Id == nextChapter.Id);
+            var hasPreviousChapter = currentIndex > 0;
+            var previousChapter = hasPreviousChapter ? chapters[currentIndex - 1] : null;
+            var hasNextChapter = currentIndex >= 0 && currentIndex < chapters.Count - 1;
+            var nextChapterAfter = hasNextChapter ? chapters[currentIndex + 1] : null;
+
+            // Lấy segment đầu tiên của chương trước và chương sau
+            int? previousSegmentId = null;
+            if (previousChapter != null)
+            {
+                var firstSegmentOfPrevious = await _context.ChapterSegments
+                    .Where(s => s.ChapterId == previousChapter.Id)
+                    .OrderBy(s => s.Id)
+                    .FirstOrDefaultAsync();
+                previousSegmentId = firstSegmentOfPrevious?.Id;
+            }
+
+            int? nextSegmentId = null;
+            if (nextChapterAfter != null)
+            {
+                var firstSegmentOfNext = await _context.ChapterSegments
+                    .Where(s => s.ChapterId == nextChapterAfter.Id)
+                    .OrderBy(s => s.Id)
+                    .FirstOrDefaultAsync();
+                nextSegmentId = firstSegmentOfNext?.Id;
+            }
+
+            // Lấy danh sách các lựa chọn
+            var choices = firstSegment.Choices
+                .Where(c => c.NextSegment != null &&
+                            c.NextSegment.Chapter.StoryId == storyId &&
+                            c.NextSegment.Chapter.IsPublic)
+                .Select(c => new
+                {
+                    id = c.Id,
+                    choiceText = c.ChoiceText
+                }).ToList();
+
+            // Kiểm tra xem truyện đã có trong thư viện chưa
+            var isInLibrary = user != null && await _context.Libraries.AnyAsync(l => l.UserId == user.Id && l.StoryId == storyId);
+
+            // Lấy thông tin tác giả
+            var author = currentChapter.Story.Author;
+            var authorAvatarUrl = string.IsNullOrEmpty(author?.AvatarUrl) ? "/images/AvatarNull.jpg" : author.AvatarUrl;
+
+            // Trả về dữ liệu JSON
+            return Json(new
+            {
+                success = true,
+                data = new
+                {
+                    segmentId = firstSegment.Id,
+                    chapterId = nextChapter.Id,
+                    storyId = storyId,
+                    storyTitle = currentChapter.Story.Title,
+                    chapterTitle = nextChapter.Title,
+                    segmentTitle = firstSegment.Title,
+                    content = content,
+                    imageUrl = firstSegment.ImageUrl,
+                    imagePosition = firstSegment.ImagePosition.ToString(),
+                    allowCustomization = currentChapter.Story.AllowCustomization,
+                    choices = choices,
+                    hasNextChapter = hasNextChapter,
+                    hasPreviousChapter = hasPreviousChapter,
+                    previousSegmentId = previousSegmentId,
+                    nextSegmentId = nextSegmentId,
+                    createdAt = nextChapter.CreatedAt.ToString("dd/MM/yyyy HH:mm"),
+                    updatedAt = nextChapter.UpdatedAt?.ToString("dd/MM/yyyy HH:mm"),
+                    authorId = author?.Id,
+                    authorUserName = author?.UserName,
+                    authorAvatarUrl = authorAvatarUrl,
+                    isInLibrary = isInLibrary,
+                    isAuthenticated = user != null
+                }
             });
         }
 
@@ -467,19 +915,13 @@ namespace InteractiveStoryWeb.Controllers
             ReaderStoryCustomization customization = null;
             if (chapter.Story.AllowCustomization)
             {
-                string userId = user.Id;
-                customization = await _context.ReaderStoryCustomizations
-                    .FirstOrDefaultAsync(rsc => rsc.StoryId == chapter.StoryId && rsc.UserId == userId);
-
-                if (customization == null)
-                {
-                    customization = new ReaderStoryCustomization
+               
+                     customization = new ReaderStoryCustomization
                     {
-                        Name = "Người đọc",
+                        Name = "NgườiĐọc",
                         FirstPersonPronoun = "Tôi",
                         SecondPersonPronoun = "Bạn"
                     };
-                }
             }
 
             var previewContent = MarkdownFormatter.FormatContent(content, customization);

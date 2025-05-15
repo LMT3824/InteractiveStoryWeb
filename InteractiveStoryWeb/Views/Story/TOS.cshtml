@@ -1,0 +1,156 @@
+﻿@model string
+@{
+    ViewData["Title"] = "Điều khoản tùy chỉnh nhân vật";
+}
+
+<style>
+    /* Khung chính căn đều với header trang */
+    .main-container {
+        max-width: 1600px;
+        margin: 0 auto; /* Căn giữa khung */
+    }
+
+    /* Khung nội dung TOS */
+    .tos-container {
+        max-width: 1300px; /* Đồng bộ với các trang khác */
+        margin: 0 auto; /* Căn giữa khung */
+        margin-top: 24px;
+        padding: 24px;
+        background: #FFF7EF; /* Nền màu be nhạt */
+        border: 2px solid #BCAA98; /* Viền màu nâu nhạt */
+        border-radius: 8px; /* Bo góc */
+    }
+
+    /* Header bên trong TOS */
+    .tos-header {
+        display: flex;
+        justify-content: space-between; /* Tiêu đề trái, nút phải */
+        align-items: center;
+        margin-bottom: 24px;
+    }
+
+    .tos-header-left {
+        display: flex;
+        align-items: center;
+    }
+
+    /* Nút quay lại */
+    .back-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 38px;
+        height: 38px;
+        border-radius: 4px;
+        text-decoration: none; /* Bỏ gạch chân */
+        color: #000000;
+        transition: background .2s;
+        margin-right: 12px;
+    }
+
+        .back-button:hover {
+            background: rgba(122,75,22,0.1);
+            color: #000000;
+        }
+
+        .back-button svg {
+            width: 100%;
+            height: 100%;
+        }
+
+    /* Tiêu đề TOS */
+    .tos-header h2 {
+        font-family: 'STIX Two Text', serif;
+        font-weight: 700;
+        font-size: 32px;
+        margin-top: 26px;
+        margin-bottom: 20px;
+        line-height: 30px;
+    }
+
+    /* Nội dung TOS */
+    .tos-content h3 {
+        font-family: 'STIX Two Text', serif;
+        font-weight: 600;
+        font-size: 24px;
+        margin-top: 20px;
+        margin-bottom: 12px;
+        color: #000;
+    }
+
+    .tos-content p {
+        font-size: 20px;
+        line-height: 1.8;
+        color: #333;
+        margin-bottom: 16px;
+    }
+
+    .tos-content ul {
+        list-style-type: disc;
+        margin-left: 22px;
+        margin-bottom: 16px;
+    }
+
+        .tos-content ul li {
+            font-size: 20px;
+            line-height: 1.8;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+    .tos-content .example {
+        font-style: italic;
+        color: #7A6A5A;
+        margin-top: 8px;
+        display: block;
+    }
+</style>
+
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Itim&display=swap" rel="stylesheet">
+
+<div class="main-container">
+    <div class="tos-container">
+        <!-- Header với nú/calt quay lại và tiêu đề -->
+        <div class="tos-header">
+            <div class="tos-header-left">
+                <a href="javascript:history.back()" class="back-button" title="Quay về trang trước">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </a>
+                <h2>ĐIỀU KHOẢN TÙY CHỈNH NHÂN VẬT</h2>
+            </div>
+        </div>
+
+        <div class="tos-content">
+            <h3>Chức năng tùy chỉnh xưng hô và tên nhân vật chính là gì?</h3>
+            <p>Chức năng này được thiết kế dành cho các tác giả muốn người đọc hóa thân thành nhân vật chính, nâng cao trải nghiệm nhập vai và mức tương tác trong quá trình đọc truyện. Việc này sẽ giúp người đọc trải nghiệm như được “sống trong câu chuyện” mà không phải chỉ là người đọc thụ động.</p>
+            <p>Khi bạn bật tính năng này, hệ thống sẽ thay thế các từ khóa <strong>[Tên]</strong>, <strong>[XưngHôThứNhất]</strong>, <strong>[XưngHôThứHai]</strong> trong nội dung truyện bằng thông tin từ bảng tùy chỉnh nhân vật chính người đọc nhập.</p>
+
+            <h3>Giải thích các từ khóa</h3>
+            <ul>
+                <li><strong>[Tên]</strong>: Tên của nhân vật chính mà người đọc nhập.</li>
+                <li>
+                    <strong>[XưngHôThứNhất]</strong>: Cách nhân vật chính xưng hô khi nói về bản thân (ví dụ: Tôi, mình, tớ, tao, ...). Thường dùng trong góc nhìn thứ nhất.
+                    <span class="example">Ví dụ: “<strong>[XưngHôThứNhất]</strong> đâu biết rằng mọi chuyện sẽ diễn ra thế này."</span>
+                    <span class="example"> => “Tôi/Mình/Tớ/Tao đâu biết rằng mọi chuyện sẽ diễn ra thế này.”</span>
+                </li>
+                <li>
+                    <strong>[XưngHôThứHai]</strong>: Cách các nhân vật khác gọi nhân vật chính, thường liên quan đến giới tính hoặc trung lập (ví dụ: Bạn, cô, anh, ...). Thường dùng trong góc nhìn thứ ba.
+                    <span class="example">Ví dụ: “<strong>[XưngHôThứHai]</strong> hoảng hốt tỉnh dậy khỏi cơn ác mộng.”</span>
+                    <span class="example"> => “Bạn/Anh/Cô hoảng hốt tỉnh dậy khỏi cơn ác mộng.”</span>
+                </li>
+            </ul>
+
+            <h3>Lưu ý cho tác giả</h3>
+            <ul>
+                <li>Chỉ sử dụng tính năng này khi câu chuyện được thiết kế để người đọc nhập vai nhân vật chính.</li>
+                <li>Nên thống nhất cách dùng từ khóa và kiểm tra lỗi chính tả để tránh lỗi thay thế.</li>
+                <li>
+                    Hiện tại rủi ro việc tên các nhân vật mặc định có thể trùng với bảng tùy chỉnh nhân vật chính của người đọc vẫn có thể xảy ra. Chúng mình đang nghiêm túc xem xét và cải thiện điều này, mong mọi người thông cảm và kiên nhẫn đợi.
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>

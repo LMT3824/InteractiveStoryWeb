@@ -47,6 +47,9 @@ namespace InteractiveStoryWeb.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsBanned")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
 
@@ -236,9 +239,6 @@ namespace InteractiveStoryWeb.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("ChapterId")
-                        .HasColumnType("int");
-
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -260,8 +260,6 @@ namespace InteractiveStoryWeb.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("ChapterId");
 
                     b.HasIndex("StoryId");
 
@@ -350,6 +348,13 @@ namespace InteractiveStoryWeb.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("UserId")
                         .HasColumnType("nvarchar(450)");
@@ -544,6 +549,9 @@ namespace InteractiveStoryWeb.Migrations
                     b.Property<bool>("IsCompleted")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsHidden")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsPublic")
                         .HasColumnType("bit");
 
@@ -590,6 +598,55 @@ namespace InteractiveStoryWeb.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("SupportTickets");
+                });
+
+            modelBuilder.Entity("InteractiveStoryWeb.Models.SupportTicketResponse", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AdminId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("SupportTicketId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AdminId");
+
+                    b.HasIndex("SupportTicketId");
+
+                    b.ToTable("SupportTicketResponses");
+                });
+
+            modelBuilder.Entity("InteractiveStoryWeb.Models.UserNotificationRead", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("NotificationId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.HasKey("UserId", "NotificationId");
+
+                    b.HasIndex("NotificationId");
+
+                    b.ToTable("UserNotificationReads");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -797,11 +854,6 @@ namespace InteractiveStoryWeb.Migrations
 
             modelBuilder.Entity("InteractiveStoryWeb.Models.Comment", b =>
                 {
-                    b.HasOne("InteractiveStoryWeb.Models.Chapter", "Chapter")
-                        .WithMany()
-                        .HasForeignKey("ChapterId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("InteractiveStoryWeb.Models.Story", "Story")
                         .WithMany()
                         .HasForeignKey("StoryId")
@@ -813,8 +865,6 @@ namespace InteractiveStoryWeb.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.Navigation("Chapter");
 
                     b.Navigation("Story");
 
@@ -992,6 +1042,44 @@ namespace InteractiveStoryWeb.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("InteractiveStoryWeb.Models.SupportTicketResponse", b =>
+                {
+                    b.HasOne("InteractiveStoryWeb.Models.ApplicationUser", "Admin")
+                        .WithMany()
+                        .HasForeignKey("AdminId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InteractiveStoryWeb.Models.SupportTicket", "SupportTicket")
+                        .WithMany("SupportTicketResponses")
+                        .HasForeignKey("SupportTicketId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Admin");
+
+                    b.Navigation("SupportTicket");
+                });
+
+            modelBuilder.Entity("InteractiveStoryWeb.Models.UserNotificationRead", b =>
+                {
+                    b.HasOne("InteractiveStoryWeb.Models.Notification", "Notification")
+                        .WithMany()
+                        .HasForeignKey("NotificationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("InteractiveStoryWeb.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Notification");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -1066,6 +1154,11 @@ namespace InteractiveStoryWeb.Migrations
             modelBuilder.Entity("InteractiveStoryWeb.Models.Story", b =>
                 {
                     b.Navigation("Chapters");
+                });
+
+            modelBuilder.Entity("InteractiveStoryWeb.Models.SupportTicket", b =>
+                {
+                    b.Navigation("SupportTicketResponses");
                 });
 #pragma warning restore 612, 618
         }

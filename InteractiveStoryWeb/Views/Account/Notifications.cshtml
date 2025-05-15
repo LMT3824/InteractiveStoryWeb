@@ -1,0 +1,100 @@
+﻿@model List<InteractiveStoryWeb.Models.Notification>
+
+@{
+    ViewData["Title"] = "Thông Báo";
+}
+
+<style>
+.page-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+        .page-header .back-arrow {
+            cursor: pointer;
+            color: #000;
+            text-decoration: none;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            vertical-align: middle;
+        }
+
+            .page-header .back-arrow:hover {
+                background: rgba(122,75,22,0.1);
+                color: #000000;
+            }
+
+            .page-header .back-arrow svg {
+                width: 100%;
+                height: 100%;
+            }
+
+        .page-header h2 {
+            font-family: 'STIX Two Text', serif;
+            font-weight: 700;
+            font-size: 32px;
+            margin-top: 26px;
+            margin-bottom: 20px;
+            line-height: 30px;
+        }
+
+    .list-group-item {
+        font-family: 'Itim', cursive;
+        border: 1px solid #e0e0e0;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        padding: 15px;
+        background-color: #fff;
+    }
+
+    .notification-title {
+        font-family: 'STIX Two Text', serif;
+        font-size: 25px;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    .notification-content {
+        font-size: 18px;
+        margin-bottom: 5px;
+    }
+
+    .notification-time {
+        font-size: 14px;
+        color: #666;
+    }
+</style>
+
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text&display=swap" rel="stylesheet">
+
+<div class="page-header">
+    <a href="javascript:history.back()" class="back-arrow">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+    </a>
+    <h2>THÔNG BÁO</h2>
+</div>
+
+@if (!Model.Any())
+{
+    <p>Không có thông báo nào.</p>
+}
+else
+{
+    <div class="list-group">
+        @foreach (var notification in Model)
+        {
+            <div class="list-group-item">
+                <div class="notification-title">@notification.Title</div>
+                <div class="notification-content">@notification.Content</div>
+                <div class="notification-time">@notification.CreatedAt.ToString("dd/MM/yyyy HH:mm")</div>
+            </div>
+        }
+    </div>
+}

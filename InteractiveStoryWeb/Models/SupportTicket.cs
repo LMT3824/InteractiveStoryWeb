@@ -9,5 +9,6 @@
         public bool IsResolved { get; set; } = false;
 
         public ApplicationUser User { get; set; }
+        public ICollection<SupportTicketResponse> SupportTicketResponses { get; set; } = new List<SupportTicketResponse>();
     }
 }

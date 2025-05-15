@@ -8,6 +8,7 @@
     var storiesCount = ViewBag.StoriesCount as int?;
     var isOwnProfile = ViewBag.IsOwnProfile as bool?;
     var isFollowing = ViewBag.IsFollowing as bool?;
+    var isBlocked = ViewBag.IsBlocked as bool?;
 }
 
 <link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:wght@400;700&display=swap" rel="stylesheet">
@@ -21,14 +22,13 @@
 
     #alert-container {
         width: 100%;
-        /* Bỏ max-width và margin để sát lề trái và dài bằng container (1600px) */
     }
 
     .alert {
         margin-bottom: 10px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        text-align: left; /* Văn bản trong thông báo sát lề trái */
-        width: 100%; /* Đảm bảo thông báo dài bằng container */
+        text-align: left;
+        width: 100%;
     }
 
     .profile-container {
@@ -40,6 +40,7 @@
         padding: 20px;
         margin-bottom: 20px;
         overflow: hidden;
+        user-select: none; /* Ngăn chọn */
     }
 
         .profile-container::before {
@@ -121,6 +122,7 @@
         border-radius: 10px;
         padding: 5px 15px;
         border: none;
+        margin-right: 10px;
     }
 
         .profile-actions button:hover, .profile-actions a:hover {
@@ -146,6 +148,7 @@
         font-weight: 700;
         font-size: 30px;
         margin-bottom: 20px;
+        user-select: none; /* Ngăn chọn */
     }
 
     .story-card {
@@ -160,6 +163,8 @@
         text-decoration: none;
         color: inherit;
         cursor: pointer;
+        position: relative;
+        user-select: none; /* Ngăn chọn */
     }
 
         .story-card:hover {
@@ -184,7 +189,7 @@
         display: flex;
         flex-direction: column;
         height: 100%;
-        position: relative; /* Để cố định story-genre ở dưới cùng */
+        position: relative;
     }
 
     .story-title {
@@ -197,7 +202,7 @@
         overflow: hidden;
         text-overflow: ellipsis;
         line-height: 1.3;
-        height: 52px; /* Cố định chiều cao cho 2 dòng (2 x 26px) */
+        height: 52px;
     }
 
     .story-stats {
@@ -206,8 +211,8 @@
         gap: 10px;
         margin: 5px 0;
         position: absolute;
-        top: 62px; /* 52px (chiều cao tiêu đề) + 10px (padding/margin) */
-        width: calc(100% - 20px); /* Trừ padding 10px mỗi bên */
+        top: 62px;
+        width: calc(100% - 20px);
     }
 
     .stat-item {
@@ -230,16 +235,16 @@
         margin: 0;
         line-height: 1.3;
         position: absolute;
-        top: 92px; /* 62px (vị trí story-stats) + 30px (chiều cao story-stats) */
-        bottom: 40px; /* Chừa chỗ cho story-genre (30px) + padding */
+        top: 92px;
+        bottom: 40px;
         overflow: hidden;
-        width: calc(100% - 20px); /* Trừ padding 10px mỗi bên */
+        width: calc(100% - 20px);
     }
 
     .story-genre {
         position: absolute;
-        bottom: 5px; /* Cố định ở dưới cùng của khung */
-        width: calc(100% - 20px); /* Trừ padding 10px mỗi bên */
+        bottom: 5px;
+        width: calc(100% - 20px);
     }
 
     .genre-tag {
@@ -328,6 +333,50 @@
             padding: 2px 5px;
             border-radius: 3px;
         }
+
+    .blocked-message {
+        display: none;
+        text-align: center;
+        font-size: 24px;
+        color: #000;
+        background: #FFFBF8;
+        padding: 20px;
+        border-radius: 10px;
+        margin: 20px 0;
+        position: relative;
+        z-index: 1;
+    }
+
+    .loading {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 15px;
+        border-radius: 5px;
+        z-index: 1000;
+    }
+
+    .hidden-story-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 20px;
+        font-size: 16px;
+        line-height: 1.5;
+        z-index: 10;
+        pointer-events: none;
+    }
 </style>
 
 @if (TempData["SuccessMessage"] != null)
@@ -348,6 +397,15 @@
 
 <div class="container">
     <div id="alert-container"></div>
+    <div class="blocked-message">
+        Bạn đã chặn người dùng này, bạn không thể xem trang cá nhân của họ được.
+        @if (isBlocked == true)
+        {
+            <div style="margin-top: 20px;">
+                <button class="btn btn-custom unblock-btn" data-user-id="@user.Id">Bỏ chặn</button>
+            </div>
+        }
+    </div>
     <div class="profile-container">
         <div class="profile-content">
             <div class="profile-left">
@@ -381,19 +439,26 @@
             @if (isOwnProfile == true)
             {
                 <button type="button" class="btn edit-profile-btn me-2">Sửa hồ sơ</button>
+                <a asp-action="BlockedList" asp-controller="Account" class="btn me-2">Danh sách chặn</a>
                 <a asp-area="Identity" asp-page="/Account/ChangePassword" class="btn me-2">Đổi mật khẩu</a>
-                <a asp-area="Identity" asp-page="/Account/EditUsername" class="btn">Đổi tên người dùng</a>
+                <a asp-area="Identity" asp-page="/Account/EditUsername" class="btn me-2">Đổi tên người dùng</a>
+                @if (User.IsInRole("User"))
+                {
+                    <a asp-action="CreateSupportTicket" asp-controller="Account" class="btn me-2">Hỗ trợ</a>
+                }
+                @if (User.IsInRole("Admin"))
+                {
+                    <a asp-controller="Admin" asp-action="Index" class="btn">Admin Dashboard</a>
+                }
             }
             else
             {
-                if (isFollowing == true)
-                {
-                    <button class="btn btn-custom unfollow-btn" data-user-id="@user.Id">Bỏ theo dõi</button>
-                }
-                else
-                {
-                    <button class="btn btn-custom follow-btn" data-user-id="@user.Id">Theo dõi</button>
-                }
+                <button class="btn btn-custom follow-btn @(isFollowing == true ? "unfollow-btn" : "")" data-user-id="@user.Id">
+                    @(isFollowing == true ? "Bỏ theo dõi" : "Theo dõi")
+                </button>
+                <button class="btn btn-custom @(isBlocked == true ? "unblock-btn" : "block-btn")" data-user-id="@user.Id">
+                    @(isBlocked == true ? "Bỏ chặn" : "Chặn")
+                </button>
             }
         </div>
 
@@ -417,21 +482,29 @@
             </form>
         </div>
     </div>
-    </div>
     <hr />
     <h2 class="mb-4">TRUYỆN CỦA TÔI</h2>
 
     @if (!Model.Any())
     {
-        <p>@(isOwnProfile == true ? "Bạn chưa đăng truyện nào." : "Người dùng này chưa đăng truyện nào.")</p>
+        <p>@(isOwnProfile == true ? "Bạn chưa đăng truyện nào." : "Người dùng này chưa đăng truyện nào hoặc truyện đã bị chặn.")</p>
     }
     else
     {
         <div class="story-row mb-5">
-            @foreach (var story in (isOwnProfile == true ? Model.OrderBy(s => s.CreatedAt) : Model.Where(s => s.IsPublic).OrderBy(s => s.CreatedAt)))
+            @foreach (var story in (isOwnProfile == true ? Model.OrderBy(s => s.CreatedAt) : Model.OrderBy(s => s.CreatedAt)))
             {
                 <div class="col">
-                    <a asp-controller="Story" asp-action="Details" asp-route-id="@story.Id" class="story-card">
+                    <div class="story-card"
+                    @if (!story.IsHidden) {
+                        @:onclick="window.location.href='@Url.Action("Details", "Story", new { id = story.Id })'"
+                    }>
+                        @if (story.IsHidden && isOwnProfile == true)
+                        {
+                            <div class="hidden-story-overlay">
+                                Truyện đã bị ẩn do vi phạm. Vui lòng báo cho admin nếu cần hỗ trợ.
+                            </div>
+                        }
                         <div class="story-image">
                             <img src="@(!string.IsNullOrEmpty(story.CoverImageUrl) ? story.CoverImageUrl : "/images/ImageNotFound.png")" alt="@story.Title" />
                         </div>
@@ -470,18 +543,17 @@
                                 <span class="genre-tag">@(string.IsNullOrEmpty(story.Genre) ? "Không có thể loại" : story.Genre)</span>
                             </div>
                         </div>
-                    </a>
+                    </div>
                     @if (isOwnProfile == true)
                     {
-                    <div class="card-footer">
-                        <a asp-controller="Story" asp-action="Edit" asp-route-id="@story.Id" class="btn btn-outline-dark btn-sm">Sửa truyện</a>
-                        <a asp-controller="Chapter" asp-action="Manage" asp-route-storyId="@story.Id" class="btn btn-outline-dark btn-sm">
-                            Quản lý chương
-                        </a>
-                        <button type="button" class="btn btn-outline-dark btn-sm delete-story-btn" data-story-id="@story.Id">
-                            Xóa truyện
-                        </button>
-                    </div>
+                        <div class="card-footer">
+                            @if (!story.IsHidden)
+                            {
+                                <a asp-controller="Story" asp-action="Edit" asp-route-id="@story.Id" class="btn btn-outline-dark btn-sm">Sửa truyện</a>
+                                <a asp-controller="Chapter" asp-action="Manage" asp-route-storyId="@story.Id" class="btn btn-outline-dark btn-sm">Quản lý chương</a>
+                            }
+                            <button type="button" class="btn btn-outline-dark btn-sm delete-story-btn" data-story-id="@story.Id">Xóa truyện</button>
+                        </div>
                     }
                 </div>
             }
@@ -503,7 +575,17 @@
                 @foreach (var progress in readingProgresses)
                 {
                     <div class="col">
-                        <div class="story-card" onclick="window.location.href='@Url.Action("Details", "Story", new { id = progress.Story.Id })'">
+                        <div class="story-card"
+                        @if (!progress.Story.IsHidden)
+                        {
+                            @:onclick="window.location.href='@Url.Action("Details", "Story", new { id = progress.Story.Id })'"
+                        }>
+                            @if (progress.Story.IsHidden)
+                            {
+                                <div class="hidden-story-overlay">
+                                    Truyện đã bị ẩn do vi phạm. Vui lòng báo cho admin nếu cần hỗ trợ.
+                                </div>
+                            }
                             <div class="story-image">
                                 <img src="@(string.IsNullOrEmpty(progress.Story.CoverImageUrl)
                                     ? Url.Content("~/images/ImageNotFound.png")
@@ -544,13 +626,13 @@
                             </div>
                         </div>
                         <div class="card-footer">
-                            @if (progress.ChapterSegmentId != null)
+                            @if (progress.ChapterSegmentId != null && !progress.Story.IsHidden)
                             {
                                 <a asp-controller="Segment" asp-action="InteractiveRead" asp-route-id="@progress.ChapterSegmentId" class="btn btn-outline-dark btn-sm">Tiếp tục đọc</a>
                             }
                             else
                             {
-                                <span class="text-muted">Không thể tiếp tục do đoạn đã bị xóa</span>
+                                <span class="text-muted">Không thể tiếp tục do đoạn đã bị xóa hoặc truyện bị ẩn</span>
                             }
                         </div>
                     </div>
@@ -565,33 +647,56 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         $(document).ready(function () {
+            // Biến theo dõi trạng thái chặn ở client
+            var isBlocked = @Json.Serialize(isBlocked == true);
+
             // Hàm hiển thị thông báo
             function showAlert(type, message) {
-                // Xóa các thông báo cũ
                 $('#alert-container').empty();
-
                 var $alert = $('<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
                     message + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>');
                 $('#alert-container').prepend($alert);
                 setTimeout(function () { $alert.alert('close'); }, 3000);
             }
 
+            // Hàm ẩn nội dung hồ sơ và hiển thị thông báo chặn
+            function hideProfileContent() {
+                $('.profile-container').fadeOut(200);
+                $('.story-row').fadeOut(200);
+                $('h2.mb-4').fadeOut(200);
+                $('.blocked-message').fadeIn(200);
+                $('.profile-actions').find('.follow-btn, .unfollow-btn, .block-btn, .unblock-btn').hide();
+            }
+
+            // Hàm hiển thị lại nội dung hồ sơ
+            function showProfileContent() {
+                $('.profile-container').fadeIn(200);
+                $('.story-row').fadeIn(200);
+                $('h2.mb-4').fadeIn(200);
+                $('.blocked-message').fadeOut(200);
+                $('.profile-actions').find('.follow-btn, .unfollow-btn, .block-btn, .unblock-btn').show();
+            }
+
+            // Kiểm tra trạng thái chặn ban đầu
+        @if (isBlocked == true)
+        {
+            @:hideProfileContent();
+        }
+
             // Hiển thị form chỉnh sửa
             $('.edit-profile-btn').on('click', function () {
                 $('.profile-display').hide();
                 $('.profile-edit').show();
-                updateCharCounter(); // Cập nhật số ký tự khi mở form
+                updateCharCounter();
             });
 
             // Hủy chỉnh sửa
             $('.cancel-profile-btn').on('click', function () {
                 $('.profile-display').show();
                 $('.profile-edit').hide();
-
-                // Đặt lại giá trị ban đầu
                 $('.profile-caption-input').val($('.profile-caption').text().trim() === 'Hiện không có nội dung' ? '' : $('.profile-caption').text().trim());
-                $('#avatarFile').val(''); // Xóa file đã chọn
-                updateCharCounter(); // Cập nhật lại số ký tự
+                $('#avatarFile').val('');
+                updateCharCounter();
             });
 
             // Lưu thay đổi hồ sơ
@@ -612,7 +717,6 @@
                     contentType: false,
                     success: function (response) {
                         if (response.success) {
-                            // Cập nhật giao diện
                             if (response.avatarUrl) {
                                 $('.profile-avatar').attr('src', response.avatarUrl);
                             }
@@ -631,8 +735,9 @@
             });
 
             // Theo dõi người dùng
-            $(document).on('click', '.follow-btn', function () {
-                var targetUserId = $(this).data('user-id');
+            $(document).on('click', '.follow-btn:not(.unfollow-btn)', function () {
+                var $button = $(this);
+                var targetUserId = $button.data('user-id');
                 $.ajax({
                     url: '/Account/FollowUser',
                     type: 'POST',
@@ -642,10 +747,11 @@
                     },
                     success: function (response) {
                         if (response.success) {
-                            $(`button[data-user-id="${targetUserId}"]`)
-                                .removeClass('btn-custom follow-btn')
-                                .addClass('btn-custom unfollow-btn')
-                                .text('Bỏ theo dõi');
+                            $button
+                                .removeClass('follow-btn')
+                                .addClass('unfollow-btn')
+                                .text('Bỏ theo dõi')
+                                .fadeIn(200);
                             $('.followers-count').text(response.followersCount);
                             showAlert('success', response.message);
                         } else {
@@ -660,7 +766,8 @@
 
             // Bỏ theo dõi người dùng
             $(document).on('click', '.unfollow-btn', function () {
-                var targetUserId = $(this).data('user-id');
+                var $button = $(this);
+                var targetUserId = $button.data('user-id');
                 if (confirm('Bạn có chắc chắn muốn bỏ theo dõi người dùng này?')) {
                     $.ajax({
                         url: '/Account/UnfollowUser',
@@ -671,10 +778,11 @@
                         },
                         success: function (response) {
                             if (response.success) {
-                                $(`button[data-user-id="${targetUserId}"]`)
-                                    .removeClass('btn-custom unfollow-btn')
-                                    .addClass('btn-custom follow-btn')
-                                    .text('Theo dõi');
+                                $button
+                                    .removeClass('unfollow-btn')
+                                    .addClass('follow-btn')
+                                    .text('Theo dõi')
+                                    .fadeIn(200);
                                 $('.followers-count').text(response.followersCount);
                                 showAlert('success', response.message);
                             } else {
@@ -688,8 +796,123 @@
                 }
             });
 
-            // Lưu giá trị ban đầu của caption
-            $('.profile-caption-input').data('original-value', $('.profile-caption').text().trim());
+            // Chặn người dùng
+            $(document).on('click', '.block-btn:not(.unblock-btn)', function () {
+                var $button = $(this);
+                var targetUserId = $button.data('user-id');
+                if (confirm('Bạn có chắc chắn muốn chặn người dùng này? Nội dung của họ sẽ bị ẩn khỏi bạn.')) {
+                    $('body').append('<div class="loading">Đang xử lý...</div>');
+                    $.ajax({
+                        url: '/Account/BlockUser',
+                        type: 'POST',
+                        data: {
+                            blockedUserId: targetUserId,
+                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        success: function (response) {
+                            if (response.success) {
+                                $button
+                                    .removeClass('block-btn')
+                                    .addClass('unblock-btn')
+                                    .text('Bỏ chặn')
+                                    .fadeIn(200);
+                                isBlocked = true;
+                                showAlert('success', response.message);
+                                hideProfileContent();
+                            } else {
+                                showAlert('danger', response.message);
+                            }
+                        },
+                        error: function () {
+                            showAlert('danger', 'Có lỗi xảy ra khi chặn người dùng.');
+                        },
+                        complete: function () {
+                            $('.loading').remove();
+                        }
+                    });
+                }
+            });
+
+            // Bỏ chặn người dùng
+            $(document).on('click', '.unblock-btn', function () {
+                var $button = $(this);
+                var targetUserId = $button.data('user-id');
+                if (confirm('Bạn có chắc chắn muốn bỏ chặn người dùng này?')) {
+                    $('body').append('<div class="loading">Đang xử lý...</div>');
+                    $.ajax({
+                        url: '/Account/UnblockUser',
+                        type: 'POST',
+                        data: {
+                            blockedUserId: targetUserId,
+                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        success: function (response) {
+                            if (response.success) {
+                                $button
+                                    .removeClass('unblock-btn block-btn')
+                                    .addClass('block-btn')
+                                    .text('Chặn')
+                                    .fadeIn(200);
+                                var $followButton = $('.profile-actions').find('.follow-btn, .unfollow-btn');
+                                var isFollowing = $followButton.hasClass('unfollow-btn');
+                                $followButton
+                                    .removeClass('follow-btn unfollow-btn')
+                                    .addClass(isFollowing ? 'unfollow-btn' : 'follow-btn')
+                                    .text(isFollowing ? 'Bỏ theo dõi' : 'Theo dõi')
+                                    .fadeIn(200);
+                                isBlocked = false;
+                                showAlert('success', response.message);
+                                showProfileContent();
+                            } else {
+                                showAlert('danger', response.message);
+                            }
+                        },
+                        error: function () {
+                            showAlert('danger', 'Có lỗi xảy ra khi bỏ chặn người dùng.');
+                        },
+                        complete: function () {
+                            $('.loading').remove();
+                        }
+                    });
+                }
+            });
+
+            // Xóa truyện
+            $(document).on('click', '.delete-story-btn', function (e) {
+                e.preventDefault();
+                if (!confirm('Bạn có chắc chắn muốn xóa truyện này?')) return;
+
+                var storyId = $(this).data('story-id');
+                var token = $('input[name="__RequestVerificationToken"]').val();
+
+                $.ajax({
+                    url: '/Story/Delete',
+                    type: 'POST',
+                    data: {
+                        id: storyId,
+                        __RequestVerificationToken: token
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            $(`.col [data-story-id="${storyId}"]`).closest('.col').fadeOut(300, function () {
+                                $(this).remove();
+                                if ($('.story-row .col').length === 0) {
+                                    $('.story-row').before('<p>Bạn chưa đăng truyện nào.</p>');
+                                }
+                            });
+                            showAlert('success', response.message);
+                        } else {
+                            showAlert('danger', response.message);
+                        }
+                    },
+                    error: function (xhr) {
+                        var errorMessage = xhr.responseJSON && xhr.responseJSON.message
+                            ? xhr.responseJSON.message
+                            : 'Có lỗi xảy ra khi xóa truyện.';
+                        showAlert('danger', errorMessage);
+                    }
+                });
+            });
 
             // Cập nhật số ký tự trong textarea
             function updateCharCounter() {
@@ -697,54 +920,11 @@
                 $('#charCounter').text(captionLength + '/200');
             }
 
-            // Lắng nghe sự kiện input trên textarea
             $('#Caption').on('input', function () {
                 updateCharCounter();
             });
 
-            // Khởi tạo số ký tự
             updateCharCounter();
-        });
-
-                // Xóa truyện
-        $(document).on('click', '.delete-story-btn', function (e) {
-            e.preventDefault();
-            if (!confirm('Bạn có chắc chắn muốn xóa truyện này?')) return;
-
-            var storyId = $(this).data('story-id');
-            var token = $('input[name="__RequestVerificationToken"]').val();
-
-            $.ajax({
-                url: '/Story/Delete',
-                type: 'POST',
-                data: {
-                    id: storyId,
-                    __RequestVerificationToken: token
-                },
-                success: function (response) {
-                    if (response.success) {
-                        // Xóa card truyện khỏi giao diện
-                        $(`.col [data-story-id="${storyId}"]`).closest('.col').fadeOut(300, function() {
-                            $(this).remove();
-
-                            // Kiểm tra nếu không còn truyện nào thì hiển thị thông báo
-                            if ($('.story-row .col').length === 0) {
-                                $('.story-row').before('<p>Bạn chưa đăng truyện nào.</p>');
-                            }
-                        });
-
-                        showAlert('success', response.message);
-                    } else {
-                        showAlert('danger', response.message);
-                    }
-                },
-                error: function (xhr) {
-                    var errorMessage = xhr.responseJSON && xhr.responseJSON.message
-                        ? xhr.responseJSON.message
-                        : 'Có lỗi xảy ra khi xóa truyện.';
-                    showAlert('danger', errorMessage);
-                }
-            });
         });
     </script>
 }

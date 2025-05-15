@@ -1,9 +1,11 @@
 ﻿using InteractiveStoryWeb.Data;
 using InteractiveStoryWeb.Models;
+using InteractiveStoryWeb.Utils;
 using InteractiveStoryWeb.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 
 namespace InteractiveStoryWeb.Controllers
@@ -276,5 +278,114 @@ namespace InteractiveStoryWeb.Controllers
             return RedirectToAction("InteractiveRead", "Segment", new { id = choice.NextSegmentId });
         }
 
+        [HttpPost]
+        [AllowAnonymous]
+        public async Task<IActionResult> ChooseJson(int id)
+        {
+            var currentUser = await _userManager.GetUserAsync(User);
+            string currentUserId = currentUser?.Id;
+
+            var choice = await _context.Choices
+                .Include(c => c.NextSegment)
+                    .ThenInclude(ns => ns.Chapter)
+                        .ThenInclude(c => c.Story)
+                            .ThenInclude(s => s.Author)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (choice == null || choice.NextSegment == null)
+            {
+                return Json(new { success = false, message = "Lựa chọn không hợp lệ hoặc không tồn tại." });
+            }
+
+            var nextSegment = choice.NextSegment;
+            var chapter = nextSegment.Chapter;
+            var story = chapter.Story;
+
+            if (!chapter.IsPublic || !story.IsPublic || story.Author.IsBanned)
+            {
+                return Json(new { success = false, message = "Nội dung chưa được công khai hoặc tác giả đã bị cấm." });
+            }
+
+            // Kiểm tra trạng thái chặn
+            if (currentUserId != null)
+            {
+                bool isStoryBlocked = await _context.Blocks
+                    .AnyAsync(b => b.UserId == currentUserId && b.BlockedStoryId == story.Id);
+                bool isAuthorBlocked = await _context.Blocks
+                    .AnyAsync(b => b.UserId == currentUserId && b.BlockedUserId == story.AuthorId);
+                bool isBlockedByAuthor = await _context.Blocks
+                    .AnyAsync(b => b.UserId == story.AuthorId && b.BlockedUserId == currentUserId);
+
+                if (isStoryBlocked || isAuthorBlocked || isBlockedByAuthor)
+                {
+                    return Json(new { success = false, message = "Không thể truy cập nội dung do trạng thái chặn." });
+                }
+            }
+
+            // Lấy thông tin tùy chỉnh (nếu có)
+            ReaderStoryCustomization customization = null;
+            if (story.AllowCustomization)
+            {
+                string userId = currentUser?.Id ?? "anonymous";
+                if (currentUser != null)
+                {
+                    customization = await _context.ReaderStoryCustomizations
+                        .FirstOrDefaultAsync(rsc => rsc.StoryId == story.Id && rsc.UserId == userId);
+                }
+                else
+                {
+                    var sessionKey = $"Customization_{story.Id}";
+                    var sessionData = HttpContext.Session.GetString(sessionKey);
+                    if (!string.IsNullOrEmpty(sessionData))
+                    {
+                        customization = JsonSerializer.Deserialize<ReaderStoryCustomization>(sessionData);
+                    }
+                }
+            }
+
+            // Định dạng nội dung với Markdown và tùy chỉnh
+            var content = MarkdownFormatter.FormatContent(nextSegment.Content ?? string.Empty, customization);
+
+            // Lấy danh sách lựa chọn cho segment tiếp theo
+            var choices = await _context.Choices
+                .Where(c => c.ChapterSegmentId == nextSegment.Id)
+                .Include(c => c.NextSegment)
+                    .ThenInclude(ns => ns.Chapter)
+                .Where(c => c.NextSegment != null &&
+                           c.NextSegment.Chapter != null &&
+                           c.NextSegment.Chapter.StoryId == story.Id &&
+                           c.NextSegment.Chapter.IsPublic)
+                .Select(c => new
+                {
+                    id = c.Id,
+                    choiceText = c.ChoiceText
+                }).ToListAsync();
+
+            return Json(new
+            {
+                success = true,
+                data = new
+                {
+                    segmentId = nextSegment.Id,
+                    chapterId = chapter.Id,
+                    storyId = story.Id,
+                    storyTitle = story.Title,
+                    chapterTitle = chapter.Title,
+                    segmentTitle = nextSegment.Title,
+                    content = content,
+                    imageUrl = nextSegment.ImageUrl,
+                    imagePosition = nextSegment.ImagePosition.ToString(),
+                    allowCustomization = story.AllowCustomization,
+                    choices = choices,
+                    createdAt = chapter.CreatedAt.ToString("dd/MM/yyyy HH:mm"),
+                    updatedAt = chapter.UpdatedAt?.ToString("dd/MM/yyyy HH:mm"),
+                    authorId = story.Author?.Id,
+                    authorUserName = story.Author?.UserName ?? "Unknown", // Đảm bảo không null
+                    authorAvatarUrl = string.IsNullOrEmpty(story.Author?.AvatarUrl) ? "/images/AvatarNull.jpg" : story.Author.AvatarUrl,
+                    isInLibrary = currentUser != null && await _context.Libraries.AnyAsync(l => l.UserId == currentUser.Id && l.StoryId == story.Id),
+                    isAuthenticated = currentUser != null
+                }
+            });
+        }
     }
 }

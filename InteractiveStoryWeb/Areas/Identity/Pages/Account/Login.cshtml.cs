@@ -92,6 +92,13 @@ namespace InteractiveStoryWeb.Areas.Identity.Pages.Account
                     return Page();
                 }
 
+                // Kiểm tra xem tài khoản có bị chặn không
+                if (user.IsBanned)
+                {
+                    ModelState.AddModelError(string.Empty, "Tài khoản của bạn đã bị chặn. Vui lòng liên hệ quản trị viên.");
+                    return Page();
+                }
+
                 if (!await _signInManager.UserManager.IsEmailConfirmedAsync(user))
                 {
                     ModelState.AddModelError(string.Empty, "Tài khoản chưa xác nhận email.");

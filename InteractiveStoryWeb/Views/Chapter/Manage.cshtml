@@ -5,7 +5,57 @@
     var storyId = ViewBag.StoryId;
 }
 
-<h2 class="mb-4"><i class="bi bi-journal-bookmark"></i> Quản lý chương & phân nhánh của truyện</h2>
+<style>
+    .page-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+        .page-header .back-arrow {
+            cursor: pointer;
+            color: #000;
+            text-decoration: none;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            vertical-align: middle;
+        }
+
+            .page-header .back-arrow:hover {
+                background: rgba(122,75,22,0.1);
+                color: #000000;
+            }
+
+            .page-header .back-arrow svg {
+                width: 100%;
+                height: 100%;
+            }
+
+        .page-header h2 {
+            font-family: 'STIX Two Text', serif;
+            font-weight: 700;
+            font-size: 32px;
+            margin-top: 26px;
+            margin-bottom: 20px;
+            line-height: 30px;
+        }
+
+</style>
+
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text&display=swap" rel="stylesheet">
+
+<div class="page-header">
+    <a href="javascript:history.back()" class="back-arrow">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+    </a>
+    <h2>QUẢN LÝ CHƯƠNG VÀ PHÂN NHÁNH CỦA TRUYỆN</h2>
+</div>
 
 <div id="alert-container"></div>
 
@@ -58,7 +108,7 @@ else
     {
         <div class="card mb-3 border-primary" id="chapter-@chapter.Id">
             <div class="card-header bg-primary text-white fw-bold">
-                <i class="bi bi-journal-text"></i> <span class="chapter-title">Chương @chapter.Title</span> (ID: @chapter.Id)
+                <span class="chapter-title">@chapter.Title</span>
                 <span class="badge @(chapter.IsPublic ? "bg-success" : "bg-secondary") ms-2 is-public-badge">
                     @(chapter.IsPublic ? "Công khai" : "Không công khai")
                 </span>
@@ -68,10 +118,10 @@ else
 
                 <div class="float-end">
                     <button type="button" class="btn btn-warning btn-sm toggle-edit-form" data-chapter-id="@chapter.Id">
-                        <i class="bi bi-pencil"></i> Sửa
+                         Sửa
                     </button>
                     <button type="button" class="btn btn-danger btn-sm ms-2 delete-chapter-btn" data-chapter-id="@chapter.Id">
-                        <i class="bi bi-trash"></i> Xóa
+                         Xóa
                     </button>
                 </div>
             </div>
@@ -111,15 +161,15 @@ else
                     {
                         <div class="card mb-2 border-light" id="segment-@segment.Id">
                             <div class="card-header">
-                                <strong><span class="segment-title">Đoạn @segment.Title</span></strong> (ID: @segment.Id)
+                                <strong><span class="segment-title">@segment.Title</span></strong>
 
                                 <div class="float-end">
                                     <a asp-controller="Segment" asp-action="Edit" asp-route-id="@segment.Id"
                                        class="btn btn-sm btn-warning ms-2">
-                                        <i class="bi bi-pencil"></i> Sửa
+                                         Sửa
                                     </a>
                                     <button type="button" class="btn btn-sm btn-danger ms-2 delete-segment-btn" data-segment-id="@segment.Id" data-story-id="@chapter.StoryId">
-                                        <i class="bi bi-trash"></i> Xóa
+                                        Xóa
                                     </button>
                                 </div>
                             </div>
@@ -182,10 +232,10 @@ else
                                                 </div>
                                                 <div class="choice-actions">
                                                     <button type="button" class="btn btn-warning btn-sm edit-choice-btn ms-2">
-                                                        <i class="bi bi-pencil"></i> Sửa
+                                                         Sửa
                                                     </button>
                                                     <button type="button" class="btn btn-danger btn-sm ms-2 delete-choice-btn" data-choice-id="@choice.Id" data-story-id="@chapter.StoryId">
-                                                        <i class="bi bi-trash"></i> Xóa
+                                                         Xóa
                                                     </button>
                                                 </div>
                                             </li>
@@ -273,10 +323,10 @@ else
                                                     </div>
                                                     <div class="choice-actions">
                                                         <button type="button" class="btn btn-warning btn-sm edit-choice-btn ms-2">
-                                                            <i class="bi bi-pencil"></i> Sửa
+                                                             Sửa
                                                         </button>
                                                         <button type="button" class="btn btn-danger btn-sm ms-2 delete-choice-btn" data-choice-id="${choice.id}" data-story-id="${chapter.storyId}">
-                                                            <i class="bi bi-trash"></i> Xóa
+                                                             Xóa
                                                         </button>
                                                     </div>
                                                 </li>`;
@@ -290,13 +340,13 @@ else
                                     segmentsHtml += `
                                         <div class="card mb-2 border-light" id="segment-${segment.id}">
                                             <div class="card-header">
-                                                <strong><span class="segment-title">Đoạn ${segment.title}</span></strong> (ID: ${segment.id})
+                                                <strong><span class="segment-title">${segment.title}</span></strong>
                                                 <div class="float-end">
                                                     <a href="/Segment/Edit/${segment.id}" class="btn btn-sm btn-warning ms-2">
-                                                        <i class="bi bi-pencil"></i> Sửa
+                                                         Sửa
                                                     </a>
                                                     <button type="button" class="btn btn-sm btn-danger ms-2 delete-segment-btn" data-segment-id="${segment.id}" data-story-id="${chapter.storyId}">
-                                                        <i class="bi bi-trash"></i> Xóa
+                                                         Xóa
                                                     </button>
                                                 </div>
                                             </div>
@@ -330,15 +380,15 @@ else
                             var $newChapter = $(`
                                 <div class="card mb-3 border-primary" id="chapter-${chapter.id}">
                                     <div class="card-header bg-primary text-white fw-bold">
-                                        <i class="bi bi-journal-text"></i> <span class="chapter-title">Chương ${chapter.title}</span> (ID: ${chapter.id})
+                                        <span class="chapter-title">${chapter.title}</span>
                                         <span class="badge ${chapter.isPublic ? 'bg-success' : 'bg-secondary'} ms-2 is-public-badge">${chapter.isPublic ? 'Công khai' : 'Không công khai'}</span>
                                         <span class="badge bg-info ms-2"><i class="bi bi-eye"></i> ${chapter.viewCount} lượt xem</span>
                                         <div class="float-end">
                                             <button type="button" class="btn btn-warning btn-sm toggle-edit-form" data-chapter-id="${chapter.id}">
-                                                <i class="bi bi-pencil"></i> Sửa
+                                                 Sửa
                                             </button>
                                             <button type="button" class="btn btn-danger btn-sm ms-2 delete-chapter-btn" data-chapter-id="${chapter.id}">
-                                                <i class="bi bi-trash"></i> Xóa
+                                                 Xóa
                                             </button>
                                         </div>
                                     </div>
@@ -611,10 +661,10 @@ else
                                     </div>
                                     <div class="choice-actions">
                                         <button type="button" class="btn btn-warning btn-sm edit-choice-btn ms-2">
-                                            <i class="bi bi-pencil"></i> Sửa
+                                             Sửa
                                         </button>
                                         <button type="button" class="btn btn-danger btn-sm ms-2 delete-choice-btn" data-choice-id="${choice.id}" data-story-id="${storyId}">
-                                            <i class="bi bi-trash"></i> Xóa
+                                             Xóa
                                         </button>
                                     </div>
                                 </li>`);
