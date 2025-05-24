@@ -199,7 +199,33 @@
 
         .learn-more-link:hover {
             text-decoration: underline;
+
         }
+
+    /* Kiểu cho checkbox */
+    .form-check {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 24px;
+    }
+
+    .form-check-input {
+        width: 22px;
+        height: 22px;
+        margin-right: 8px;
+    }
+
+    .form-check-label {
+        font-size: 20px;
+        color: #4B3F35;
+    }
+
+    .form-check small {
+        display: block;
+        font-size: 18px;
+        color: #7A6A5A;
+        margin-top: 4px;
+    }
 </style>
 
 <link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text&display=swap" rel="stylesheet">
@@ -315,5 +341,49 @@
                  }
              });
          });
+       $(document).ready(function () {
+    /* Chuẩn hóa ký tự xuống dòng và cập nhật bộ đếm ký tự */
+            function updateCharCounter() {
+            var text = $('#DescriptionCreate').val();
+            // Chuẩn hóa ký tự xuống dòng trước khi đếm
+            var normalizedText = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+            var len = normalizedText.length;
+            $('#charCounterCreate').text(len + '/1500');
+
+            // Cảnh báo nếu vượt quá giới hạn
+            if (len > 1500) {
+                $('#charCounterCreate').css('color', '#ff0000');
+            } else {
+                $('#charCounterCreate').css('color', '#7A6A5A');
+            }
+        }
+
+        // Cập nhật bộ đếm khi nhập liệu
+        $('#DescriptionCreate').on('input', updateCharCounter);
+
+        // Khởi tạo bộ đếm khi trang load
+        updateCharCounter();
+
+    /* Chuẩn hóa dữ liệu trước khi gửi form */
+            $('#formCreate').on('submit', function() {
+            var text = $('#DescriptionCreate').val();
+            // Chuẩn hóa ký tự xuống dòng trước khi gửi
+            $('#DescriptionCreate').val(text.replace(/\r\n/g, '\n').replace(/\r/g, '\n'));
+        });
+
+    /* Hiển thị preview ảnh bìa khi chọn file */
+    $('#coverImageInput').on('change', function (e) {
+        var file = e.target.files[0];
+        if (file && file.type.startsWith('image/')) {
+            var reader = new FileReader();
+            reader.onload = function (ev) {
+                $('#coverImagePreview').attr('src', ev.target.result);
+            };
+            reader.readAsDataURL(file);
+        } else {
+            $('#coverImagePreview').attr('src', '/images/ImageNotFound.png');
+        }
+    });
+});
     </script>
 }

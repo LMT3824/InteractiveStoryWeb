@@ -599,7 +599,6 @@ namespace InteractiveStoryWeb.Controllers
 
             return View(viewModel);
         }
-
         [Authorize]
         public IActionResult CreateSupportTicket()
         {

@@ -40,7 +40,6 @@
         padding: 20px;
         margin-bottom: 20px;
         overflow: hidden;
-        user-select: none; /* Ngăn chọn */
     }
 
         .profile-container::before {
@@ -148,7 +147,6 @@
         font-weight: 700;
         font-size: 30px;
         margin-bottom: 20px;
-        user-select: none; /* Ngăn chọn */
     }
 
     .story-card {
@@ -164,7 +162,6 @@
         color: inherit;
         cursor: pointer;
         position: relative;
-        user-select: none; /* Ngăn chọn */
     }
 
         .story-card:hover {
@@ -496,7 +493,8 @@
             {
                 <div class="col">
                     <div class="story-card"
-                    @if (!story.IsHidden) {
+                    @if (!story.IsHidden)
+                    {
                         @:onclick="window.location.href='@Url.Action("Details", "Story", new { id = story.Id })'"
                     }>
                         @if (story.IsHidden && isOwnProfile == true)
@@ -575,11 +573,7 @@
                 @foreach (var progress in readingProgresses)
                 {
                     <div class="col">
-                        <div class="story-card"
-                        @if (!progress.Story.IsHidden)
-                        {
-                            @:onclick="window.location.href='@Url.Action("Details", "Story", new { id = progress.Story.Id })'"
-                        }>
+                        <div class="story-card" @(progress.Story.IsHidden ? "" : "onclick=\"window.location.href='" + Url.Action("Details", "Story", new { id = progress.Story.Id }) + "'\"")>
                             @if (progress.Story.IsHidden)
                             {
                                 <div class="hidden-story-overlay">

@@ -168,6 +168,102 @@
         .learn-more-link:hover {
             text-decoration: underline;
         }
+
+    /* Tiêu đề form */
+    .customize-header h2 {
+        font-family: 'STIX Two Text', serif;
+        font-weight: 700;
+        font-size: 32px;
+        margin-top: 26px;
+        margin-bottom: 20px;
+        line-height: 30px;
+    }
+
+    /* Nút lưu và đọc ở trên cùng */
+    .btn-submit-top {
+        background-color: #5B2A00; /* Màu nâu đậm */
+        color: #FFF;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 4px;
+        font-size: 20px;
+        font-weight: 500;
+    }
+
+        .btn-submit-top:hover {
+            background-color: #4a2300;
+        }
+
+    /* Label và ô input */
+    .form-label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 20px;
+        font-weight: 500;
+        color: #000;
+    }
+
+    .form-group small {
+        display: block;
+        font-size: 18px;
+        color: #7A6A5A;
+        margin-top: 4px;
+    }
+
+    .form-control {
+        width: 100%;
+        border: 1px solid #999999;
+        border-radius: 4px;
+        background: #FFF;
+        font-size: 18px;
+        color: #333;
+    }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #C4A484;
+
+    /* Preview section */
+    
+    .preview-section h5 {
+        font-family: 'S0TIX Two Text', serif;
+        display: block;
+        margin-bottom: 6px;
+        font-size: 23px;
+        font-weight: 700;
+        color: #000;
+    }
+
+    .preview-block {
+        margin-bottom: 20px;
+    }
+
+    .preview-block h6 {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 20px;
+        font-weight: 500;
+        color: #000;
+    }
+
+    .preview-content {
+        padding: 10px;
+        border: 1px solid #999999;
+        border-radius: 5px;
+        background-color: #FFFFFF;
+    }
+
+    .preview-content p {
+        margin: 5px 0;
+        font-size: 18px;
+        line-height: 1.8;
+        color: #000;
+    }
+
+    .preview-content .placeholder {
+        color: #000;
+        font-style: 'Itim', cursive;
+    }
 </style>
 
 <link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text&display=swap" rel="stylesheet">
@@ -186,6 +282,7 @@
                 <div>
                     <h2>TÙY CHỈNH NHÂN VẬT CHÍNH</h2>
                 </div>
+                <h2>TÙY CHỈNH NHÂN VẬT</h2>
             </div>
             <button type="submit" form="formCustomize" class="btn-submit-top">LƯU VÀ ĐỌC</button>
         </div>
@@ -202,6 +299,13 @@
                 <input asp-for="Name" class="form-control" id="nameInput" placeholder="Nhập tên nhân vật của bạn..." />
                 <small>Tên này sẽ thay thế [Tên] trong truyện.</small>
                 <span asp-validation-for="Name" class="text -danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                <label asp-for="Name" class="form-label">Tên nhân vật</label>
+                <input asp-for="Name" class="form-control" id="nameInput" placeholder="Nhập tên nhân vật của bạn..." />
+                <small>Tên này sẽ thay thế [Tên] trong truyện.</small>
+                <span asp-validation-for="Name" class="text-danger"></span>
             </div>
 
             <div class="form-group mb-3">

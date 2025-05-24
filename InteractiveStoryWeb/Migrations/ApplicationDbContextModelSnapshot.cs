@@ -599,7 +599,6 @@ namespace InteractiveStoryWeb.Migrations
 
                     b.ToTable("SupportTickets");
                 });
-
             modelBuilder.Entity("InteractiveStoryWeb.Models.SupportTicketResponse", b =>
                 {
                     b.Property<int>("Id")
@@ -630,7 +629,6 @@ namespace InteractiveStoryWeb.Migrations
 
                     b.ToTable("SupportTicketResponses");
                 });
-
             modelBuilder.Entity("InteractiveStoryWeb.Models.UserNotificationRead", b =>
                 {
                     b.Property<string>("UserId")
@@ -1041,7 +1039,6 @@ namespace InteractiveStoryWeb.Migrations
 
                     b.Navigation("User");
                 });
-
             modelBuilder.Entity("InteractiveStoryWeb.Models.SupportTicketResponse", b =>
                 {
                     b.HasOne("InteractiveStoryWeb.Models.ApplicationUser", "Admin")
@@ -1060,7 +1057,6 @@ namespace InteractiveStoryWeb.Migrations
 
                     b.Navigation("SupportTicket");
                 });
-
             modelBuilder.Entity("InteractiveStoryWeb.Models.UserNotificationRead", b =>
                 {
                     b.HasOne("InteractiveStoryWeb.Models.Notification", "Notification")
