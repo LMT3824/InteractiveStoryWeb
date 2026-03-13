@@ -6,8 +6,8 @@
     var customization = ViewBag.Customization as InteractiveStoryWeb.Models.ReaderStoryCustomization;
     var author = Model.Chapter?.Story?.Author;
     var avatarUrl = string.IsNullOrEmpty(author?.AvatarUrl) ? "~/images/AvatarNull.jpg" : author.AvatarUrl;
+    var userHighlights = ViewBag.UserHighlights as List<InteractiveStoryWeb.Models.UserHighlight> ?? new List<InteractiveStoryWeb.Models.UserHighlight>();
 
-    // Xác định chương trước và chương sau
     var story = Model.Chapter?.Story;
     var chapters = story?.Chapters?.Where(c => c.IsPublic).OrderBy(c => c.CreatedAt).ToList();
     var currentChapter = Model.Chapter;
@@ -17,11 +17,9 @@
     var hasNextChapter = ViewBag.HasNextChapter == true;
     var nextChapter = hasNextChapter && currentIndex >= 0 && currentIndex < chapters.Count - 1 ? chapters[currentIndex + 1] : null;
 
-    // Lấy segment đầu tiên của chương trước và chương sau
     var firstSegmentOfPrevious = previousChapter?.Segments?.OrderBy(s => s.Id).FirstOrDefault();
     var firstSegmentOfNext = nextChapter?.Segments?.OrderBy(s => s.Id).FirstOrDefault();
 
-    // Sử dụng ViewBag.IsInLibrary và ViewBag.IsAuthenticated
     bool isInLibrary = ViewBag.IsInLibrary ?? false;
     bool isAuthenticated = ViewBag.IsAuthenticated ?? false;
 }
@@ -241,6 +239,10 @@
     #segment-text {
         font-size: 20px;
         text-align: justify;
+        user-select: text;
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
     }
 
     #segment-content {
@@ -252,6 +254,339 @@
     #choices-container .list-group-item {
         border: none;
         background: none;
+    }
+
+    /* CSS cho Highlight */
+    .user-highlight {
+        cursor: pointer;
+        position: relative;
+        padding: 2px 0;
+        border-radius: 2px;
+        background: transparent; /* Xóa background mặc định của mark */
+    }
+
+    .highlight-yellow {
+        background-color: rgba(255, 255, 0, 0.4);
+    }
+
+    .highlight-green {
+        background-color: rgba(144, 238, 144, 0.4);
+    }
+
+    .highlight-blue {
+        background-color: rgba(173, 216, 230, 0.4);
+    }
+
+    .highlight-pink {
+        background-color: rgba(255, 182, 193, 0.4);
+    }
+
+    .highlight-orange {
+        background-color: rgba(255, 165, 0, 0.4);
+    }
+
+    /* Toolbar khi chọn text */
+    #highlight-toolbar {
+        position: absolute;
+        background: white;
+        border: 2px solid #A6724E;
+        border-radius: 8px;
+        padding: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 1000;
+        display: none;
+    }
+
+        #highlight-toolbar button {
+            border: none;
+            background: none;
+            cursor: pointer;
+            padding: 6px 10px;
+            margin: 0 2px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+            #highlight-toolbar button:hover {
+                background-color: #f0f0f0;
+            }
+
+        #highlight-toolbar .color-btn {
+            width: 30px;
+            height: 30px;
+            border: 2px solid #ccc;
+            margin: 0 3px;
+        }
+
+            #highlight-toolbar .color-btn.highlight-yellow {
+                background-color: rgba(255, 255, 0, 0.6);
+            }
+
+            #highlight-toolbar .color-btn.highlight-green {
+                background-color: rgba(144, 238, 144, 0.6);
+            }
+
+            #highlight-toolbar .color-btn.highlight-blue {
+                background-color: rgba(173, 216, 230, 0.6);
+            }
+
+            #highlight-toolbar .color-btn.highlight-pink {
+                background-color: rgba(255, 182, 193, 0.6);
+            }
+
+            #highlight-toolbar .color-btn.highlight-orange {
+                background-color: rgba(255, 165, 0, 0.6);
+            }
+
+            #highlight-toolbar .color-btn.active {
+                border-color: #000;
+                box-shadow: 0 0 0 2px #A6724E;
+            }
+
+    /* Modal cho ghi chú */
+    .highlight-note-modal .modal-content {
+        border: 2px solid #A6724E;
+        border-radius: 10px;
+    }
+
+    .highlight-note-modal .modal-header {
+        background-color: #FEE6D0;
+        border-bottom: 2px solid #A6724E;
+    }
+
+    /* Tooltip hiển thị note */
+    .highlight-tooltip {
+        position: absolute;
+        background: white;
+        border: 2px solid #A6724E;
+        border-radius: 8px;
+        padding: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 999;
+        max-width: 300px;
+        display: none;
+    }
+
+        .highlight-tooltip .tooltip-content {
+            font-size: 14px;
+            color: #333;
+        }
+
+        .highlight-tooltip .tooltip-actions {
+            margin-top: 8px;
+            display: flex;
+            gap: 8px;
+        }
+
+            .highlight-tooltip .tooltip-actions button {
+                font-size: 12px;
+                padding: 4px 8px;
+            }
+
+    /* Highlight mode toggle */
+    .highlight-mode-toggle {
+        display: inline-block;
+        margin-left: 10px;
+    }
+
+    .floating-highlight-button {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, #FEE6D0 0%, #F5D5B8 100%);
+        border: 3px solid #A6724E;
+        border-radius: 50%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease;
+        z-index: 1000;
+        gap: 2px;
+    }
+
+        .floating-highlight-button svg {
+            color: #000;
+            transition: transform 0.3s ease;
+        }
+
+        .floating-highlight-button .btn-text {
+            font-size: 10px;
+            font-weight: 600;
+            color: #000;
+            margin-top: -2px;
+        }
+
+        .floating-highlight-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .floating-highlight-button.active {
+            background: linear-gradient(135deg, #A6724E 0%, #8B5A3C 100%);
+            border-color: #5D3A1A;
+            animation: pulse 2s infinite;
+        }
+
+            .floating-highlight-button.active svg,
+            .floating-highlight-button.active .btn-text {
+                color: #FFF;
+            }
+
+            .floating-highlight-button.active svg {
+                transform: rotate(15deg);
+            }
+
+    /* Color picker trong modal */
+    .modal-color-btn {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #ccc;
+        cursor: pointer;
+        border-radius: 6px;
+        transition: all 0.2s;
+    }
+
+        .modal-color-btn.highlight-yellow {
+            background-color: rgba(255, 255, 0, 0.6);
+        }
+
+        .modal-color-btn.highlight-green {
+            background-color: rgba(144, 238, 144, 0.6);
+        }
+
+        .modal-color-btn.highlight-blue {
+            background-color: rgba(173, 216, 230, 0.6);
+        }
+
+        .modal-color-btn.highlight-pink {
+            background-color: rgba(255, 182, 193, 0.6);
+        }
+
+        .modal-color-btn.highlight-orange {
+            background-color: rgba(255, 165, 0, 0.6);
+        }
+
+        .modal-color-btn.active {
+            border-color: #000;
+            box-shadow: 0 0 0 3px #A6724E;
+            transform: scale(1.1);
+        }
+
+        .modal-color-btn:hover {
+            transform: scale(1.05);
+            border-color: #666;
+        }
+
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 24px;
+        vertical-align: middle;
+    }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+    .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: .4s;
+        border-radius: 24px;
+    }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+    input:checked + .toggle-slider {
+        background-color: #A6724E;
+    }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+
+    /* CSS cho Modal Quản lý Highlights */
+    .highlights-list {
+        max-height: 500px;
+        overflow-y: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 10px;
+    }
+
+    .highlight-item {
+        display: flex;
+        gap: 12px;
+        padding: 12px;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        background-color: #fff;
+        transition: all 0.2s;
+    }
+
+        .highlight-item:hover {
+            background-color: #f8f9fa;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+    .highlight-checkbox {
+        display: flex;
+        align-items: center;
+        padding-top: 4px;
+    }
+
+        .highlight-checkbox .form-check-input {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+    .highlight-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .highlight-text {
+        margin-bottom: 8px;
+        word-wrap: break-word;
+        line-height: 1.6;
+    }
+
+    .highlight-note {
+        padding: 8px;
+        background-color: #fff3cd;
+        border-left: 3px solid #ffc107;
+        border-radius: 4px;
+        margin-bottom: 8px;
+    }
+
+    .highlight-meta {
+        color: #6c757d;
+        font-size: 0.85rem;
     }
 </style>
 
@@ -287,7 +622,7 @@
     <h3 class="story-title">@Model.Chapter.Story.Title</h3>
     <div class="author-info">
         <img src="@(string.IsNullOrEmpty(@author?.AvatarUrl) ? Url.Content("~/images/AvatarNull.jpg") : @author?.AvatarUrl)" alt="Avatar" class="author-avatar" />
-        <a href="@Url.Action("Profile", "Account", new { id = author?.Id })" title="Xem trang cá nhân">
+        <a href="@Url.Action("MyProfile", "Account", new { userId = author?.Id })" title="Xem trang cá nhân">
             @author?.UserName
         </a>
     </div>
@@ -311,7 +646,7 @@
         <div class="left-controls">
             @if (Model.Chapter.Story.AllowCustomization)
             {
-                <a href="@Url.Action("Customize", "Story", new { storyId = Model.Chapter.StoryId })">Tùy chỉnh nhân vật</a>
+                <a href="@Url.Action("Customize", "Story", new { storyId = Model.Chapter.StoryId })">Tùy chỉnh nhân vật chính</a>
                 <span class="separator">|</span>
                 <a href="@Url.Action("TOS", "Story")" title="Điều khoản tùy chỉnh nhân vật">Tìm hiểu thêm</a>
             }
@@ -345,6 +680,27 @@
     </div>
 </div>
 
+<!-- Floating Highlight Button -->
+@if (isAuthenticated)
+{
+    <div id="floating-highlight-btn" class="floating-highlight-button" title="Bật/Tắt chế độ Highlight">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m9 11-6 6v3h3l6-6"></path>
+            <path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"></path>
+        </svg>
+        <span class="btn-text">Highlight</span>
+    </div>
+
+    <div id="floating-manage-btn" class="floating-highlight-button" title="Quản lý Highlights" style="bottom: 100px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18"></path>
+            <path d="M3 12h18"></path>
+            <path d="M3 18h18"></path>
+        </svg>
+        <span class="btn-text">Quản lý</span>
+    </div>
+}
+
 <hr />
 
 <div class="content-container">
@@ -357,7 +713,7 @@
                 </div>
             }
 
-            <div id="segment-text">
+            <div id="segment-text" data-segment-id="@Model.Id">
                 @Html.Raw(Model.Content)
             </div>
 
@@ -391,13 +747,103 @@
     </div>
 </div>
 
+<!-- Highlight Toolbar -->
+<div id="highlight-toolbar">
+    <button class="color-btn highlight-yellow" data-color="yellow" title="Vàng"></button>
+    <button class="color-btn highlight-green" data-color="green" title="Xanh lá"></button>
+    <button class="color-btn highlight-blue" data-color="blue" title="Xanh dương"></button>
+    <button class="color-btn highlight-pink" data-color="pink" title="Hồng"></button>
+    <button class="color-btn highlight-orange" data-color="orange" title="Cam"></button>
+    <button id="add-note-btn" style="margin-left: 10px;">📝 Ghi chú</button>
+</div>
+
+<!-- Highlight Tooltip -->
+<div id="highlight-tooltip" class="highlight-tooltip">
+    <div class="tooltip-content"></div>
+    <div class="tooltip-actions">
+        <button class="btn btn-sm btn-primary edit-note-btn">Sửa ghi chú</button>
+        <button class="btn btn-sm btn-danger delete-highlight-btn">Xóa</button>
+    </div>
+</div>
+
+<!-- Modal thêm/sửa ghi chú -->
+<div class="modal fade highlight-note-modal" id="noteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Thêm ghi chú</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Chọn màu -->
+                <div class="mb-3">
+                    <label class="form-label">Chọn màu highlight:</label>
+                    <div class="d-flex gap-2" id="modal-color-picker">
+                        <button type="button" class="modal-color-btn highlight-yellow" data-color="yellow" title="Vàng"></button>
+                        <button type="button" class="modal-color-btn highlight-green" data-color="green" title="Xanh lá"></button>
+                        <button type="button" class="modal-color-btn highlight-blue" data-color="blue" title="Xanh dương"></button>
+                        <button type="button" class="modal-color-btn highlight-pink" data-color="pink" title="Hồng"></button>
+                        <button type="button" class="modal-color-btn highlight-orange" data-color="orange" title="Cam"></button>
+                    </div>
+                </div>
+
+                <!-- Ghi chú -->
+                <div class="mb-3">
+                    <label class="form-label">Ghi chú (tùy chọn):</label>
+                    <textarea class="form-control" id="noteText" rows="4" maxlength="500" placeholder="Nhập ghi chú của bạn..."></textarea>
+                    <small class="text-muted">Tối đa 500 ký tự</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary" id="saveNoteBtn">Lưu</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Quản lý Highlights -->
+<div class="modal fade" id="manageHighlightsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Quản lý Highlight và ghi chú</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3 d-flex justify-content-between align-items-center">
+                    <div>
+                        <span id="highlight-count-text">Tổng: 0 highlights</span>
+                        <span id="selected-count-text" class="ms-3 text-muted"></span>
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="selectAllHighlights">Chọn tất cả</button>
+                        <button type="button" class="btn btn-sm btn-danger" id="deleteSelectedHighlights" disabled>Xóa đã chọn</button>
+                    </div>
+                </div>
+
+                <div id="highlights-list" class="highlights-list">
+                    <!-- Danh sách highlights sẽ được load ở đây -->
+                </div>
+
+                <div id="no-highlights-message" class="text-center text-muted py-5" style="display: none;">
+                    <p>Chưa có highlight nào.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <hr />
 
 <div class="control-bar" id="control-bar">
     <div class="left-controls">
         @if (Model.Chapter.Story.AllowCustomization)
         {
-            <a href="@Url.Action("Customize", "Story", new { storyId = Model.Chapter.StoryId })">Tùy chỉnh nhân vật</a>
+            <a href="@Url.Action("Customize", "Story", new { storyId = Model.Chapter.StoryId })">Tùy chỉnh nhân vật chính</a>
             <span class="separator">|</span>
             <a href="@Url.Action("TOS", "Story")" title="Điều khoản tùy chỉnh nhân vật">Tìm hiểu thêm</a>
         }
@@ -430,215 +876,26 @@
     </div>
 </div>
 
+<!-- Truyền dữ liệu highlights từ server -->
+<script>
+    window.existingHighlights = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(userHighlights.Select(h => new
+        {
+            id = h.Id,
+            highlightedText = h.HighlightedText,
+            contextBefore = h.ContextBefore,
+            contextAfter = h.ContextAfter,
+            startOffset = h.StartOffset,
+            endOffset = h.EndOffset,
+            color = h.Color,
+            note = h.Note
+        })));
+    window.isAuthenticated = @isAuthenticated.ToString().ToLower();
+
+    console.log('Page loaded. Highlights:', window.existingHighlights);
+</script>
+
 @section Scripts {
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script>
-        $(document).ready(function () {
-            // Hàm hiển thị thông báo
-            function showAlert(type, message) {
-                $('#alert-container').empty();
-                var $alert = $('<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
-                    message + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>');
-                $('#alert-container').prepend($alert);
-                setTimeout(function () { $alert.alert('close'); }, 3000);
-            }
-
-            // Xử lý submit form Lưu/Xóa khỏi thư viện
-            $('.library-form').on('submit', function (e) {
-                e.preventDefault(); // Ngăn submit mặc định
-
-                var $form = $(this);
-                var action = $form.data('action');
-                var storyId = $form.data('story-id');
-                var token = $('input[name="__RequestVerificationToken"]').val();
-
-                $.ajax({
-                    url: '/Story/' + action,
-                    type: 'POST',
-                    data: {
-                        storyId: storyId,
-                        __RequestVerificationToken: token
-                    },
-                    success: function (response) {
-                        if (response.success) {
-                            // Cập nhật trạng thái nút
-                            var newAction = action === 'AddToLibrary' ? 'RemoveFromLibrary' : 'AddToLibrary';
-                            var newText = action === 'AddToLibrary' ? 'Xóa khỏi thư viện' : 'Lưu vào thư viện';
-                            $form.data('action', newAction);
-                            $form.find('.library-btn').text(newText);
-
-                            // Cập nhật tất cả form trên trang
-                            $('.library-form').each(function () {
-                                $(this).data('action', newAction);
-                                $(this).find('.library-btn').text(newText);
-                            });
-
-                            showAlert('success', response.message);
-                        } else {
-                            showAlert('danger', response.message);
-                        }
-                    },
-                    error: function (xhr, status, error) {
-                        var errorMessage = xhr.responseJSON && xhr.responseJSON.message
-                            ? xhr.responseJSON.message
-                            : 'Có lỗi xảy ra khi thực hiện thao tác.';
-                        showAlert('danger', errorMessage);
-                    }
-                });
-            });
-
-            // Hàm xử lý chuyển chương (dùng chung cho prev và next)
-            function navigateChapter(chapterId, isNext) {
-                console.log('Navigating chapter with ID:', chapterId, 'isNext:', isNext);
-                $.ajax({
-                    url: isNext ? '@Url.Action("NextChapterJson", "Segment")' : '@Url.Action("PrevChapterJson", "Segment")',
-                    type: 'GET',
-                    data: { currentChapterId: chapterId },
-                    success: function (response) {
-                        console.log('Navigate chapter response:', response);
-                        if (response.success) {
-                            updateSegment(response.data);
-                        } else {
-                            showAlert('warning', response.message);
-                        }
-                    },
-                    error: function (xhr, status, error) {
-                        console.log('Navigate chapter error:', xhr, status, error);
-                        var errorMessage = xhr.responseJSON && xhr.responseJSON.message
-                            ? xhr.responseJSON.message
-                            : 'Có lỗi xảy ra khi chuyển chương. Status: ' + xhr.status + ', Error: ' + (xhr.statusText || error);
-                        showAlert('danger', errorMessage);
-                    }
-                });
-            }
-
-            // Xử lý nút "Chương trước"
-            $(document).on('click', '.prev-chapter', function (e) {
-                e.preventDefault();
-                var chapterId = $(this).data('current-chapter-id');
-                navigateChapter(chapterId, false);
-            });
-
-            // Xử lý nút "Chương sau"
-            $(document).on('click', '.next-chapter', function (e) {
-                e.preventDefault();
-                var chapterId = $(this).data('current-chapter-id');
-                navigateChapter(chapterId, true);
-            });
-
-            // Xử lý lựa chọn
-            $(document).on('click', '.choice-button', function (e) {
-                e.preventDefault();
-                var choiceId = $(this).data('choice-id');
-                var token = $('input[name="__RequestVerificationToken"]').val();
-                console.log('Sending AJAX with choiceId:', choiceId, 'Token:', token);
-
-                $.ajax({
-                    url: '@Url.Action("ChooseJson", "Choice")',
-                    type: 'POST',
-                    contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
-                    data: $.param({
-                        id: choiceId,
-                        __RequestVerificationToken: token
-                    }),
-                    success: function (response) {
-                        console.log('AJAX Success:', response);
-                        if (response.success) {
-                            updateSegment(response.data);
-                        } else {
-                            showAlert('danger', response.message);
-                        }
-                    },
-                    error: function (xhr, status, error) {
-                        console.log('AJAX Error:', { status: xhr.status, statusText: xhr.statusText, response: xhr.responseJSON, error: error });
-                        var errorMessage = xhr.responseJSON && xhr.responseJSON.message
-                            ? xhr.responseJSON.message
-                            : 'Có lỗi xảy ra khi chọn lựa chọn. Status: ' + xhr.status + ', Error: ' + (xhr.statusText || error);
-                        showAlert('danger', errorMessage);
-                    }
-                });
-            });
-
-            // Hàm cập nhật nội dung đoạn
-            function updateSegment(data) {
-                console.log('Updating segment with data:', data);
-                if (!data || !data.chapterId) {
-                    showAlert('danger', 'Không thể cập nhật nội dung: Dữ liệu chương không hợp lệ.');
-                    return;
-                }
-
-                // Cập nhật tiêu đề truyện
-                $('#chapter-header').html(`
-                    <h3 class="story-title">${data.storyTitle}</h3>
-                    <div class="author-info">
-                        <img src="${data.authorAvatarUrl}" alt="Avatar" class="author-avatar" />
-                        <a href="@Url.Action("Profile", "Account")/${data.authorId || ''}" title="Xem trang cá nhân">
-                            ${data.authorUserName || 'Không xác định'}
-                        </a>
-                    </div>
-                `);
-
-                // Cập nhật tiêu đề chương
-                $('#chapter-title').text(data.chapterTitle);
-
-                // Cập nhật thời gian
-                var metaHtml = `<p><span class="time-info">Thời gian đăng: ${data.createdAt}</span>`;
-                if (data.updatedAt) {
-                    metaHtml += `<span class="separator">|</span><span class="time-info">Thời gian chỉnh sửa: ${data.updatedAt}</span>`;
-                }
-                metaHtml += `</p>`;
-                $('#chapter-meta').html(metaHtml);
-
-                // Cập nhật nút điều hướng
-                $('.prev-chapter').data('current-chapter-id', data.chapterId);
-                $('.next-chapter').data('current-chapter-id', data.chapterId);
-
-                // Cập nhật nội dung đoạn
-                var contentHtml = '';
-                if (data.imageUrl && data.imagePosition === 'Top') {
-                    contentHtml += `
-                        <div class="text-center mb-3">
-                            <img src="${data.imageUrl}" class="img-fluid rounded shadow segment-image" alt="Ảnh minh họa" />
-                        </div>`;
-                }
-                contentHtml += `<div id="segment-text">${data.content}</div>`;
-                if (data.imageUrl && data.imagePosition === 'Bottom') {
-                    contentHtml += `
-                        <div class="text-center mb-3">
-                            <img src="${data.imageUrl}" class="img-fluid rounded shadow segment-image" alt="Ảnh minh họa" />
-                        </div>`;
-                }
-                $('#segment-content .card-body').html(contentHtml);
-
-                // Cập nhật danh sách lựa chọn
-                var choicesHtml = '';
-                if (data.choices && data.choices.length > 0) {
-                    choicesHtml = '<ul class="list-group mb-4">';
-                    data.choices.forEach(function (choice) {
-                        choicesHtml += `
-                            <li class="list-group-item">
-                                <button class="btn btn-outline-dark w-100 choice-button" data-choice-id="${choice.id}">
-                                    ${choice.choiceText}
-                                </button>
-                            </li>`;
-                    });
-                    choicesHtml += '</ul>';
-                } else {
-                    choicesHtml = '<p class="text-muted">Không có lựa chọn nào khả dụng cho đoạn này.</p>';
-                }
-                $('#choices-container').html(choicesHtml);
-
-                // Cập nhật trạng thái thư viện
-                var libraryAction = data.isInLibrary ? 'RemoveFromLibrary' : 'AddToLibrary';
-                var libraryText = data.isInLibrary ? 'Xóa khỏi thư viện' : 'Lưu vào thư viện';
-                $('.library-form').each(function () {
-                    $(this).data('action', libraryAction);
-                    $(this).find('.library-btn').text(libraryText);
-                });
-
-                // Cuộn lên đầu trang
-                window.scrollTo(0, 0);
-            }
-        });
-    </script>
+    <script src="~/js/highlight.js"></script>
+    <script src="~/js/interactive-read.js"></script>
 }

@@ -173,6 +173,7 @@ namespace InteractiveStoryWeb.Controllers
 
                 // Lưu tiến trình đọc nếu người dùng đã đăng nhập
                 var user = await _userManager.GetUserAsync(User);
+                List<UserHighlight> userHighlights = new List<UserHighlight>();
                 if (user != null)
                 {
                     var progress = await _context.ReadingProgresses
@@ -195,7 +196,15 @@ namespace InteractiveStoryWeb.Controllers
                         progress.LastReadAt = DateTime.Now;
                     }
                     await _context.SaveChangesAsync();
+
+                    // Lấy highlights của user (nếu đã đăng nhập)
+                    userHighlights = await _context.UserHighlights
+                        .Where(h => h.UserId == user.Id && h.ChapterSegmentId == segment.Id)
+                        .OrderBy(h => h.StartOffset)
+                        .ToListAsync();
                 }
+
+                ViewBag.UserHighlights = userHighlights;
 
                 // Kiểm tra xem truyện đã có trong thư viện chưa
                 bool isInLibrary = user != null && await _context.Libraries.AnyAsync(l => l.UserId == user.Id && l.StoryId == story.Id);
@@ -232,6 +241,9 @@ namespace InteractiveStoryWeb.Controllers
 
                 // Chuyển đổi nội dung thành HTML với Markdown và tùy chỉnh
                 segment.Content = MarkdownFormatter.FormatContent(segment.Content ?? string.Empty, customization);
+
+                //Plain text để dùng cho highlight
+                ViewBag.PlainTextContent = segment.Content; // Lưu content đã format để làm base
 
                 ViewBag.StoryId = story.Id;
                 ViewBag.CurrentChapterId = chapter.Id;
@@ -741,6 +753,8 @@ namespace InteractiveStoryWeb.Controllers
 
             ViewBag.StoryId = segment.Chapter.StoryId;
             ViewBag.AllowCustomization = segment.Chapter.Story.AllowCustomization;
+            ViewBag.StoryTitle = segment.Chapter.Story.Title;
+            ViewBag.ChapterTitle = segment.Chapter.Title;
 
             return View(model);
         }

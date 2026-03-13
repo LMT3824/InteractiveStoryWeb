@@ -301,7 +301,7 @@
                 <polyline points="15 18 9 12 15 6"></polyline>
             </svg>
         </a>
-        <h2>ĐỌC TRUYỆN</h2>
+        <h2>THÔNG TIN TRUYỆN</h2>
     </div>
 
     <div class="blocked-message">
@@ -408,7 +408,6 @@
                                 </div>
                                 <p class="mb-1">
                                     <strong>Lượt xem:</strong> @chapter.ViewCount<br />
-                                    <strong>Số đoạn:</strong> @(chapter.Segments?.Count ?? 0)
                                 </p>
                                 @if (chapter.Segments != null && chapter.Segments.Any())
                                 {
@@ -589,8 +588,8 @@
                                     <div class="comment-edit" style="display: none;">
                                         <textarea class="form-control comment-content-input mb-2" rows="3" required>@comment.Content</textarea>
                                         <div class="text-end">
-                                            <button type="button" class="btn btn-comment btn-outline-secondary btn-sm save-comment-btn">Lưu</button>
-                                            <button type="button" class="btn btn-comment btn-outline-secondary btn-sm cancel-comment-btn ms-2">Hủy</button>
+                                            <button type="button" class="btn btn-comment btn-outline-secondary save-comment-btn">Lưu</button>
+                                            <button type="button" class="btn btn-comment btn-outline-secondary cancel-comment-btn ms-2">Hủy</button>
                                         </div>
                                     </div>
                                 </div>
@@ -858,8 +857,8 @@
                                 <div class="comment-edit" style="display: none;">
                                     <textarea class="form-control comment-content-input mb-2" rows="3" required>${comment.content}</textarea>
                                     <div class="text-end">
-                                        <button type="button" class="btn btn-outline-secondary btn-rating save-comment-btn">Lưu</button>
-                                        <button type="button" class="btn btn-outline-secondary btn-rating cancel-comment-btn ms-2">Hủy</button>
+                                        <button type="button" class="btn btn-comment btn-outline-secondary save-comment-btn">Lưu</button>
+                                        <button type="button" class="btn btn-comment btn-outline-secondary cancel-comment-btn ms-2">Hủy</button>
                                     </div>
                                 </div>
                             </div>`;
@@ -1012,8 +1011,8 @@
                                                 <span class="comment-username"><a href="/Account/MyProfile?userId=${response.userId}" class="username-link">${response.userName}</a></span>
                                             </div>
                                             <div class="comment-actions">
-                                                <button type="button" class="btn btn-comment btn-outline-secondary edit-comment-btn"> Sửa</button>
-                                                <button type="button" class="btn btn-comment btn-outline-secondary delete-comment-btn"> Xóa</button>
+                                                <button type="button" class="btn btn-comment btn-outline-secondary edit-comment-btn">Sửa</button>
+                                                <button type="button" class="btn btn-comment btn-outline-secondary delete-comment-btn">Xóa</button>
                                             </div>
                                         </div>
                                         <div class="comment-time">
@@ -1024,15 +1023,14 @@
                                     <div class="comment-edit" style="display: none;">
                                         <textarea class="form-control comment-content-input mb-2" rows="3" required>${response.content}</textarea>
                                         <div class="text-end">
-                                            <button type="button" class="btn btn-outline-secondary btn-rating save-comment-btn">Lưu</button>
-                                            <button type="button" class="btn btn-outline-secondary btn-rating cancel-comment-btn ms-2">Hủy</button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm save-comment-btn">Lưu</button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm cancel-comment-btn ms-2">Hủy</button>
                                         </div>
                                     </div>
                                 </div>`;
                             $('.comment-list').prepend(commentHtml).fadeIn(200);
                             $('.comment-no-data').hide();
                             $('.comment-list-container').prev().find('.btn-outline-primary').remove();
-                            $('.comment-list-container').prev().append('<a href="/Story/Comments?storyId=' + response.storyId + '" class="btn btn-outline-primary btn-sm">Xem tất cả</a>');
                             $('#addCommentForm')[0].reset();
                             $('.error-message').hide();
                             $('.comment-list .comment-item').slice(5).remove();
@@ -1190,7 +1188,6 @@
                             $('.rating-list').prepend(ratingHtml).fadeIn(200);
                             $('.rating-no-data').hide();
                             $('.rating-list-container').prev().find('.btn-outline-primary').remove();
-                            $('.rating-list-container').prev().append('<a href="/Story/Ratings?storyId=' + response.storyId + '" class="btn btn-outline-primary btn-sm">Xem tất cả</a>');
                             $('#addRatingForm').hide();
                             $('.average-rating').html(`${response.averageRating.toFixed(1)}`);
                             $('.error-message').hide();
@@ -1228,8 +1225,8 @@
                             `).join('')}
                         </div>
                         <input type="hidden" class="rating-value-input" value="${ratingValue}" />
-                        <button type="button" class="btn btn-outline-secondary btn-rating save-rating-btn">Lưu</button>
-                        <button type="button" class="btn btn-outline-secondary btn-rating cancel-rating-btn ms-2">Hủy</button>
+                        <button type="button" class="btn btn-rating btn-outline-secondary save-rating-btn">Lưu</button>
+                        <button type="button" class="btn btn-rating btn-outline-secondary cancel-rating-btn ms-2">Hủy</button>
                     </div>`;
                 $row.append(editHtml);
                 $row.find('.rating-display').hide();

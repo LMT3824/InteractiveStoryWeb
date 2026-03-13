@@ -24,11 +24,37 @@
         width: 100%;
     }
 
-    h2.mb-4 {
+    .page-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .page-header .back-arrow {
+        cursor: pointer;
+        color: #000;
+        text-decoration: none;
+        width: 38px;
+        height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        vertical-align: middle;
+    }
+
+    .page-header .back-arrow svg {
+        width: 100%;
+        height: 100%;
+    }
+
+    .page-header h2 {
         font-family: 'STIX Two Text', serif;
         font-weight: 700;
-        font-size: 30px;
+        font-size: 32px;
+        margin-top: 26px;
         margin-bottom: 20px;
+        line-height: 30px;
     }
 
     .blocked-list {
@@ -77,6 +103,15 @@
             color: #fff;
         }
 </style>
+
+<div class="page-header">
+    <a href="javascript:history.back()" class="back-arrow">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+    </a>
+    <h2>DANH SÁCH CHẶN</h2>
+</div>
 
 <div class="container">
     <div id="alert-container"></div>

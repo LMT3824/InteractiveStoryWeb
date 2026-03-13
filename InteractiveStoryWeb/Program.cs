@@ -43,6 +43,9 @@ builder.Services.AddSession(options =>
 
 builder.Services.AddTransient<IEmailSender, InteractiveStoryWeb.Services.GmailEmailSender>();
 
+builder.Services.AddScoped<InteractiveStoryWeb.Services.IFileParserService,
+                           InteractiveStoryWeb.Services.FileParserService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

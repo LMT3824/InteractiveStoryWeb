@@ -28,6 +28,7 @@ namespace InteractiveStoryWeb.Data
         public DbSet<Report> Reports { get; set; }
         public DbSet<ReaderStoryCustomization> ReaderStoryCustomizations { get; set; }
         public DbSet<ReadingProgress> ReadingProgresses { get; set; }
+        public DbSet<UserHighlight> UserHighlights { get; set; }
         public DbSet<ApplicationUser> ApplicationUsers { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -236,6 +237,23 @@ namespace InteractiveStoryWeb.Data
                 .WithMany()
                 .HasForeignKey(str => str.AdminId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Cấu hình UserHighlight
+            builder.Entity<UserHighlight>()
+                .HasOne(uh => uh.User)
+                .WithMany()
+                .HasForeignKey(uh => uh.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<UserHighlight>()
+                .HasOne(uh => uh.ChapterSegment)
+                .WithMany()
+                .HasForeignKey(uh => uh.ChapterSegmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Index để query nhanh hơn
+            builder.Entity<UserHighlight>()
+                .HasIndex(uh => new { uh.UserId, uh.ChapterSegmentId });
         }
     }
 }

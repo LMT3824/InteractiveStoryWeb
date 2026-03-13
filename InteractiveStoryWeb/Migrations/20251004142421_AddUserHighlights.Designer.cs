@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InteractiveStoryWeb.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250524162506_RemoveChapterFromComment")]
-    partial class RemoveChapterFromComment
+    [Migration("20251004142421_AddUserHighlights")]
+    partial class AddUserHighlights
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -634,6 +634,53 @@ namespace InteractiveStoryWeb.Migrations
                     b.ToTable("SupportTicketResponses");
                 });
 
+            modelBuilder.Entity("InteractiveStoryWeb.Models.UserHighlight", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ChapterSegmentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Color")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("EndOffset")
+                        .HasColumnType("int");
+
+                    b.Property<string>("HighlightedText")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("StartOffset")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChapterSegmentId");
+
+                    b.HasIndex("UserId", "ChapterSegmentId");
+
+                    b.ToTable("UserHighlights");
+                });
+
             modelBuilder.Entity("InteractiveStoryWeb.Models.UserNotificationRead", b =>
                 {
                     b.Property<string>("UserId")
@@ -1062,6 +1109,25 @@ namespace InteractiveStoryWeb.Migrations
                     b.Navigation("Admin");
 
                     b.Navigation("SupportTicket");
+                });
+
+            modelBuilder.Entity("InteractiveStoryWeb.Models.UserHighlight", b =>
+                {
+                    b.HasOne("InteractiveStoryWeb.Models.ChapterSegment", "ChapterSegment")
+                        .WithMany()
+                        .HasForeignKey("ChapterSegmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("InteractiveStoryWeb.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ChapterSegment");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("InteractiveStoryWeb.Models.UserNotificationRead", b =>

@@ -101,15 +101,18 @@ namespace InteractiveStoryWeb.Controllers
         // Hiển thị danh sách người dùng và truyện ẩn
         public async Task<IActionResult> ManageAccountStory()
         {
-            var users = await _userManager.Users.ToListAsync();
+            var users = await _userManager.Users
+                .Where(u => u.IsBanned)
+                .ToListAsync();
+
             var hiddenStories = await _context.Stories
                 .Where(s => s.IsHidden)
                 .Include(s => s.Author)
                 .ToListAsync();
 
-            ViewBag.HiddenStories = hiddenStories; // Truyền danh sách truyện bị ẩn vào View
+            ViewBag.HiddenStories = hiddenStories;
             return View(users);
-        }
+        }  
 
         // Chặn tài khoản
         [HttpPost]

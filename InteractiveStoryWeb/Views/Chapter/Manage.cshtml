@@ -96,6 +96,38 @@
     </div>
 </div>
 
+<!-- Card Import File -->
+<div class="card mb-3 border-info" id="import-file-card">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0"><i class="bi bi-cloud-upload"></i> Import truyện từ file</h5>
+    </div>
+    <div class="card-body">
+        <p class="mb-3">
+            <i class="bi bi-info-circle"></i>
+            Tải lên file .docx hoặc .pdf để tự động phân tích và tạo chương, đoạn truyện.
+        </p>
+        <div class="text-center">
+            <a asp-controller="Import" asp-action="Upload" asp-route-storyId="@storyId" class="btn btn-info">
+                <i class="bi bi-upload"></i> Chọn file để import
+            </a>
+        </div>
+        <div class="mt-3">
+            <small class="text-muted">
+                <strong>Yêu cầu cấu trúc file:</strong>
+                <ul class="mb-0 mt-2">
+                    <li>Hỗ trợ file .docx và .pdf (tối đa 10MB)</li>
+                    <li><strong>Tiêu đề chương:</strong> Dùng Heading 1 hoặc "Chương 1:", "Chương 2:"</li>
+                    <li><strong>Tiêu đề đoạn:</strong> <span class="text-danger">BẮT BUỘC</span> dùng Heading 2 hoặc "Đoạn 1:", "Đoạn 2:"</li>
+                    <li>Mỗi đoạn phải có tiêu đề riêng</li>
+                    <li><strong>Các ghi chú trong truyện: </strong> để tránh bị import, hãy để trong dấu [] hoặc đặt trước dòng là // </li>
+                    <li>Sau khi import, bạn sẽ tự tạo các lựa chọn (choices) để liên kết các đoạn</li>
+                </ul>
+            </small>
+        </div>
+    </div>
+</div>
+
+
 @if (!Model.Any())
 {
     <div class="alert alert-info">
